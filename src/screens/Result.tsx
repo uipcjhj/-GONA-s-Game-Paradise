@@ -20,8 +20,8 @@ export default function Result({ view, onRetry, onMap, onRanking }: { view: Resu
   const rank = s.levelAfter > s.levelBefore;
   return (
     <div className="p-screen">
-      <div className="p-scroll" style={{ paddingTop: 14 }}>
-        <div className="p-ribbon" style={{ margin: '0 auto' }}>{view.saveFailed ? 'RESULT · 저장 실패' : cleared ? 'ADVENTURE CLEAR' : 'RESULT'}</div>
+      <div className="p-scroll" style={{ paddingTop: 8, gap: 8 }}>
+        <div className="p-ribbon" style={{ margin: '0 auto', padding: '3px 10px 4px' }}>{view.saveFailed ? 'RESULT · 저장 실패' : cleared ? 'ADVENTURE CLEAR' : 'RESULT'}</div>
         <div className="p-gamerow">
           <div className="th" style={{ backgroundImage: "url('./assets/gona-world-map.png')", backgroundSize: '640% auto', backgroundPosition: '6% 15%' }} />
           <div style={{ flex: 1, minWidth: 0 }}>

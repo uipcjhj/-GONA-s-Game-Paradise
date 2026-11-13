@@ -12,7 +12,7 @@ import PixelPanel from '../ui/PixelPanel';
 function Preview({ item, p }: { item: ShopItem; p: PlayerData }) {
   return (
     <div className="pv">
-      {item.slot === 'frame' && <Portrait p={p} size={30} frame={item.style} deco="none" />}
+      {item.slot === 'frame' && <Portrait p={p} size={34} frame={item.style} deco="none" />}
       {item.slot === 'avatarDeco' && (
         <span style={{ position: 'relative', display: 'inline-block', marginTop: 8 }}>
           <Avatar id={p.avatarId} size={36} />

@@ -30,7 +30,7 @@ export default function IslandPanel({ island, onClose }: { island: Island; onClo
         <p>{island.tagline}</p>
         {open && (
           <p className="popup-rec">
-            {rec ? `내 최고 ${rec.bestScore.toLocaleString('ko-KR')} · ${rec.plays}회 · 클리어 ${rec.clears}회 · ${fmtDate(rec.lastPlayedAt).slice(5)}` : g?.link === 'pending' ? '🔌 기록 연동 준비 중 · 아직 기록이 저장되지 않아요' : '아직 기록이 없어요'}
+            {rec ? `내 최고 ${rec.bestScore.toLocaleString('ko-KR')} · ${rec.plays}회 · 클리어 ${rec.clears}회 · ${fmtDate(rec.lastPlayedAt).slice(5)}` : g?.link === 'pending' ? '🔌 기록 연동 준비 중' : '아직 기록이 없어요'}
           </p>
         )}
       </div>

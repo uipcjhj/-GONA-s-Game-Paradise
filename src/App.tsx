@@ -85,6 +85,14 @@ export default function App() {
   useBackLayer(screen === 'map' && tab === 'more' && more !== null, () => setMore(null));
   useBackLayer(screen === 'map' && tab === 'map' && selectedId !== null, () => setSelectedId(null));
 
+  // 앱을 다시 열었을 때(탭 복귀·날짜 변경) 출석/일일 상태 갱신 — 같은 한국 날짜에는 1번만(엔진이 중복 차단)
+  useEffect(() => {
+    if (screen !== 'map' || !player) return;
+    const on = () => document.visibilityState === 'visible' && checkIn();
+    document.addEventListener('visibilitychange', on);
+    return () => document.removeEventListener('visibilitychange', on);
+  }, [screen, !!player, checkIn]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 게임에서 돌아와 결과가 도착하면 타이틀을 건너뛰고 바로 결과 화면으로
   useBackLayer(screen === 'map' && result !== null, dismissResult);
   useEffect(() => {

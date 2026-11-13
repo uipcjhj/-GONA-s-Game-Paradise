@@ -333,6 +333,51 @@ async function inject(page, o = {}) {
     ok(`[${tag}] 전체 흐름 콘솔 오류 없음`, errors.length === 0, errors.slice(0, 3).join(' / '));
     await ctx.close();
 
+
+    // ── 비정상 날짜 변경: 다음 날 출석(연속 2일) → 시계를 과거로 돌려도 중복 지급 없음
+    {
+      const c3 = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: true, isMobile: true });
+      await c3.addInitScript(() => { try { localStorage.setItem('gona.openingSeen', '1'); } catch (e) {} });
+      const D = await mkPage(browser, w, h, c3);
+      await D.page.clock.install({ time: new Date('2026-11-13T03:00:00Z') });
+      await D.page.goto(url);
+      await D.page.clock.resume();
+      await register(D.page, w, h);
+      const d1 = await player(D.page);
+      await D.page.clock.setSystemTime(new Date('2026-11-14T03:00:00Z'));
+      await D.page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+      await D.page.waitForTimeout(500);
+      const d2 = await player(D.page);
+      ok(`[${tag}] 날짜 변경(한국 자정 이후) → 연속 출석 2일·코인 지급`, d1.attendance.streak === 1 && d2.attendance.streak === 2 && d2.coinBalance > d1.coinBalance && d2.daily.dateKST === '2026-11-14');
+      await D.page.clock.setSystemTime(new Date('2026-11-12T03:00:00Z')); // 시계를 과거로
+      await D.page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+      await D.page.waitForTimeout(500);
+      const d3 = await player(D.page);
+      ok(`[${tag}] 시계를 과거로 되돌려도 출석·코인 중복 지급 없음`, d3.attendance.streak === 2 && d3.coinBalance === d2.coinBalance && d3.stats.checkins === 2);
+      await c3.close();
+    }
+    // ── 브라우저 저장 차단(localStorage 접근 불가): 앱은 동작, 저장 안 됨 안내
+    {
+      const c4 = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: true, isMobile: true });
+      await c4.addInitScript(() => { Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('denied', 'SecurityError'); } }); });
+      const E = await mkPage(browser, w, h, c4);
+      await E.page.goto(url);
+      await E.page.waitForSelector('.title', { timeout: 8000 });
+      await E.page.waitForTimeout(2500); // 저장이 막혀 오프닝이 매번 재생됨 → 끝난 뒤 시작
+      await E.page.touchscreen.tap(w / 2, h / 2);
+      await E.page.fill('#gp-nick', '차단테스트');
+      await E.page.getByRole('button', { name: /다음/ }).tap();
+      await E.page.getByRole('button', { name: '이걸로 결정!' }).tap();
+      await E.page.waitForSelector('text=WELCOME!');
+      ok(`[${tag}] 저장 차단: 등록 완료 + '저장이 막혀 있어' 안내`, (await E.page.locator('text=저장이 막혀').count()) >= 1);
+      await E.page.getByRole('button', { name: /게임천국 입장/ }).tap();
+      await E.page.waitForSelector('.hit');
+      await E.page.getByRole('button', { name: /PROFILE/ }).tap();
+      await E.page.waitForSelector('.p-pcard');
+      ok(`[${tag}] 저장 차단: 프로필·월드맵 정상 · 콘솔 오류 없음`, E.errors.length === 0, E.errors.join(' / '));
+      await c4.close();
+    }
+
     // ── 두 탭 동시 처리
     {
       const c2 = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
