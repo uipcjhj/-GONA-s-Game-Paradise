@@ -20,7 +20,7 @@ body {
   -webkit-user-select: none;
   touch-action: manipulation;
 }
-canvas, img { image-rendering: pixelated; image-rendering: crisp-edges; image-rendering: pixelated; display: block; }
+img { display: block; -webkit-user-drag: none; }
 button { font: inherit; color: inherit; cursor: pointer; }
 
 /* ── 프레임: 폭은 JS 가 정수 배율로 정해 줌 (가로 스크롤 없음) */
@@ -39,7 +39,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* ── 상단 로고 */
 .top {
-  flex: 0 0 58px;
+  flex: 0 0 52px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -53,7 +53,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .top-en { font-size: 10px; letter-spacing: 1px; color: #8f5c3a; }
 .top h1 {
   margin: 0;
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1;
   color: #fff;
   text-shadow: -2px 0 var(--line), 2px 0 var(--line), 0 -2px var(--line), 0 2px var(--line), -2px -2px var(--line), 2px -2px var(--line), -2px 2px var(--line), 2px 2px var(--line), 0 4px #c9852a;
@@ -61,105 +61,76 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .stage { flex: 1 1 0; min-height: 0; position: relative; display: flex; flex-direction: column; background: var(--sea); }
 
-/* ── 월드맵 */
-.map { flex: 1 1 0; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-.map::-webkit-scrollbar { display: none; }
-.world { position: relative; overflow: hidden; margin: 0 auto; }
-.sea { position: absolute; inset: 0; }
+/* ── 월드맵: 이미지 + 고나 + 터치 영역이 모두 같은 좌표계(.world, 이미지 픽셀 단위)에 있고 통째로 scale */
+.mapbox { flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; background: #1daefd; }
+.fit {
+  position: absolute; overflow: hidden;
+  /* 이미지 가장자리만 바다색으로 부드럽게 이어 붙임(여백이 있을 때 구름이 뚝 잘려 보이지 않게) */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 2.5%, #000 97.5%, transparent 100%), linear-gradient(to right, transparent 0, #000 2.5%, #000 97.5%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 2.5%, #000 97.5%, transparent 100%), linear-gradient(to right, transparent 0, #000 2.5%, #000 97.5%, transparent 100%);
+  mask-composite: intersect;
+}
+.world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.bg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.hit { position: absolute; padding: 0; margin: 0; border: 0; background: transparent; outline: none; border-radius: 28%; }
+.hit.plaza { border-radius: 50%; }
+.hit:focus-visible { outline: 8px solid #fff; }
 
-.cloud { position: absolute; left: 0; pointer-events: none; animation: drift linear infinite; will-change: transform; opacity: 0.92; }
-@keyframes drift { from { transform: translateX(-60%); } to { transform: translateX(480px); } }
-.airship { position: absolute; left: 0; pointer-events: none; animation: fly 48s linear infinite; z-index: 3; }
-@keyframes fly { from { transform: translateX(-120px); } to { transform: translateX(520px); } }
+.gona { position: absolute; left: 0; top: 0; z-index: 3; pointer-events: none; will-change: transform; }
+.gona img { width: 100%; height: 100%; image-rendering: pixelated; filter: drop-shadow(0 6px 0 rgba(30, 60, 110, 0.28)); }
+.gona:not(.moving) img { animation: idle 1.2s steps(1) infinite; }
+@keyframes idle { 0%, 100% { margin-top: 0; } 50% { margin-top: 5px; } }
 
-.spot { position: absolute; }
-.shadow {
-  position: absolute; left: 14%; right: 14%; bottom: -14%; height: 14%;
-  background: rgba(20, 60, 110, 0.35); border-radius: 50%;
-  box-shadow: 0 0 0 calc(var(--s)) rgba(20, 60, 110, 0.2);
+.star {
+  position: absolute; z-index: 4; width: 12px; height: 12px; margin: -6px 0 0 -6px; pointer-events: none; background: #fff6a8;
+  box-shadow: 12px 0 #ffd84a, -12px 0 #ffd84a, 0 12px #ffd84a, 0 -12px #ffd84a;
+  animation: spark 0.55s steps(6) forwards;
 }
-.island {
-  position: absolute; inset: 0; padding: 0; margin: 0; border: 0; background: none;
-  display: block; outline: none; z-index: 2;
-}
-.island .art { position: absolute; inset: 0; transition: filter 0.15s steps(2); }
-.island:active .art { transform: translateY(var(--s)); }
-.island.floaty, .gona.floaty .gona-hop { animation: bob 2.4s steps(1) infinite; }
-@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(calc(var(--s) * -2)); } }
-
-/* 선택: 통통 튀는 '착!' + 노란 테두리 + 별 */
-.island.selected .art {
-  animation: pop 0.45s steps(5) 1;
-  filter: drop-shadow(var(--s) 0 0 var(--gold)) drop-shadow(calc(var(--s) * -1) 0 0 var(--gold)) drop-shadow(0 var(--s) 0 var(--gold)) drop-shadow(0 calc(var(--s) * -1) 0 var(--gold));
-}
-@keyframes pop {
-  0% { transform: scale(1, 1); }
-  25% { transform: scale(1.06, 0.88) translateY(calc(var(--s) * 2)); }
-  60% { transform: scale(0.97, 1.08) translateY(calc(var(--s) * -3)); }
-  100% { transform: scale(1, 1); }
-}
-.island:focus-visible .art { filter: drop-shadow(var(--s) 0 0 #fff) drop-shadow(calc(var(--s) * -1) 0 0 #fff) drop-shadow(0 var(--s) 0 #fff) drop-shadow(0 calc(var(--s) * -1) 0 #fff); }
-
-.sign {
-  position: absolute; left: 50%; bottom: calc(var(--s) * -1); transform: translateX(-50%);
-  white-space: nowrap; font-size: 12px; font-weight: 700; line-height: 1;
-  padding: 4px 7px 5px; background: #d9a066; color: #fff;
-  border: 2px solid var(--line); box-shadow: inset 0 -3px 0 var(--woodD), 0 2px 0 rgba(0, 0, 0, 0.25);
-  text-shadow: 1px 1px 0 var(--line);
-}
-.island.selected .sign { background: var(--gold); color: var(--line); text-shadow: none; box-shadow: inset 0 -3px 0 #e8a92c, 0 2px 0 rgba(0, 0, 0, 0.25); }
-.sign em { display: block; margin: 4px -3px -2px; padding: 3px 0 3px; font-style: normal; font-size: 9px; letter-spacing: 0.5px; text-align: center; background: #ff6b8a; border-top: 2px solid var(--line); text-shadow: 1px 1px 0 var(--line); }
-.island.selected .sign em { color: #fff; }
-
-.burst { position: absolute; left: 50%; top: 40%; pointer-events: none; z-index: 4; }
-.burst i {
-  position: absolute; width: calc(var(--s) * 2); height: calc(var(--s) * 2); background: #fff7b0;
-  box-shadow: var(--s) 0 var(--gold), calc(var(--s) * -1) 0 var(--gold), 0 var(--s) var(--gold), 0 calc(var(--s) * -1) var(--gold);
-  animation: burst 0.6s steps(6) forwards;
-}
-@keyframes burst {
-  from { transform: rotate(var(--a)) translateY(calc(var(--s) * -6)); opacity: 1; }
-  to { transform: rotate(var(--a)) translateY(calc(var(--s) * -22)); opacity: 0; }
+@keyframes spark {
+  from { transform: rotate(var(--a)) translateY(-8px) scale(1); opacity: 1; }
+  to { transform: rotate(var(--a)) translateY(-70px) scale(0.5); opacity: 0; }
 }
 
-/* ── 고나 */
-.gona { position: absolute; z-index: 3; pointer-events: none; transition: left 0.7s steps(12), top 0.7s steps(12); }
-.gona img { width: 100%; height: 100%; }
-.gona-hop { width: 100%; height: 100%; }
-.gona-hop:not(.go) { animation: idle 1.2s steps(1) infinite; }
-.gona.floaty .gona-hop:not(.go) { animation: bob 2.4s steps(1) infinite; }
-.gona-hop.go { animation: hop 0.7s steps(7) 1; }
-@keyframes idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(var(--s)); } }
-@keyframes hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(calc(var(--s) * -14)); } }
+/* 도착: 선택한 섬이 반짝 */
+.glow { position: absolute; z-index: 2; pointer-events: none; border-radius: 40%; animation: pulse 1.1s steps(11) 1 forwards; background: radial-gradient(closest-side, rgba(255, 255, 210, 0.6), rgba(255, 255, 210, 0) 100%); mix-blend-mode: screen; }
+.glow i {
+  position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; background: #fff;
+  box-shadow: 14px 0 #fff6a8, -14px 0 #fff6a8, 0 14px #fff6a8, 0 -14px #fff6a8; opacity: 0; animation: twinkle 0.9s steps(9) 1 forwards;
+}
+@keyframes pulse { 0% { opacity: 0; } 20% { opacity: 1; } 50% { opacity: 0.45; } 70% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes twinkle { 0% { opacity: 0; transform: scale(0.3); } 40% { opacity: 1; transform: scale(1.5); } 100% { opacity: 0; transform: scale(0.6); } }
 
-/* ── 하단 패널 */
-.panel {
-  flex: 0 0 auto; position: relative; z-index: 6;
-  padding: 14px 16px 16px; background: var(--cream);
-  border-top: 3px solid var(--line); box-shadow: inset 0 3px 0 #fff, 0 -4px 0 rgba(0, 0, 0, 0.18);
-  animation: rise 0.25s steps(4);
+/* ── 작은 팝업 (지도 아래쪽 여백 · 화면 폭을 거의 다 쓰되 낮게) */
+.popup {
+  position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 6;
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px 10px;
+  padding: 10px 10px 10px 12px; background: var(--cream);
+  border: 3px solid var(--line); box-shadow: inset 0 3px 0 #fff, 0 3px 0 rgba(0, 0, 0, 0.25);
+  animation: rise 0.2s steps(3);
 }
-@keyframes rise { from { transform: translateY(100%); } to { transform: none; } }
-.panel-close {
-  position: absolute; right: 8px; top: 8px; width: 30px; height: 30px; padding: 0; line-height: 1; font-size: 20px; font-weight: 700;
-  background: #fff; border: 2px solid var(--line); box-shadow: inset 0 -3px 0 #ddd;
+@keyframes rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.popup-info { min-width: 0; display: flex; flex-direction: column; gap: 3px; padding-right: 22px; }
+.popup h2 { margin: 3px 0 0; font-size: 15px; line-height: 1.25; word-break: keep-all; overflow-wrap: anywhere; }
+.popup p { margin: 0; font-size: 11px; line-height: 1.4; color: #6b4330; word-break: keep-all; }
+.popup-close {
+  position: absolute; right: 4px; top: 4px; width: 22px; height: 22px; padding: 0; line-height: 1; font-size: 16px; font-weight: 700;
+  background: #fff; border: 2px solid var(--line);
 }
-.panel-title { margin: 8px 40px 4px 0; font-size: 18px; line-height: 1.25; word-break: keep-all; overflow-wrap: anywhere; }
-.panel-tag { margin: 0 0 12px; font-size: 13px; line-height: 1.4; color: #6b4330; word-break: keep-all; }
-.chip { display: inline-block; font-size: 11px; line-height: 1; padding: 4px 7px 5px; border: 2px solid var(--line); font-weight: 700; }
+.chip { align-self: flex-start; font-size: 10px; line-height: 1; padding: 3px 6px 4px; border: 2px solid var(--line); font-weight: 700; }
 .chip-open { background: #8fe06a; }
 .chip-soon { background: #ffb3c6; }
 .btn {
-  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px; padding: 0 12px;
-  font-size: 16px; font-weight: 700; text-decoration: none; border: 3px solid var(--line);
+  display: flex; align-items: center; justify-content: center; min-width: 76px; min-height: 44px; padding: 0 12px;
+  font-size: 15px; font-weight: 700; text-decoration: none; border: 3px solid var(--line);
 }
 .btn-go { background: #ffd84a; color: var(--line); box-shadow: inset 0 -5px 0 #e8a92c, 0 3px 0 rgba(0, 0, 0, 0.3); }
 .btn-go:active { transform: translateY(2px); box-shadow: inset 0 -3px 0 #e8a92c; }
-.btn-off { background: #d8d2c4; color: #7a7366; box-shadow: inset 0 -5px 0 #b9b2a2; cursor: not-allowed; }
+.btn-off { background: #d8d2c4; color: #7a7366; box-shadow: inset 0 -5px 0 #b9b2a2; cursor: not-allowed; font-size: 13px; }
 
 /* ── 하단 메뉴 */
 .nav {
-  flex: 0 0 66px; display: grid; grid-template-columns: repeat(3, 1fr);
+  flex: 0 0 62px; display: grid; grid-template-columns: repeat(3, 1fr);
   background: #6b4330; border-top: 3px solid var(--line); box-shadow: inset 0 3px 0 #8f5c3a; z-index: 7;
   padding-bottom: env(safe-area-inset-bottom); box-sizing: content-box;
 }
@@ -175,7 +146,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .view { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: #8fd0f2; }
 .card { background: var(--cream); border: 3px solid var(--line); box-shadow: inset 0 3px 0 #fff, 0 3px 0 rgba(0, 0, 0, 0.2); padding: 16px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .card h2 { margin: 4px 0 0; font-size: 18px; }
-.portrait { width: calc(var(--s) * 27); height: calc(var(--s) * 34); }
+.portrait { width: 108px; height: 136px; image-rendering: pixelated; }
 .muted { margin: 0; font-size: 13px; line-height: 1.5; color: #6b4330; word-break: keep-all; }
 .list { text-align: left; align-items: stretch; gap: 0; padding: 4px 14px; }
 .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; font-size: 13px; border-bottom: 2px dashed #e2c08a; }
@@ -185,6 +156,5 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .chips { display: flex; justify-content: center; gap: 8px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .cloud, .airship, .island.floaty, .gona-hop, .island .art, .burst i, .nav-btn.on svg, .panel { animation: none !important; }
-  .gona { transition: none; }
+  .glow, .glow i, .star, .gona img, .popup { animation: none !important; }
 }

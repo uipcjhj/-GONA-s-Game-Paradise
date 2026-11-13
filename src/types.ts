@@ -1,24 +1,26 @@
+export interface Point {
+  x: number;
+  y: number;
+}
+
+/** 월드맵 이미지(gona-world-map.png) 픽셀 좌표계 기준 */
+export interface IslandMap {
+  /** 터치 영역(사각형). clip: 사각형 안에서 %로 지정하는 다각형(다리 등 겹침 제외용) */
+  hit: { x: number; y: number; w: number; h: number; clip?: string };
+  /** 중앙 광장 → 섬 도착 지점까지 다리의 꺾임을 따라가는 경로. 첫 점은 광장, 마지막 점이 고나가 서는 곳 */
+  path: Point[];
+}
+
 /** 게임 한 개 = 섬 한 개. 새 게임은 src/data/islands.ts 에 항목만 추가하면 됩니다. */
 export interface Island {
-  /** 고유 ID (소문자-영문). 향후 점수·업적·랭킹의 gameId 로 그대로 사용 */
+  /** 고유 ID. 향후 점수·업적·랭킹의 gameId 로 그대로 사용 */
   id: string;
-  /** 섬 그림 종류 — src/art/painters.ts 의 PAINTERS 키. 없는 값이면 기본 섬 */
-  theme: string;
-  /** 월드맵 표지판 · 패널 제목 */
   name: string;
-  /** 게임 이름 (패널에 크게 표시) */
   gameTitle: string;
-  /** 한 줄 소개 */
   tagline: string;
   /** 'open' = 입장 가능 / 'soon' = COMING SOON */
   status: 'open' | 'soon';
-  /**
-   * 게임 주소. status 가 'open' 이어도 주소가 비어 있으면 입장 버튼이 잠깁니다.
-   * 확인되지 않은 주소는 임의로 넣지 마세요.
-   */
+  /** 게임 주소. 비어 있으면 입장 버튼이 잠깁니다. */
   url?: string;
-  /** 하늘에 떠 있는 섬(그림자 표시) */
-  floating?: boolean;
-  /** (선택) 월드맵 좌표를 직접 지정. 생략하면 아래에서 위로 지그재그 자동 배치 */
-  pos?: { x: number; y: number };
+  map: IslandMap;
 }
