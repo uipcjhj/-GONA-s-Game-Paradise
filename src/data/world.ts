@@ -9,6 +9,12 @@ export const WORLD = {
   sea: '#1daefd',
 } as const;
 
+/**
+ * 화면에 보여 줄 영역(이미지 좌표). 세 섬·광장·다리·비행선은 전부 안에 있고,
+ * 바깥의 빈 바다만 화면 밖으로 처리 → 같은 화면에서 지도가 더 크게 보임 (이미지 파일은 그대로)
+ */
+export const VIEW = { x: 10, y: 30, w: 1064, h: 1305 } as const;
+
 /** 중앙 광장 — 고나의 시작 위치 */
 export const PLAZA: Point = { x: 545, y: 835 };
 export const PLAZA_HIT = { x: 300, y: 600, w: 490, h: 350 };
