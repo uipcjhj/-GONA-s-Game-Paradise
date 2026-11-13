@@ -4,14 +4,15 @@ import { useEffect, useState } from 'react';
  * 타이틀 화면 (정적). 배경 · 로고 · 고나는 서로 독립된 레이어지만 '같은 도트 격자'를 씁니다.
  *  - 기준: 고나 원본 스프라이트(27×34) 1도트 = s CSS px (s = 4, 넓은 화면 5)
  *  - 배경(110×245 도트)·로고(86×51 도트)도 같은 s 배율 → 도트 크기 동일, 모든 위치는 s 의 배수로 맞춤(격자 어긋남 없음)
- *  - 배경 title-bg-px.png / 로고 logo-px.png / 한글 부제 subtitle-px.png(투명) — 모두 원본(art-src/title)을 고나 도트 밀도로 재작업한 것
+ *  - 배경 title-bg-px.png / 로고 logo-px.png / 한글 부제 subtitle-px.png(투명) — Higgsfield 로 굵은 8비트 도트로 생성한 원본(art-src/title)을 고나 격자에 맞춘 것
  */
 const BG_W = 110;
 const BG_H = 245;
-const LOGO_W = 86;
-const LOGO_H = 51;
-const SUB_W = 72;
-const SUB_H = 16;
+/** 로고·부제는 AI 가 그린 도트 원본을 그대로 쓰고(리샘플 없음) 화면 크기만 맞춤: 로고 폭 344px(도트 약 4.5px), 부제 폭 300px */
+const LOGO_W = 86; // 도트 단위 환산 폭 (86 × 4px = 344px)
+const LOGO_PX_H = 228; // 344 × 0.6623
+const SUB_PX_W = 300; // 한글은 획이 촘촘해 폭 300px (도트 약 3px)
+const SUB_PX_H = 64; // 300 × 0.2137
 const GONA_W = 27;
 const GONA_H = 34;
 /** 배경 도트 좌표에서 고나가 서는 곳 (모래섬 위 · 발끝 기준) */
@@ -47,8 +48,8 @@ function layout(): Layout {
     bgTop,
     logoLeft: snap((vw - LOGO_W * s) / 2),
     logoTop,
-    subLeft: snap((vw - SUB_W * s) / 2),
-    subTop: logoTop + (LOGO_H + 2) * s,
+    subLeft: Math.round((vw - SUB_PX_W) / 2),
+    subTop: logoTop + LOGO_PX_H + s,
     gonaLeft: bgLeft + (GONA_FEET.x - Math.floor(GONA_W / 2)) * s,
     gonaTop: bgTop + (GONA_FEET.y - GONA_H) * s,
   };
@@ -82,8 +83,8 @@ export default function Title({ onStart }: { onStart: () => void }) {
   return (
     <div className={`title${leaving ? ' leaving' : ''}`} onClick={start} role="button" tabIndex={0} aria-label="화면을 터치하면 시작합니다" onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && start()} style={{ ['--u' as string]: px(L.s) }}>
       <img className="t-bg" src="./assets/title/title-bg-px.png" alt="" draggable={false} style={{ left: L.bgLeft, top: L.bgTop, width: BG_W * L.s, height: BG_H * L.s }} />
-      <img className="t-logo" src="./assets/title/logo-px.png" alt="GONA GONE WILD!" draggable={false} style={{ left: L.logoLeft, top: L.logoTop, width: LOGO_W * L.s, height: LOGO_H * L.s }} />
-      <img className="t-subimg" src="./assets/title/subtitle-px.png" alt="고나가 떴고나!" draggable={false} style={{ left: L.subLeft, top: L.subTop, width: SUB_W * L.s, height: SUB_H * L.s }} />
+      <img className="t-logo" src="./assets/title/logo-px.png" alt="GONA GONE WILD!" draggable={false} style={{ left: L.logoLeft, top: L.logoTop, width: LOGO_W * L.s, height: LOGO_PX_H }} />
+      <img className="t-subimg" src="./assets/title/subtitle-px.png" alt="고나가 떴고나!" draggable={false} style={{ left: L.subLeft, top: L.subTop, width: SUB_PX_W, height: SUB_PX_H }} />
       <img className="t-gona" src="./assets/gona.png" alt="고나" draggable={false} style={{ left: L.gonaLeft, top: L.gonaTop, width: GONA_W * L.s, height: GONA_H * L.s }} />
       <p className="t-tap">TAP ANYWHERE TO START</p>
     </div>
