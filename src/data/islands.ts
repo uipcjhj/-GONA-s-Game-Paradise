@@ -13,6 +13,7 @@ export const ISLANDS: Island[] = [
     tagline: '간식을 먹으며 달리는 고나의 대모험!',
     status: 'open',
     url: 'https://uipcjhj.github.io/GoNa/',
+    sdk: 'pending',
     map: {
       hit: { x: 20, y: 225, w: 465, h: 435 },
       path: [PLAZA, { x: 450, y: 760 }, { x: 385, y: 700 }, { x: 330, y: 645 }, { x: 280, y: 590 }, { x: 305, y: 545 }],

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { importFoodBest } from '../platform/importFood';
 import { BACKUP_ERROR_MESSAGES, BACKUP_MAX_BYTES, parseBackup } from '../platform/backup';
 import { usePlayer } from '../platform/PlayerContext';
 import type { PlayerData } from '../platform/types';
@@ -13,11 +14,12 @@ type Dlg =
   | { t: 'avatar' }
   | { t: 'info'; title: string; text: string }
   | { t: 'restore'; player: PlayerData }
+  | { t: 'import'; score: number; stage?: number }
   | { t: 'reset1' }
   | { t: 'reset2' };
 
 export default function Settings({ onBack, onToast, onReset }: { onBack: () => void; onToast: (t: string) => void; onReset: () => void }) {
-  const { player, restore, reset, exportText, persistent } = usePlayer();
+  const { player, restore, reset, exportText, persistent, updateSettings, importPrevious, pendingInbox, rejectedCount } = usePlayer();
   const [sfxOff, setSfxOff] = useState(muted());
   const [dlg, setDlg] = useState<Dlg | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -73,6 +75,17 @@ export default function Settings({ onBack, onToast, onReset }: { onBack: () => v
           </div>
           <p className="p-muted">iPhone Safari는 화면을 한 번 터치한 뒤에 소리가 나요. 배경음은 아직 없어서 나중에 켜져요.</p>
         </PixelPanel>
+        <PixelPanel title="화면 · 조작">
+          <div className="p-setrow">
+            <span>진동</span>
+            <button type="button" className={`p-toggle${player.settings.vibration ? ' on' : ''}`} role="switch" aria-checked={player.settings.vibration} aria-label="진동" data-testid="set-vibration" onClick={() => updateSettings({ vibration: !player.settings.vibration })} />
+          </div>
+          <div className="p-setrow">
+            <span>움직임 줄이기</span>
+            <button type="button" className={`p-toggle${player.settings.reduceMotion ? ' on' : ''}`} role="switch" aria-checked={player.settings.reduceMotion} aria-label="움직임 줄이기" data-testid="set-motion" onClick={() => updateSettings({ reduceMotion: !player.settings.reduceMotion })} />
+          </div>
+          <p className="p-muted">진동은 지원하는 기기(주로 Android)에서만 동작해요.</p>
+        </PixelPanel>
         <PixelPanel title="내 정보">
           <div className="p-row">
             <PixelButton small variant="sub" className="fill" onClick={() => setDlg({ t: 'nick' })}>
@@ -94,6 +107,27 @@ export default function Settings({ onBack, onToast, onReset }: { onBack: () => v
             </PixelButton>
           </div>
           <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={(e) => { void onFile(e.target.files?.[0]); e.target.value = ''; }} />
+        </PixelPanel>
+        <PixelPanel title="게임 기록 연동">
+          <p className="p-muted" data-testid="sync-info">
+            연동 대기 중인 결과 {pendingInbox()}개 · 이번에 걸러진 결과 {rejectedCount}개
+          </p>
+          <PixelButton
+            small
+            variant="sub"
+            block
+            style={{ marginTop: 8 }}
+            data-testid="import-food"
+            onClick={() => {
+              const f = importFoodBest();
+              if (!f) return setDlg({ t: 'info', title: '가져올 기록이 없어요', text: '이 기기에서 GONA’s Food Adventure 의 이전 최고 기록을 찾지 못했어요.' });
+              if (player.stats['import:food-island']) return setDlg({ t: 'info', title: '이미 가져왔어요', text: '이전 기록 가져오기는 한 번만 할 수 있어요.' });
+              setDlg({ t: 'import', score: f.score, stage: f.stage });
+            }}
+          >
+            이전 Food 최고 기록 가져오기
+          </PixelButton>
+          <p className="p-muted">Food 의 기록은 읽기만 하고 그대로 두어요. 가져온 기록은 ‘가져옴’으로 표시돼요.</p>
         </PixelPanel>
         <PixelPanel title="데이터 초기화">
           <p className="p-muted">닉네임·플레이어 기록을 모두 지우고 처음부터 시작해요. 소리 설정과 오프닝 기록은 그대로 남아요.</p>
@@ -119,6 +153,19 @@ export default function Settings({ onBack, onToast, onReset }: { onBack: () => v
             restore(dlg.player);
             setDlg(null);
             onToast('백업을 복원했어요');
+          }}
+        />
+      )}
+      {dlg?.t === 'import' && (
+        <ConfirmDialog
+          title="이전 기록을 가져올까요?"
+          text={`Food Adventure 최고 ${dlg.score.toLocaleString('ko-KR')}점${dlg.stage ? ` (단계 ${dlg.stage})` : ''}을 내 기록으로 한 번만 가져와요. Food 의 원래 기록은 바뀌지 않아요.`}
+          okLabel="가져오기"
+          onCancel={() => setDlg(null)}
+          onOk={() => {
+            const ok = importPrevious('food-island', dlg.score, dlg.stage);
+            setDlg(null);
+            onToast(ok ? '이전 기록을 가져왔어요' : '가져올 수 없어요');
           }}
         />
       )}

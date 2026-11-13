@@ -22,5 +22,7 @@ export interface Island {
   status: 'open' | 'soon';
   /** 게임 주소. 비어 있으면 입장 버튼이 잠깁니다. */
   url?: string;
+  /** 게임천국 기록 연동 상태: 'live' = 결과가 자동 기록됨 / 'pending' = 게임 쪽 연동 대기(플레이는 되지만 기록은 아직 안 쌓임) */
+  sdk?: 'live' | 'pending';
   map: IslandMap;
 }

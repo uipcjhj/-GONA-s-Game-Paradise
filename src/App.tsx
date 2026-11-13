@@ -5,9 +5,14 @@ import BottomNav, { type Tab } from './components/BottomNav';
 import IslandPanel from './components/IslandPanel';
 import WorldMap from './components/WorldMap';
 import Title from './components/Title';
+import { getMission } from './platform/missions';
 import { usePlayer } from './platform/PlayerContext';
 import { useBackLayer } from './platform/useBackLayer';
-import ComingSoon from './screens/ComingSoon';
+import Achievements from './screens/Achievements';
+import Codex from './screens/Codex';
+import Missions from './screens/Missions';
+import Result from './screens/Result';
+import Shop from './screens/Shop';
 import More, { type MoreItem } from './screens/More';
 import Profile from './screens/Profile';
 import Ranking from './screens/Ranking';
@@ -24,7 +29,7 @@ const MAX_FRAME = 600;
 const POPUP_PX = 80; // 팝업 높이(대략)
 
 export default function App() {
-  const { player, loadStatus, touch } = usePlayer();
+  const { player, loadStatus, touch, results, dismissResults, news, clearNews, saveFailed, retryConsume } = usePlayer();
   const [screen, setScreen] = useState<'title' | 'register' | 'recover' | 'map'>('title');
   const [tab, setTab] = useState<Tab>('map');
   const [more, setMore] = useState<MoreItem | null>(null);
@@ -36,6 +41,16 @@ export default function App() {
     window.clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(null), 1800);
   }, []);
+  // 새 소식(업적·도감·칭호)은 토스트로 한 번에 알림
+  useEffect(() => {
+    if (!news.length) return;
+    notify(news.length > 1 ? `${news[0].text} 외 ${news.length - 1}건` : news[0].text);
+    clearNews();
+  }, [news, notify, clearNews]);
+  // 게임에서 돌아왔을 때(결과가 있으면) 타이틀을 건너뛰고 바로 월드맵 → 결과 화면
+  useEffect(() => {
+    if (results.length > 0 && screen === 'title' && player) setScreen('map');
+  }, [results, screen, player]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [vp, setVp] = useState({ w: window.innerWidth, h: window.innerHeight });
   const [area, setArea] = useState({ w: 0, h: 0 });
@@ -102,6 +117,8 @@ export default function App() {
     if (t !== 'map') setSelectedId(null);
   };
 
+  const m = player?.missions;
+  const claimable = !!m && (m.attendance.claimedDateKST !== m.attendance.lastDateKST || [...m.daily, ...m.weekly].some((x) => !x.claimed && x.value >= (getMission(x.id)?.target ?? Infinity)));
   if (screen === 'title') return <Title onStart={enter} />;
   if (screen === 'register' || screen === 'recover' || !player) {
     return (
@@ -137,10 +154,44 @@ export default function App() {
         )}
         {tab === 'profile' && <Profile onToast={notify} />}
         {tab === 'ranking' && <Ranking />}
-        {tab === 'more' && (more === null ? <More onOpen={setMore} /> : more === 'settings' ? <Settings onBack={() => setMore(null)} onToast={notify} onReset={() => { setTab('map'); setMore(null); setScreen('register'); }} /> : <ComingSoon id={more} onBack={() => setMore(null)} />)}
+        {tab === 'more' &&
+          (more === null ? (
+            <More onOpen={setMore} badges={{ missions: claimable }} />
+          ) : more === 'settings' ? (
+            <Settings onBack={() => setMore(null)} onToast={notify} onReset={() => { setTab('map'); setMore(null); setScreen('register'); }} />
+          ) : more === 'achievements' ? (
+            <Achievements onBack={() => setMore(null)} />
+          ) : more === 'codex' ? (
+            <Codex onBack={() => setMore(null)} />
+          ) : more === 'missions' ? (
+            <Missions onBack={() => setMore(null)} onToast={notify} />
+          ) : (
+            <Shop onBack={() => setMore(null)} onToast={notify} />
+          ))}
       </main>
 
-      <BottomNav tab={tab} onTab={goTab} />
+      {saveFailed && (
+        <div className="p-savefail" role="alert" data-testid="save-failed">
+          <b>게임 기록을 저장하지 못했어요.</b> 기록은 안전하게 남아 있어요.
+          <button type="button" onClick={retryConsume}>
+            다시 시도
+          </button>
+        </div>
+      )}
+      {results.length > 0 && (
+        <Result
+          outcomes={results}
+          onClose={() => {
+            dismissResults();
+            toMap();
+          }}
+          onProfile={() => {
+            dismissResults();
+            goTab('profile');
+          }}
+        />
+      )}
+      <BottomNav tab={tab} onTab={goTab} badges={{ more: claimable }} />
       <Toast text={toast} />
     </div>
   );

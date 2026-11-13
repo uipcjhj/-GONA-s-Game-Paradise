@@ -104,7 +104,7 @@
 
 /* ── 프로필 */
 .p-pcard { display: grid; grid-template-columns: 96px 1fr; gap: 10px; flex: none; background: linear-gradient(180deg, #fff4d6 0 62%, #ffe9b0 62%); padding: 10px; box-shadow: var(--notch), inset 0 3px 0 #fff, 0 6px 0 0 rgba(59,27,94,.28); }
-.p-portrait { position: relative; display: grid; place-items: center; background: repeating-conic-gradient(#cfeeff 0 25%, #b7e3fb 0 50%) 0 0 / 8px 8px; box-shadow: 0 0 0 3px #ffc21a, 0 0 0 6px var(--ink); margin: 6px; height: 84px; }
+.p-portrait { position: relative; display: grid; place-items: center; background: repeating-conic-gradient(var(--bg1, #cfeeff) 0 25%, var(--bg2, #b7e3fb) 0 50%) 0 0 / 8px 8px; box-shadow: 0 0 0 3px var(--frame, #ffc21a), 0 0 0 6px var(--ink); margin: 6px; height: 84px; }
 .p-portrait img { width: 76px; height: 76px; }
 .p-lvbadge { position: absolute; left: -10px; bottom: -10px; background: var(--ink); color: #fff4d6; font-size: 9px; padding: 3px 4px; display: flex; gap: 2px; align-items: baseline; box-shadow: 0 0 0 2px #fff4d6; } .p-lvbadge b { font-size: 14px; color: #ffc21a; }
 .p-info { display: flex; flex-direction: column; gap: 5px; min-width: 0; justify-content: center; }
@@ -135,3 +135,50 @@
 .p-notice { background: #ffb3c6; border: 2px solid var(--ink); padding: 8px 10px; font-size: 11px; line-height: 1.5; flex: none; }
 
 @media (prefers-reduced-motion: reduce) { .p-hop, .p-slots i.cur, .p-scrim, .p-toast { animation: none !important; } }
+
+/* ── Phase 2~6: 결과 · 기록 · 업적 · 도감 · 미션 · 상점 · 랭킹 */
+.p-bar-right { display: inline-flex; align-items: center; font-size: 12px; font-weight: 700; color: #fff; margin-right: 2px; }
+.p-result { position: absolute; inset: 0; z-index: 25; display: flex; flex-direction: column; background: #8fd0f2 conic-gradient(rgba(255,255,255,.14) 25%, transparent 0 50%, rgba(255,255,255,.14) 0 75%, transparent 0) 0 0 / 8px 8px; padding-top: env(safe-area-inset-top); padding-bottom: calc(env(safe-area-inset-bottom)); }
+.p-result .p-scroll { padding-bottom: 18px; }
+.p-resultcard { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.p-bigscore { font-size: 34px; line-height: 1.1; letter-spacing: 1px; text-shadow: 2px 2px 0 #ffc21a; }
+.p-gain { justify-content: space-around; flex-wrap: wrap; font-size: 13px; }
+.p-gain span { display: inline-flex; align-items: center; gap: 4px; }
+.p-gainline { margin: 6px 0 0; font-size: 11px; line-height: 1.5; display: flex; gap: 5px; align-items: flex-start; }
+.p-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.p-stat b { font-size: 13px; word-break: keep-all; }
+.p-recgroup { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+.p-recrow { display: flex; flex-direction: column; gap: 1px; padding: 5px 7px; background: #fff; border: 2px solid var(--ink); font-size: 11px; }
+.p-recrow span { color: #5d3f86; font-size: 10px; }
+.p-achv { display: flex; flex-direction: column; gap: 5px; }
+.p-achv[data-done='1'] { opacity: .95; }
+.p-achv-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.p-achv-head b { font-size: 13px; }
+.p-codex { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 3px; }
+.p-cx { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border: 0; background: #fff4d6; box-shadow: var(--notch), inset 0 -3px 0 #e8d5a0; font-size: 11px; min-height: 92px; }
+.p-cx.lock { background: #cfc6b4; filter: grayscale(.8); }
+.p-cx-img { display: grid; place-items: center; width: 56px; height: 56px; background: #cfeeff; }
+.p-cx b { font-size: 11px; line-height: 1.2; word-break: keep-all; }
+.p-mission { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 2px dashed #e2c08a; }
+.p-mission:last-child { border-bottom: 0; }
+.p-mission-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.p-mission-main small { font-size: 9px; color: #5d3f86; }
+.p-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 8px; }
+.p-day { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; background: #fff; border: 2px solid var(--ink); font-size: 10px; }
+.p-day.got { background: #8fe06a; } .p-day.cur { box-shadow: 0 0 0 3px #ffc21a; }
+.p-shop { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 3px; }
+.p-shopitem { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 6px; background: #fff4d6; box-shadow: var(--notch), inset 0 -3px 0 #e8d5a0; font-size: 12px; text-align: center; }
+.p-shopitem small { font-size: 9px; color: #5d3f86; }
+.p-shopitem[data-state='equipped'] { background: #d9f7c4; }
+.p-sw { display: block; width: 44px; height: 44px; margin: 6px; background: #fff; }
+.p-sw-title { display: grid; place-items: center; width: 44px; height: 44px; margin: 6px; background: #ffc21a; border: 2px solid var(--ink); font-weight: 700; font-size: 13px; }
+.p-ranklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.p-ranklist li { display: flex; align-items: center; gap: 8px; padding: 5px 8px; background: #fff; border: 2px solid var(--ink); font-size: 13px; }
+.p-ranklist li.first { background: #fff0b8; }
+.p-ranklist li small { margin-left: auto; font-size: 10px; color: #5d3f86; }
+.p-rk { display: grid; place-items: center; width: 24px; height: 24px; background: var(--ink); color: #fff4d6; font-size: 12px; font-weight: 700; }
+.p-dot, .nav-dot { display: inline-block; width: 9px; height: 9px; background: #ec5048; border: 2px solid #fff4d6; border-radius: 0; }
+.nav-btn { position: relative; } .nav-dot { position: absolute; top: 4px; right: 22%; }
+.p-savefail { position: absolute; left: 8px; right: 8px; bottom: 76px; z-index: 35; display: flex; gap: 8px; align-items: center; background: #ffb3c6; border: 3px solid var(--ink); padding: 8px 10px; font-size: 11px; line-height: 1.4; }
+.p-savefail button { flex: none; min-height: 36px; padding: 0 10px; font: inherit; font-weight: 700; border: 2px solid var(--ink); background: #ffc21a; }
+.popup-rec { font-weight: 700; color: #3b1b5e !important; }

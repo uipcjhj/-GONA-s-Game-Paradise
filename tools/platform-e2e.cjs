@@ -152,7 +152,7 @@ async function register(page, w, h, nick = '고나짱', avatarName = '엄마') {
     await page.getByRole('button', { name: /RANKING/ }).tap();
     await page.waitForSelector('.p-tabs');
     const rtxt = await page.locator('.p-screen').innerText();
-    ok(`[${tag}] 랭킹: 준비 중 안내 · 가짜 순위 없음`, rtxt.includes('온라인 랭킹 준비 중') && !/\d{1,3},\d{3}/.test(rtxt) && !rtxt.includes('예시'));
+    ok(`[${tag}] 랭킹: 준비 중 안내 · 가짜 순위 없음`, rtxt.includes('온라인 랭킹 미연결') && !/\d{1,3},\d{3}/.test(rtxt) && !rtxt.includes('예시'));
     await page.getByRole('tab', { name: '역대 최고' }).tap();
     await page.getByRole('tab', { name: 'Sky' }).tap();
     ok(`[${tag}] 랭킹: 게임/기간 탭 전환`, await page.locator('text=COMING SOON').count());
@@ -165,7 +165,7 @@ async function register(page, w, h, nick = '고나짱', avatarName = '엄마') {
     await page.waitForSelector('.p-menu');
     await shot(page, w, h, '10-more');
     await page.getByRole('button', { name: /업적/ }).tap();
-    ok(`[${tag}] MORE: 업적 → 준비 중 화면`, await page.locator('text=준비 중이에요').count());
+    ok(`[${tag}] MORE: 업적 화면(실제 업적 목록)`, await page.locator('[data-testid=ach-play-1]').count());
     await page.goBack(); await page.waitForSelector('.p-menu');
     ok(`[${tag}] 뒤로가기 → MORE 목록`, true);
     await page.getByRole('button', { name: /설정/ }).tap();

@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import PixelIcon from '../components/PixelIcon';
-import { ISLANDS } from '../data/islands';
 import { getAvatar } from '../platform/avatars';
 import { checkNickname } from '../platform/nickname';
 import { usePlayer } from '../platform/PlayerContext';
 import { xpProgress } from '../platform/progression';
+import { GAMES } from '../platform/registry';
+import { portraitStyle, titleName } from '../ui/cosmetics';
+import { fmtDate, fmtDuration, fmtScore } from '../ui/format';
 import type { PlayerData } from '../platform/types';
 import Avatar from '../ui/Avatar';
 import AvatarSelector from '../ui/AvatarSelector';
@@ -13,10 +15,7 @@ import PixelButton from '../ui/PixelButton';
 import PixelModal from '../ui/PixelModal';
 import PixelPanel from '../ui/PixelPanel';
 
-export const fmtDate = (iso: string): string => {
-  const d = new Date(iso);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
-};
+export { fmtDate };
 
 /** 닉네임 변경 모달 (저장/취소 · 취소하면 기존 정보 유지) */
 export function NicknameEditor({ player, onClose, onSaved }: { player: PlayerData; onClose: () => void; onSaved: () => void }) {
@@ -79,12 +78,12 @@ export default function Profile({ onToast }: { onToast: (t: string) => void }) {
   const [edit, setEdit] = useState<'nick' | 'avatar' | null>(null);
   if (!player) return null;
   const xp = xpProgress(player.playerLevel, player.totalXP);
-  const recorded = ISLANDS.filter((i) => player.gameRecords[i.id]);
+  const recorded = GAMES.filter((g) => (player.gameRecords[g.gameId]?.plays ?? 0) > 0 || (player.gameRecords[g.gameId]?.bestScore ?? 0) > 0);
   return (
     <div className="p-screen">
       <div className="p-scroll">
         <div className="p-pcard">
-          <div className="p-portrait">
+          <div className="p-portrait" style={portraitStyle(player)} data-testid="portrait">
             <Avatar id={player.avatarId} size={76} className="" />
             <span className="p-lvbadge">
               LV<b>{player.playerLevel}</b>
@@ -95,6 +94,11 @@ export default function Profile({ onToast }: { onToast: (t: string) => void }) {
               <b>{player.nickname}</b>
               <span className="p-chip blue">#{player.publicCode}</span>
             </div>
+            {titleName(player) && (
+              <span className="p-chip gold" data-testid="title-chip">
+                {titleName(player)}
+              </span>
+            )}
             <div className="p-xp">
               <span className="p-bar-xp" role="progressbar" aria-valuenow={xp.into} aria-valuemax={xp.need} aria-label="경험치">
                 <i style={{ width: `${Math.round(xp.ratio * 100)}%` }} />
@@ -122,15 +126,35 @@ export default function Profile({ onToast }: { onToast: (t: string) => void }) {
           <p className="p-muted">가입일 {fmtDate(player.createdAt)}</p>
           <p className="p-muted">{persistent ? '이 기기에 저장돼 있어요 (온라인 미연결).' : '이 브라우저에서는 저장이 막혀 있어요.'}</p>
         </PixelPanel>
+        <PixelPanel title="통계">
+          <div className="p-stats" data-testid="stats">
+            <div className="p-stat">
+              <b>{player.totalPlayCount}</b>
+              <span>총 플레이</span>
+            </div>
+            <div className="p-stat">
+              <b>{player.stats.clears ?? 0}</b>
+              <span>클리어</span>
+            </div>
+            <div className="p-stat">
+              <b>{fmtDuration(player.totalPlayTimeSec)}</b>
+              <span>플레이 시간</span>
+            </div>
+            <div className="p-stat">
+              <b>
+                {Object.keys(player.achievements).length}
+              </b>
+              <span>업적</span>
+            </div>
+          </div>
+        </PixelPanel>
         <PixelPanel title="게임 기록">
           {recorded.length === 0 ? (
-            <p className="p-muted">아직 기록이 없어요. 게임 기록 연동은 다음 단계에서 열려요.</p>
+            <p className="p-muted" data-testid="no-records">
+              아직 기록이 없어요. 게임을 끝까지 하면 여기에 쌓여요.
+            </p>
           ) : (
-            recorded.map((i) => (
-              <p key={i.id} className="p-muted">
-                {i.gameTitle}
-              </p>
-            ))
+            recorded.map((g) => <RecordRows key={g.gameId} gameId={g.gameId} name={g.name} player={player} />)
           )}
         </PixelPanel>
       </div>
@@ -157,3 +181,32 @@ export default function Profile({ onToast }: { onToast: (t: string) => void }) {
     </div>
   );
 }
+
+/** 게임 한 개의 기록 줄(하위 게임이 있으면 각각) */
+export function RecordRows({ gameId, name, player }: { gameId: string; name: string; player: PlayerData }) {
+  const rec = player.gameRecords[gameId];
+  if (!rec) return null;
+  const subs = rec.subGames ? Object.entries(rec.subGames) : [];
+  const line = (key: string, label: string, r: typeof rec) => (
+    <div key={key} className="p-recrow" data-testid={`rec-${key}`}>
+      <b>{label}</b>
+      <span>
+        {r.bestScore > 0 ? `최고 ${fmtScore(r.bestScore)}${r.bestScoreSource === 'import' ? ' (가져옴)' : ''}` : '최고 -'} · {r.plays}판 · 클리어 {r.clears}
+        {r.bestStage ? ` · ${r.bestStageLabel ?? '단계'} ${r.bestStage}` : ''}
+      </span>
+    </div>
+  );
+  return (
+    <div className="p-recgroup">
+      {subs.length === 0 ? line(gameId, name, rec) : (
+        <>
+          <p className="p-muted">
+            <b>{name}</b> · 총 {rec.plays}판
+          </p>
+          {subs.map(([id, r]) => line(`${gameId}-${id}`, SUB_NAMES[id] ?? id, r))}
+        </>
+      )}
+    </div>
+  );
+}
+const SUB_NAMES: Record<string, string> = { sort: '편가르기', tower: '아슬아슬 탑', toyroom: '장난감방', challenge: '랜덤 챌린지' };
