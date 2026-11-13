@@ -215,7 +215,7 @@ export class SkyEngine {
     this.flashWhite = 0.5;
     this.shake = 0.6;
     sfx('special');
-    this.banner = { text: 'FAMILY BOMB!', t: 1.0, col: '#ffd0e0' };
+    if (!this.a.v2['chars/gona/cutin']) this.banner = { text: 'FAMILY BOMB!', t: 1.0, col: '#ffd0e0' };
     // 별 폭죽
     for (let i = 0; i < 36; i++) {
       const a = (i / 36) * TAU;
@@ -227,7 +227,7 @@ export class SkyEngine {
     return { t: +this.t.toFixed(1), hp: this.hp, score: this.score, enemies: this.en.length, ebullets: this.eb.length, pbullets: this.pb.length, boss: this.boss ? this.boss.hp : -1, power: this.power, over: this.over ? 1 : 0, px: Math.round(this.px), py: Math.round(this.py), anim: this.lastAnim, spriteScale: +this.spriteK().toFixed(3), S: this.S };
   }
   cheat(cmd: string): void {
-    if (cmd === 'boss') this.t = Math.max(this.t, BOSS_WARN_T - 0.2);
+    if (cmd === 'boss') { this.t = Math.max(this.t, BOSS_WARN_T - 0.2); this.tlIdx = this.timeline.length; this.en = this.en.filter((e) => e.kind === 'boss'); this.eb = []; }
     if (cmd === 'power') this.power = 4;
     if (cmd === 'god') this.hp = 99;
     if (cmd === 'hp1') this.hp = 1;

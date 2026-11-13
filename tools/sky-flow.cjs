@@ -17,10 +17,10 @@ fs.mkdirSync(out, { recursive: true });
       await page.waitForTimeout(100);
     }
   };
-  for (let f = 1; f <= 5; f++) {
+  for (let f = 1; f <= 6; f++) {
     await page.goto(`${base}?skytest&r=${Math.random()}#sky`);
     await page.waitForSelector('.sel-art');
-    await page.click(`.sky-card >> nth=${f - 1}`);
+    await page.click(`.sel-roster li:nth-child(${f}) button`);
     await page.click('.sky-btn-go');
     await page.waitForSelector('.sky-canvas');
     const box = await (await page.$('.sky-canvas')).boundingBox();
