@@ -37,7 +37,7 @@ const AV = {
 };
 const S = {
   p: { nick: '고나짱', code: 'K7Q2', av: 'gona', lv: 7, xp: 340, next: 500, coins: 1280, title: '고나의 첫걸음', joined: '2026.11.13', frame: 'basic' },
-  net: false, demo: false, toast: '', modal: null, rankGame: 'food', rankPeriod: 'weekly', achTab: 'common', cxTab: '캐릭터', cxSel: null, shopTab: '아바타',
+  hud: 'B', net: false, demo: false, toast: '', modal: null, rankGame: 'food', rankPeriod: 'weekly', achTab: 'common', cxTab: '캐릭터', cxSel: null, shopTab: '아바타',
   set: { bgm: true, sfx: true, vib: true, reduce: false, vol: 70 },
   reg: { step: 1, nick: '', av: 'gona' },
   owned: { cookie: true, f_basic: true, f_leaf: false },
@@ -58,9 +58,13 @@ function av(id, px = 32, extra = '') {
 const xpPct = () => Math.round((S.p.xp / S.p.next) * 100);
 const tab = (id, label, ic, on, pip) => `<button data-nav="${id}" class="${on ? 'on' : ''}">${icon(ic, 2)}<span>${label}</span>${pip ? '<i class="pip"></i>' : ''}</button>`;
 function nav(cur) {
-  return `<nav class="nav" aria-label="메뉴">${tab('world', 'WORLD', 'map', cur === 'world')}${tab('profile', 'PROFILE', 'user', cur === 'profile')}${tab('ranking', 'RANKING', 'trophy', cur === 'ranking')}${tab('more', 'MORE', 'more', ['achievements', 'codex', 'missions', 'shop', 'settings'].includes(cur), true)}</nav>`;
+  return `<nav class="nav" aria-label="메뉴">${tab('world', 'WORLD', 'map', cur === 'world')}${S.hud === 'C' ? `<button data-nav="profile" class="${cur === 'profile' ? 'on' : ''}"><span class="navav">${av(S.p.av, 22)}<b>${S.p.lv}</b></span><span>PROFILE</span></button>` : tab('profile', 'PROFILE', 'user', cur === 'profile')}${tab('ranking', 'RANKING', 'trophy', cur === 'ranking')}${tab('more', 'MORE', 'more', ['achievements', 'codex', 'missions', 'shop', 'settings'].includes(cur), true)}</nav>`;
 }
-const header = () => `<header class="top"><svg class="star" viewBox="0 0 7 7" shape-rendering="crispEdges"><g fill="#ffd84a"><rect x="3" y="0" width="1" height="3"/><rect x="0" y="3" width="7" height="1"/><rect x="2" y="2" width="3" height="3"/></g></svg><div class="logo"><h1>GONA GONE WILD!</h1><span class="ko">고나가 떴고나!</span></div><svg class="star" viewBox="0 0 7 7" shape-rendering="crispEdges"><g fill="#ffd84a"><rect x="3" y="0" width="1" height="3"/><rect x="0" y="3" width="7" height="1"/><rect x="2" y="2" width="3" height="3"/></g></svg></header>`;
+const STAR = `<svg class="star" viewBox="0 0 7 7" shape-rendering="crispEdges"><g fill="#ffd84a"><rect x="3" y="0" width="1" height="3"/><rect x="0" y="3" width="7" height="1"/><rect x="2" y="2" width="3" height="3"/></g></svg>`;
+const pbtn = (full) => `<button class="pbtn" data-nav="profile" aria-label="프로필 열기">${av(S.p.av, 28)}<span class="meta"><span class="nm">${S.p.nick}</span><span class="lv">LV${S.p.lv}<span class="bar"><i style="width:${xpPct()}%"></i></span></span></span></button>`;
+const pmini = () => `<button class="pbtn mini" data-nav="profile" aria-label="프로필 열기">${av(S.p.av, 28)}<span class="lvtag">LV${S.p.lv}</span></button>`;
+const coinchip = () => `<div class="coinchip"><i class="c"></i>${S.p.coins.toLocaleString()}</div>`;
+const header = () => S.hud === 'B' ? `<header class="top hudb">${pbtn()}<div class="logo"><h1>GONA GONE WILD!</h1><span class="ko">고나가 떴고나!</span></div>${coinchip()}</header>` : `<header class="top"><svg class="star" viewBox="0 0 7 7" shape-rendering="crispEdges"><g fill="#ffd84a"><rect x="3" y="0" width="1" height="3"/><rect x="0" y="3" width="7" height="1"/><rect x="2" y="2" width="3" height="3"/></g></svg><div class="logo"><h1>GONA GONE WILD!</h1><span class="ko">고나가 떴고나!</span></div><svg class="star" viewBox="0 0 7 7" shape-rendering="crispEdges"><g fill="#ffd84a"><rect x="3" y="0" width="1" height="3"/><rect x="0" y="3" width="7" height="1"/><rect x="2" y="2" width="3" height="3"/></g></svg></header>`;
 const titlebar = (t, back = 'world') => `<div class="bar-title"><button class="back" data-nav="${back}" aria-label="뒤로">‹</button><h2>${t}</h2></div>`;
 const wrapScreen = (cur, t, body, back) => `${titlebar(t, back)}<div class="screen"><div class="scroll">${body}</div></div>${nav(cur)}`;
 
@@ -74,21 +78,27 @@ function validNick(n) {
 }
 function screenRegister() {
   const r = S.reg; const v = validNick(r.nick);
+  const slots = (n) => { const ch = [...n]; return `<div class="slots" aria-hidden="true">${Array.from({ length: 10 }, (_, i) => `<i class="${i === ch.length ? 'cur' : ''}">${ch[i] || ''}</i>`).join('')}</div>`; };
+  const steps = (k) => `<div class="steps"><i class="${k >= 1 ? 'on' : ''}">1</i><i class="${k >= 2 ? 'on' : ''}">2</i><i class="${k >= 3 ? 'on' : ''}">3</i></div>`;
   if (r.step === 3) {
-    return `<div class="reg" style="justify-content:center;align-items:center;text-align:center;gap:14px"><div class="steps"><i></i><i></i><i class="on"></i></div>
-      <img src="assets/gona.png" style="width:135px;height:170px;animation:hop .7s steps(6) infinite alternate" alt=""><div class="bubble">어서 와, <b>${r.nick || '고나짱'}</b>!<br>고나 게임천국에 오신 걸 환영해요 🎉</div>
-      <div class="panel" style="width:100%"><div class="row" style="justify-content:center">${av(r.av, 40)}<div style="text-align:left"><b style="font-size:14px">${r.nick || '고나짱'}</b> <span class="chip blue">#K7Q2</span><div class="muted">LV 1 · 고나 코인 0</div></div></div></div>
-      <button class="btn block" data-nav="world">월드맵으로 출발!</button><p class="muted">이 기기에 저장돼요. 기기 변경·Safari 데이터 삭제 시 기록이 사라질 수 있어요 — 설정 &gt; 백업에서 보관하세요.</p></div><style>@keyframes hop{from{transform:translateY(0)}to{transform:translateY(-14px)}}</style>`;
+    return `<div class="reg center">${steps(3)}<div class="ribbon2">WELCOME!</div>
+      <div class="stagebox"><img class="hero-s hop" src="assets/gona.png" alt=""><i class="plat"></i></div>
+      <div class="bubble">어서 와, <b>${r.nick || '고나짱'}</b>!<br>고나 게임천국에 온 걸 환영해!</div>
+      <div class="idcard">${av(r.av, 44)}<div><b>${r.nick || '고나짱'}</b> <span class="chip blue">#K7Q2</span><div class="muted">LV 1 · 코인 0 · 기록 0</div></div></div>
+      <button class="btn block big" data-nav="world">▶ START!</button><p class="muted">이 기기에 저장돼요. 기기를 바꾸거나 Safari 데이터를 지우면 기록이 사라질 수 있어요. 설정 &gt; 백업에서 보관하세요.</p></div>`;
   }
   const body = r.step === 1
-    ? `<div class="field"><label class="muted" for="nick">닉네임 (한글·영문·숫자 2~10자)</label><input id="nick" value="${r.nick}" maxlength="12" autocomplete="off" placeholder="예: 고나짱"><div class="hint"><i class="${v.okLen ? 'ok' : r.nick ? 'bad' : ''}">${v.len}/10자 · 2자 이상</i><i class="${v.okChars ? 'ok' : 'bad'}">공백·특수문자 없음</i><i class="${v.okBad ? 'ok' : 'bad'}">부적절한 표현 없음</i></div></div>
-       <div class="panel"><div class="muted">닉네임은 같아도 괜찮아요. 내 기록은 <b>고유 ID</b>로 구분되고, 랭킹에는 <b>#식별코드</b>가 함께 표시돼요. 이메일·비밀번호는 필요 없어요.</div></div>
-       <button class="btn block ${v.ok ? '' : 'off'}" data-act="regnext" ${v.ok ? '' : 'disabled'}>다음 ›</button>`
-    : `<div class="avs">${Object.keys(AV).map((k) => `<button data-act="regav" data-id="${k}" class="${r.av === k ? 'on' : ''}">${av(k, 40)}<span>${AV[k].n}</span></button>`).join('')}</div>
-       <div class="panel row" style="justify-content:center">${av(r.av, 48)}<div><b style="font-size:14px">${r.nick}</b> <span class="chip blue">#K7Q2</span><div class="muted">선택한 아바타: ${AV[r.av].n}</div></div></div>
-       <p class="muted">알·별 아바타는 <b>임시 도트</b>(빨간 점선)입니다 — 신규 에셋 승인 후 제작합니다. 아바타·닉네임은 나중에 프로필에서 바꿀 수 있어요.</p>
-       <div class="row"><button class="btn sub" data-act="regback">‹ 이전</button><button class="btn" style="flex:1" data-act="regdone">시작하기!</button></div>`;
-  return `<div class="reg"><div class="steps"><i class="on"></i><i class="${r.step >= 2 ? 'on' : ''}"></i><i></i></div><div class="hero"><img src="assets/gona.png" alt=""><div class="bubble">${r.step === 1 ? '처음 왔구나! 이름을 알려줄래?' : '함께할 아바타를 골라줘!'}</div></div>${body}</div>`;
+    ? `<div class="ribbon2">NEW PLAYER</div><div class="hero2"><div class="stagebox sm"><img class="hero-s" src="assets/gona.png" alt=""><i class="plat"></i></div><div class="bubble">처음 왔구나!<br>이름을 알려줄래?</div></div>
+       <div class="field"><label class="muted" for="nick">닉네임 · 한글·영문·숫자 2~10자</label><input id="nick" class="plate" value="${r.nick}" maxlength="12" autocomplete="off" placeholder="이름 입력">${slots(r.nick)}
+       <div class="hint"><i class="${v.okLen ? 'ok' : r.nick ? 'bad' : ''}">${v.len}/10 · 2자 이상</i><i class="${v.okChars ? 'ok' : 'bad'}">공백·특수문자 없음</i><i class="${v.okBad ? 'ok' : 'bad'}">부적절한 표현 없음</i></div></div>
+       <div class="panel"><div class="muted">같은 닉네임도 괜찮아요. 내 기록은 <b>내부 ID</b>로 구분하고, 랭킹엔 <b>#식별코드</b>가 함께 보여요. 이메일·비밀번호는 필요 없어요.</div></div>
+       <button class="btn block big ${v.ok ? '' : 'off'}" data-act="regnext" ${v.ok ? '' : 'disabled'}>다음 ▶</button>`
+    : `<div class="ribbon2">CHARACTER SELECT</div>
+       <div class="pick"><div class="big-av">${av(r.av, 84)}<b>${r.nick}</b><span class="chip blue">#K7Q2</span></div>
+       <div class="avs">${Object.keys(AV).map((k) => `<button data-act="regav" data-id="${k}" class="${r.av === k ? 'on' : ''}">${r.av === k ? '<em>▶</em>' : ''}${av(k, 40)}<span>${AV[k].n}</span>${AV[k].ph ? '<u>임시</u>' : ''}</button>`).join('')}</div></div>
+       <p class="muted">알·별은 <b>임시 도트</b>(점선 표시)이며 정식 픽셀 에셋으로 교체 예정이에요. 아바타·닉네임은 나중에 바꿀 수 있어요.</p>
+       <div class="row"><button class="btn sub" data-act="regback">◀ 이전</button><button class="btn big" style="flex:1" data-act="regdone">이걸로 결정!</button></div>`;
+  return `<div class="reg">${steps(r.step)}${body}</div>`;
 }
 
 const hudHtml = () => `<div class="hud"><button class="badge" data-nav="profile" aria-label="프로필 열기">${av(S.p.av, 30)}<span class="meta"><span class="nm">${S.p.nick}</span><span class="lv">LV ${S.p.lv}<span class="bar"><i style="width:${xpPct()}%"></i></span></span></span></button>
@@ -110,7 +120,9 @@ function moreHtml() {
 }
 function screenWorld(q) {
   const isl = q.get('island');
-  return `${header()}${hudHtml()}<div class="stage"><div class="mapbox" id="mapbox"><div class="fit" id="fit"><div class="world" id="world"><img class="bg" src="assets/gona-world-map.png" alt="월드맵"><img class="gona" id="gona" src="assets/gona.png" alt="고나">
+  if (q.get('hud')) S.hud = q.get('hud');
+  const ov = S.hud === 'A' ? `<div class="ovl l">${pmini()}</div><div class="ovl r">${coinchip()}</div>` : S.hud === 'C' ? `<div class="ovl r">${coinchip()}</div>` : '';
+  return `${header()}<div class="stage">${ov}<div class="mapbox" id="mapbox"><div class="fit" id="fit"><div class="world" id="world"><img class="bg" src="assets/gona-world-map.png" alt="월드맵"><img class="gona" id="gona" src="assets/gona.png" alt="고나">
     ${Object.values(GAMES).map((g) => `<button class="hit ${isl === g.id ? 'sel' : ''}" data-act="island" data-id="${g.id}" aria-label="${g.island}" style="left:${g.hit.x}px;top:${g.hit.y}px;width:${g.hit.w}px;height:${g.hit.h}px;${g.hit.clip ? 'clip-path:' + g.hit.clip : ''}"></button>`).join('')}</div></div></div>
     ${isl ? popupHtml(GAMES[isl]) : ''}${q.get('more') ? moreHtml() : ''}</div>${nav(q.get('more') ? 'more' : 'world')}`;
 }
@@ -132,12 +144,14 @@ function layoutWorld(q) {
 
 function screenProfile() {
   const p = S.p;
-  return wrapScreen('profile', 'PROFILE', `<div class="panel"><div class="row" style="gap:10px">${av(p.av, 64)}<div style="flex:1;min-width:0"><div class="row"><b style="font-size:16px">${p.nick}</b><span class="chip blue">#${p.code}</span></div>
-    <div class="row" style="margin:5px 0 3px"><span class="chip gold">LV ${p.lv}</span><span class="chip ok">${p.title}</span></div><div class="row"><span class="bar"><i style="width:${xpPct()}%"></i></span><span style="font-size:9px;white-space:nowrap">${p.xp}/${p.next} XP</span></div></div></div>
-    <div class="muted" style="margin-top:6px">가입일 ${p.joined} · 이 기기에 저장됨(온라인 미연결)</div><div class="row" style="margin-top:8px"><button class="btn sm sub" data-act="edit" data-what="avatar">아바타</button><button class="btn sm sub" data-act="edit" data-what="nick">닉네임</button><button class="btn sm sub" data-act="edit" data-what="title">칭호</button><button class="btn sm sub" data-act="edit" data-what="frame">테두리</button></div></div>
-    <div class="panel"><h3>플레이 통계 <span class="sp"></span><span class="chip">샘플</span></h3><div class="grid" style="grid-template-columns:repeat(3,1fr)"><div class="stat"><b>12</b><span>총 플레이</span></div><div class="stat"><b>1시간 8분</b><span>총 플레이 시간</span></div><div class="stat"><b>1 / 3</b><span>플레이한 게임</span></div><div class="stat"><b>4 / 30</b><span>업적</span></div><div class="stat"><b>2,150</b><span>누적 코인</span></div><div class="stat"><b>3 / 4</b><span>최고 단계</span></div></div></div>
-    <div class="panel"><h3>게임별 기록</h3><div class="grid">${Object.values(GAMES).map((g) => `<div class="row" style="background:#fff;border:2px solid var(--ink);padding:6px 8px"><b style="font-size:11px;flex:1">${g.island}</b>${g.open ? `<span class="chip gold">최고 ${g.best}</span><span class="chip">${g.stage}</span>` : '<span class="chip soon">COMING SOON</span>'}</div>`).join('')}</div></div>
-    <div class="panel"><h3>기록 공유 · 백업</h3><div class="row"><button class="btn sm off" disabled>이미지로 공유 (예정)</button><button class="btn sm sub" data-nav="settings">백업·복구</button></div></div>`);
+  return wrapScreen('profile', 'PROFILE', `<div class="pcard"><div class="portrait">${av(p.av, 76)}<span class="lvbadge">LV<b>${p.lv}</b></span></div>
+    <div class="info"><div class="nameplate"><b>${p.nick}</b><span class="chip blue">#${p.code}</span></div><div class="titleplate">${p.title}</div>
+    <div class="xp"><span class="bar"><i style="width:${xpPct()}%"></i></span><small>${p.xp} / ${p.next} XP</small></div><div class="coinline"><i class="c"></i>${p.coins.toLocaleString()} <small>· ${p.joined} 시작</small></div></div></div>
+    <div class="row cust"><button class="btn sm sub" data-act="edit" data-what="avatar">아바타</button><button class="btn sm sub" data-act="edit" data-what="nick">닉네임</button><button class="btn sm sub" data-act="edit" data-what="title">칭호</button><button class="btn sm sub" data-act="edit" data-what="frame">테두리</button></div>
+    <div class="panel"><h3>플레이 통계 <span class="sp"></span><span class="chip">샘플</span></h3><div class="grid" style="grid-template-columns:repeat(3,1fr)"><div class="stat"><b>12</b><span>총 플레이</span></div><div class="stat"><b>1시간 8분</b><span>플레이 시간</span></div><div class="stat"><b>1 / 3</b><span>플레이한 게임</span></div></div></div>
+    <div class="panel"><h3>게임별 기록</h3><div class="grid">${Object.values(GAMES).map((g) => `<div class="grow"><b>${g.island}</b>${g.open ? `<span class="chip gold">최고 ${g.best}</span><span class="chip">${g.stage}</span>` : '<span class="chip soon">COMING SOON</span>'}</div>`).join('')}</div></div>
+    <div class="panel"><h3>업적 4 / 30 <span class="sp"></span><button class="btn sm sub" data-nav="achievements">보기</button></h3><div class="row">${icon('star', 3)}${icon('star', 3)}${icon('star', 3)}${icon('star', 3)}<span class="muted">· 이 기기에 저장됨 (온라인 미연결)</span></div></div>
+    <div class="panel"><div class="row"><button class="btn sm off" disabled>이미지로 공유 (예정)</button><button class="btn sm sub" data-nav="settings">백업·복구</button></div></div>`);
 }
 
 const SAMPLE = [['예시닉 A', 'A1B2', 12400], ['예시닉 B', 'C3D4', 11800], ['예시닉 C', 'E5F6', 10950], ['예시닉 D', 'G7H8', 9300], ['예시닉 E', 'J9K1', 8800], ['예시닉 F', 'L2M3', 7100], ['예시닉 G', 'N4P5', 6600]];
@@ -212,7 +226,7 @@ function modalHtml() {
   return `<div class="scrim" data-act="mclose"><div class="panel modal" onclick="event.stopPropagation()">${body}</div></div>`;
 }
 function render() {
-  const { name, q } = parse(); const fn = SCREENS[name] || screenWorld;
+  const { name, q } = parse(); if (q.get('hud')) S.hud = q.get('hud'); const fn = SCREENS[name] || screenWorld;
   $('#app').innerHTML = `${CLEAN ? '' : '<span class="sample">시안 · 샘플 데이터</span>'}${fn(q)}${S.toast ? `<div class="toast">${S.toast}</div>` : ''}${modalHtml()}`;
   if (name === 'world') requestAnimationFrame(() => layoutWorld(q));
   const ni = $('#nick'); if (ni) ni.addEventListener('input', () => { S.reg.nick = ni.value; const pos = ni.selectionStart; render(); const n2 = $('#nick'); n2.focus(); n2.setSelectionRange(pos, pos); });
