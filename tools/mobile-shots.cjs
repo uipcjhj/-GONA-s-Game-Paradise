@@ -27,7 +27,12 @@ fs.mkdirSync(outDir, { recursive: true });
 
 async function capture(browser, url, tag, [w, h]) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
-  await ctx.addInitScript(() => { try { localStorage.setItem('gona.openingSeen', '1'); } catch (e) {} }); // 재방문 상태(오프닝 생략)로 열기
+  await ctx.addInitScript(() => { // 재방문 상태(오프닝 생략 + 등록된 플레이어)로 열기 — before(main) 빌드는 gp.v1 키를 무시함
+    try {
+      localStorage.setItem('gona.openingSeen', '1');
+      if (!localStorage.getItem('gp.v1.player')) localStorage.setItem('gp.v1.player', JSON.stringify({ schemaVersion: 1, playerId: '11111111-2222-4333-8444-555555555555', nickname: '고나짱', publicCode: 'K7Q2', avatarId: 'gona', createdAt: '2026-11-13T00:00:00.000Z', lastPlayedAt: '2026-11-13T00:00:00.000Z', playerLevel: 1, totalXP: 0, coinBalance: 0, settings: { bgm: true }, gameRecords: {}, achievements: [], unlockedAvatarIds: [] }));
+    } catch (e) {}
+  });
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));

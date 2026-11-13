@@ -1,10 +1,11 @@
 import PixelIcon from './PixelIcon';
 
-export type Tab = 'map' | 'profile' | 'ranking';
+export type Tab = 'map' | 'profile' | 'ranking' | 'more';
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'map', label: '월드맵', icon: 'map' },
-  { id: 'profile', label: '프로필', icon: 'user' },
-  { id: 'ranking', label: '랭킹', icon: 'trophy' },
+  { id: 'map', label: 'WORLD', icon: 'map' },
+  { id: 'profile', label: 'PROFILE', icon: 'user' },
+  { id: 'ranking', label: 'RANKING', icon: 'trophy' },
+  { id: 'more', label: 'MORE', icon: 'more' },
 ];
 
 export default function BottomNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {

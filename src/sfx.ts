@@ -76,3 +76,14 @@ export function playOpeningSfx(): void {
   tone(c, t0 + 0.52, 330, 0.14, 'square', 0.09, 760); // 폴짝
   tone(c, t0 + 1.64, 300, 0.16, 'triangle', 0.2, 90); // 통
 }
+
+/** 효과음 켜기/끄기 (기존 `gona.mute` 키 그대로 사용 — 플랫폼 데이터 초기화와 무관) */
+export function setMuted(m: boolean): void {
+  try {
+    if (m) localStorage.setItem('gona.mute', '1');
+    else localStorage.removeItem('gona.mute');
+  } catch {
+    /* 저장 불가 환경: 이번 접속에서만 적용되지 않음 */
+  }
+  if (m) stopAllSfx();
+}
