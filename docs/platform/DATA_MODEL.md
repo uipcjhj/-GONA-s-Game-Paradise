@@ -1,3 +1,5 @@
+> **구현 현황**: v2 구조는 `src/platform/types.ts`·`schema.ts` 에 구현됨(아래 초안과 일부 다름 — 코드가 기준). 마이그레이션/검증/제약은 [LOCALSTORAGE_LIMITS.md](LOCALSTORAGE_LIMITS.md) 참고.
+
 # 데이터 구조 (DATA_MODEL)
 
 로컬 저장 키는 모두 `gp.v1.` 접두사. 최상위 `schemaVersion`으로 마이그레이션한다.

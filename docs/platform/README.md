@@ -17,3 +17,7 @@
 
 ## Phase 2 설계 (Food Adventure 플레이 기록 연동)
 - [PHASE2_FOOD_INTEGRATION](PHASE2_FOOD_INTEGRATION.md) · [GAME_RESULT_CONTRACT](GAME_RESULT_CONTRACT.md) · 시안 `prototype/phase2.html` / `screens/phase2/`
+
+## 전체 기능 개발 (브랜치 claude/platform-full-development)
+- [FULL_DEVELOPMENT_REPORT](FULL_DEVELOPMENT_REPORT.md) · [LOCALSTORAGE_LIMITS](LOCALSTORAGE_LIMITS.md) · [progress/STATUS](progress/STATUS.md)
+- Food 패치 준비본: [food-patch/README](food-patch/README.md) · 랭킹 서버 초안: [backend/API_CONTRACT](backend/API_CONTRACT.md)
