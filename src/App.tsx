@@ -6,6 +6,7 @@ import IslandPanel from './components/IslandPanel';
 import { ProfileView, RankingView } from './components/InfoViews';
 import WorldMap from './components/WorldMap';
 import PixelLeaf from './components/PixelLeaf';
+import Title from './components/Title';
 
 const HEADER_PX = 48;
 const NAV_PX = 66; // 떠 있는 내비게이션이 차지하는 아래쪽 자리(안전 영역 제외)
@@ -13,6 +14,7 @@ const MAX_FRAME = 600;
 const POPUP_PX = 80; // 팝업 높이(대략)
 
 export default function App() {
+  const [screen, setScreen] = useState<'title' | 'map'>('title');
   const [tab, setTab] = useState<Tab>('map');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [vp, setVp] = useState({ w: window.innerWidth, h: window.innerHeight });
@@ -41,7 +43,7 @@ export default function App() {
     ro.observe(el);
     setArea({ w: el.clientWidth, h: el.clientHeight });
     return () => ro.disconnect();
-  }, [tab, frameW]);
+  }, [tab, frameW, screen]);
 
   // 지도는 항상 '보여 줄 영역(VIEW)'을 화면에 최대한 크게 맞춤. 팝업 자리를 미리 비워 두지 않음.
   // 남는 세로 여백이 팝업 높이 이상이면 그 여백에 팝업이 앉고, 모자라면 지도 맨 아래(빈 바다·구름 쪽)에 겹쳐 앉음.
@@ -52,6 +54,8 @@ export default function App() {
   const mapTop = Math.max(0, Math.min(slack * 0.35, slack - POPUP_PX));
 
   const onArrive = useCallback((id: string | null) => setSelectedId(id), []);
+
+  if (screen === 'title') return <Title onStart={() => setScreen('map')} />;
 
   return (
     <div className="frame" style={{ width: frameW }}>
