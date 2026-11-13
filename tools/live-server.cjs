@@ -9,7 +9,8 @@ const fs = require('fs');
 const path = require('path');
 const [pdir, fdir, port = '8090', fprod] = process.argv.slice(2);
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.json': 'application/json', '.woff2': 'font/woff2', '.mp3': 'audio/mpeg', '.mp4': 'video/mp4', '.webp': 'image/webp', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml' };
-const MOUNTS = [['/-GONA-s-Game-Paradise/', pdir], ['/GoNa/', fdir], ...(fprod ? [['/GoNa-prod/', fprod]] : [])];
+const EXTRA = (process.env.EXTRA_MOUNTS || '').split(',').filter(Boolean).map((x) => x.split('=')); // 예: /mock/=tools/mock-game,/sdk/=docs/platform/sdk
+const MOUNTS = [['/-GONA-s-Game-Paradise/', pdir], ['/GoNa/', fdir], ...(fprod ? [['/GoNa-prod/', fprod]] : []), ...EXTRA];
 http.createServer((req, res) => {
   const u = decodeURIComponent(req.url.split('?')[0]);
   const m = MOUNTS.find(([p]) => u.startsWith(p));

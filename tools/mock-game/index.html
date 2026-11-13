@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>모의 게임 (연동 테스트 전용 — 실제 게임 아님)</title>
+<style>
+  body { margin: 0; font-family: sans-serif; background: #1c1230; color: #fff4d6; padding: 14px; }
+  h1 { font-size: 16px; margin: 0 0 6px; } p { font-size: 12px; margin: 4px 0 10px; color: #d8c8ff; }
+  button { font: inherit; font-weight: 700; min-height: 44px; padding: 0 12px; margin: 4px 4px 0 0; background: #ffc21a; border: 3px solid #3b1b5e; color: #3b1b5e; }
+  #score { font-size: 40px; font-weight: 700; margin: 8px 0; } .tag { background: #ec5048; color: #fff; font-size: 10px; padding: 2px 6px; }
+  a { color: #ffc21a; }
+</style></head><body>
+<h1><span class="tag">TEST ONLY</span> <span id="title">모의 게임</span></h1>
+<p>Sky Battle / Mini Game Land 연동 검증용 모의 게임입니다. 게임천국의 공통 SDK(<code>gp-sdk.js</code>)를 실제와 똑같이 사용합니다.</p>
+<div id="status">대기 중</div><div id="score">0</div>
+<div id="sub" hidden>미니게임: <select id="subsel"><option value="cat-jump">캣 점프</option><option value="fish-catch">물고기 잡기</option></select></div>
+<div><button id="start">시작</button><button id="add">+100점</button><button id="pause">일시정지</button><button id="resume">재개</button><button id="over">게임 오버</button><button id="clear">클리어</button></div>
+<p><a id="back" href="#" hidden>🏝 게임천국으로 돌아가기</a> <span id="active"></span></p>
+<script type="module">
+  import { initGame } from '../sdk/gp-sdk.js';
+  const q = new URLSearchParams(location.search);
+  const game = q.get('game') || 'sky-battle';
+  document.getElementById('title').textContent = game === 'sky-battle' ? '모의 Sky Battle' : '모의 Mini Game Land';
+  if (game === 'minigame-paradise') document.getElementById('sub').hidden = false;
+  const gp = initGame({ gameId: game, gameVersion: 'mock-1.0' });
+  document.getElementById('active').textContent = gp.active ? 'SDK 활성' : 'SDK 비활성(단독 실행)';
+  document.documentElement.dataset.sdk = gp.active ? 'on' : 'off';
+  let score = 0, stage = 1, over = false;
+  const $ = (id) => document.getElementById(id);
+  const show = () => { $('score').textContent = String(score); };
+  const finish = (outcome) => {
+    if (over) return;
+    over = true;
+    gp.runEnd({ outcome, score, stage, stageLabel: `스테이지 ${stage}`, extra: { mock: true } });
+    $('status').textContent = outcome === 'cleared' ? '클리어!' : '게임 오버';
+    if (gp.returnUrl) { $('back').href = gp.returnUrl; $('back').hidden = false; }
+  };
+  $('start').onclick = () => { score = 0; stage = 1; over = false; $('back').hidden = true; gp.runStart({ subGameId: game === 'minigame-paradise' ? $('subsel').value : undefined }); $('status').textContent = '플레이 중'; show(); };
+  $('add').onclick = () => { score += 100; if (score % 500 === 0) stage = Math.min(5, stage + 1); show(); };
+  $('pause').onclick = () => gp.runPause();
+  $('resume').onclick = () => gp.runResume();
+  $('over').onclick = () => finish('failed');
+  $('clear').onclick = () => finish('cleared');
+</script></body></html>
