@@ -57,11 +57,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .mapbox { flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; background: #1daefd; }
 .fit {
   position: absolute; overflow: hidden;
-  /* 이미지 가장자리만 바다색으로 부드럽게 이어 붙임(여백이 있을 때 구름이 뚝 잘려 보이지 않게) */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 2.5%, #000 97.5%, transparent 100%), linear-gradient(to right, transparent 0, #000 2.5%, #000 97.5%, transparent 100%);
-  -webkit-mask-composite: source-in;
-  mask-image: linear-gradient(to bottom, transparent 0, #000 2.5%, #000 97.5%, transparent 100%), linear-gradient(to right, transparent 0, #000 2.5%, #000 97.5%, transparent 100%);
-  mask-composite: intersect;
+  /* 아래쪽 가장자리만 바다색으로 부드럽게 (잘린 구름이 뚝 끊겨 보이지 않게) — 섬은 이 영역 밖 */
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 96%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0, #000 96%, transparent 100%);
 }
 .world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .bg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
@@ -95,25 +93,25 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* ── 작은 팝업 (지도 아래쪽 여백 · 화면 폭을 거의 다 쓰되 낮게) */
 .popup {
-  position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 6;
-  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px 10px;
-  padding: 10px 10px 10px 12px; background: var(--cream);
+  position: absolute; left: 8px; right: 8px; bottom: 6px; z-index: 6;
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 10px;
+  padding: 8px 8px 8px 10px; background: var(--cream);
   border: 3px solid var(--line); box-shadow: inset 0 3px 0 #fff, 0 3px 0 rgba(0, 0, 0, 0.25);
   animation: rise 0.2s steps(3);
 }
 @keyframes rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
-.popup-info { min-width: 0; display: flex; flex-direction: column; gap: 3px; padding-right: 22px; }
-.popup h2 { margin: 3px 0 0; font-size: 15px; line-height: 1.25; word-break: keep-all; overflow-wrap: anywhere; }
-.popup p { margin: 0; font-size: 11px; line-height: 1.4; color: #6b4330; word-break: keep-all; }
+.popup-info { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding-right: 20px; }
+.popup h2 { margin: 2px 0 0; font-size: 14px; line-height: 1.25; word-break: keep-all; overflow-wrap: anywhere; }
+.popup p { margin: 0; font-size: 11px; line-height: 1.35; color: #6b4330; word-break: keep-all; }
 .popup-close {
-  position: absolute; right: 4px; top: 4px; width: 22px; height: 22px; padding: 0; line-height: 1; font-size: 16px; font-weight: 700;
+  position: absolute; right: 3px; top: 3px; width: 20px; height: 20px; padding: 0; line-height: 1; font-size: 15px; font-weight: 700;
   background: #fff; border: 2px solid var(--line);
 }
 .chip { align-self: flex-start; font-size: 10px; line-height: 1; padding: 3px 6px 4px; border: 2px solid var(--line); font-weight: 700; }
 .chip-open { background: #8fe06a; }
 .chip-soon { background: #ffb3c6; }
 .btn {
-  display: flex; align-items: center; justify-content: center; min-width: 76px; min-height: 44px; padding: 0 12px;
+  display: flex; align-items: center; justify-content: center; min-width: 70px; min-height: 44px; padding: 0 10px;
   font-size: 15px; font-weight: 700; text-decoration: none; border: 3px solid var(--line);
 }
 .btn-go { background: #ffd84a; color: var(--line); box-shadow: inset 0 -5px 0 #e8a92c, 0 3px 0 rgba(0, 0, 0, 0.3); }
