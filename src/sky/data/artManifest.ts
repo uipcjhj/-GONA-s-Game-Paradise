@@ -7,16 +7,18 @@ import type { CharId } from './characters';
 
 const BASE = `${import.meta.env.BASE_URL}assets/sky/v2/`;
 
-/** 스프라이트 시트: 가로 = 프레임, 세로 = 애니메이션 행 (행 순서 고정). 셀 크기는 캐릭터별(기본 96×96) */
+/** 스프라이트 시트: 가로 = 프레임(4), 세로 = 애니메이션 행(10, 순서 고정) → 기본 384×960. 셀 크기는 캐릭터별(기본 96×96) */
 export const SPRITE_ROWS = [
   { name: 'fly', frames: 4, fps: 10, loop: true },
-  { name: 'bankL', frames: 2, fps: 8, loop: true },
-  { name: 'bankR', frames: 2, fps: 8, loop: true },
-  { name: 'shoot', frames: 3, fps: 12, loop: false },
-  { name: 'charge', frames: 3, fps: 10, loop: true },
-  { name: 'bomb', frames: 3, fps: 10, loop: false },
-  { name: 'hurt', frames: 2, fps: 10, loop: false },
-  { name: 'win', frames: 2, fps: 6, loop: true },
+  { name: 'bankL', frames: 4, fps: 8, loop: false }, // 0·1 약한 기울기(약 12°) → 2·3 강한 기울기(약 25°)
+  { name: 'bankR', frames: 4, fps: 8, loop: false },
+  { name: 'idle', frames: 4, fps: 6, loop: true },
+  { name: 'shoot', frames: 4, fps: 12, loop: false },
+  { name: 'charge', frames: 4, fps: 10, loop: true },
+  { name: 'bomb', frames: 4, fps: 10, loop: false },
+  { name: 'hurt', frames: 4, fps: 12, loop: false },
+  { name: 'defeat', frames: 4, fps: 8, loop: false },
+  { name: 'win', frames: 4, fps: 8, loop: false },
 ] as const;
 export type SpriteRowName = (typeof SPRITE_ROWS)[number]['name'];
 
