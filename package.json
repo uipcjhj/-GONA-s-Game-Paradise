@@ -8,7 +8,8 @@
     "dev": "vite --host",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "shots": "node tools/mobile-shots.cjs"
   },
   "dependencies": {
     "galmuri": "^2.40.3",
