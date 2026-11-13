@@ -36,7 +36,7 @@ ims=[Image.open(f).convert('RGB') for f in fr]
 ims_all=ims+[ims[-1]]*14
 pal=[im.quantize(colors=128,method=Image.Quantize.MEDIANCUT,dither=Image.Dither.NONE) for im in ims_all]
 pal[0].save(out,save_all=True,append_images=pal[1:],duration=50,loop=0,optimize=False)`, path.join(outDir, `opening-${size}.gif`), ...frames]);
-  const picks = [0, 150, 450, 700, 850, 1050, 1300, 1500, 1700, 1900, 2200, 2600];
+  const picks = [0, 250, 500, 700, 850, 1000, 1100, 1300, 1500, 1700, 1900, 2200];
   execFileSync('python3', ['-c', `
 import sys
 from PIL import Image

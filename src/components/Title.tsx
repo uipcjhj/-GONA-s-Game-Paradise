@@ -1,12 +1,12 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { playOpeningSfx, playStartSfx, stopAllSfx, unlockAudio } from '../sfx';
+import { playOpeningSfx, stopAllSfx, unlockAudio } from '../sfx';
 
 /**
- * 타이틀 화면 + 오프닝(2.4초). 배경 · 로고 · 부제 · 고나는 승인된 이미지 그대로이며 서로 독립된 레이어입니다.
+ * 타이틀 화면 + 짧은 오프닝(2초). 배경 · 로고 · 부제 · 고나는 승인된 이미지 그대로이며 서로 독립된 레이어입니다.
  *  - 기준: 고나 원본 스프라이트(27×34) 1도트 = s CSS px (s = 4, 넓은 화면 5). 모든 위치는 s 의 배수(격자 어긋남 없음)
- *  - 오프닝 전용 레이어만 추가: 발자국 · 날아가는 고나 실루엣 · 별 (public/assets/opening/, tools/build-opening-assets.py)
- *  - 오프닝은 transform/opacity 애니메이션만 사용 → iPhone Safari 에서도 부드럽게
- * 흐름: 첫 방문 = 오프닝 자동 재생 → 타이틀 대기 / 재방문 = 타이틀부터 / 오프닝 중 터치 = 건너뛰고 타이틀 / 타이틀에서 터치 = 월드맵
+ *  - 오프닝은 새 이미지 없이 기존 레이어를 CSS 애니메이션(transform/opacity)으로만 움직임 → iPhone Safari 에서도 부드럽게
+ *    0~0.5초 배경 페이드인 · 0.5~1.2초 고나가 아래에서 폴짝 착지 · 1.2~2초 로고 한 번 통통 착지 + 부제 · 이후 타이틀 대기
+ * 흐름: 첫 방문 = 오프닝 자동 재생 / 재방문 = 타이틀부터 / 오프닝 중 터치 = 건너뛰기 / 타이틀에서 터치 = 월드맵 / ↻ 다시 보기
  */
 const BG_W = 110;
 const BG_H = 245;
@@ -16,21 +16,9 @@ const SUB_PX_W = 300;
 const SUB_PX_H = 64; // 300 × 0.2137
 const GONA_W = 27;
 const GONA_H = 34;
-const FLY_W = 80; // 날아가는 실루엣(도트)
-const FLY_H = 44;
-const FP_W = 15;
-const FP_H = 16;
-const SPARK = 5;
 /** 배경 도트 좌표에서 고나가 서는 곳 (모래섬 위 · 발끝 기준) */
 const GONA_FEET = { x: 55, y: 198 };
-/** 발자국: 모래섬 위, 왼쪽에서 오른쪽으로 통통통 (배경 도트 좌표, 발자국 가운데 아래 기준) */
-const FOOTPRINTS = [
-  { x: 24, y: 212, d: 0, r: -8 },
-  { x: 42, y: 206, d: 150, r: 6 },
-  { x: 60, y: 213, d: 300, r: -6 },
-  { x: 78, y: 206, d: 450, r: 8 },
-];
-const OPENING_MS = 2400;
+const OPENING_MS = 2000;
 const SEEN_KEY = 'gona.openingSeen';
 
 function seenBefore(): boolean {
@@ -59,6 +47,7 @@ interface Layout {
   subTop: number;
   gonaLeft: number;
   gonaTop: number;
+  gdrop: number;
 }
 
 function layout(): Layout {
@@ -84,6 +73,7 @@ function layout(): Layout {
     subTop: logoTop + LOGO_PX_H + s,
     gonaLeft: bgLeft + (GONA_FEET.x - Math.floor(GONA_W / 2)) * s,
     gonaTop: bgTop + (GONA_FEET.y - GONA_H) * s,
+    gdrop: vh - (bgTop + (GONA_FEET.y - GONA_H) * s) + 8 * s, // 화면 아래 바깥에서 출발
   };
 }
 
@@ -138,7 +128,6 @@ export default function Title({ onStart }: { onStart: () => void }) {
       return;
     }
     if (Date.now() - lastSkip.current < 450) return; // 건너뛰기 직후의 연타(중복 터치)는 무시
-    playStartSfx();
     setLeaving(true);
     window.setTimeout(onStart, 220);
   };
@@ -153,37 +142,18 @@ export default function Title({ onStart }: { onStart: () => void }) {
 
   const px = (n: number) => `${n}px`;
   const cls = `title${play ? ' playing' : ''}${seek !== null ? ' seeking' : ''}${leaving ? ' leaving' : ''}`;
-  const rootStyle = { ['--u' as string]: px(L.s), ['--vw' as string]: px(L.vw), ['--fw' as string]: px(FLY_W * L.s), ['--seek' as string]: seek !== null ? `${seek}ms` : '0ms' };
-  const logoRight = L.logoLeft + LOGO_W * L.s;
-  const sparks = [
-    { x: L.logoLeft - L.s * 3, y: L.logoTop + L.s * 6 },
-    { x: logoRight - L.s * 2, y: L.logoTop + L.s * 12 },
-    { x: L.logoLeft + L.s * 8, y: L.logoTop + LOGO_PX_H - L.s * 4 },
-    { x: logoRight - L.s * 14, y: L.logoTop + LOGO_PX_H - L.s * 2 },
-  ];
-
+  const rootStyle = { ['--u' as string]: px(L.s), ['--gdrop' as string]: px(L.gdrop), ['--seek' as string]: seek !== null ? `${seek}ms` : '0ms' };
   return (
     <div className={cls} onClick={onTap} role="button" tabIndex={0} aria-label="화면을 터치하면 시작합니다" onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onTap()} style={rootStyle}>
       <img className="t-bg" src="./assets/title/title-bg-px.png" alt="" draggable={false} style={{ left: L.bgLeft, top: L.bgTop, width: BG_W * L.s, height: BG_H * L.s }} />
       <Fragment key={run}>
-        {FOOTPRINTS.map((f, i) => (
-          <img
-            key={i}
-            className="t-fp"
-            src="./assets/opening/footprint.png"
-            alt=""
-            draggable={false}
-            style={{ left: L.bgLeft + (f.x - Math.floor(FP_W / 2)) * L.s, top: L.bgTop + (f.y - FP_H) * L.s, width: FP_W * L.s, height: FP_H * L.s, ['--d' as string]: `${f.d}ms`, ['--r' as string]: `${f.r}deg` }}
-          />
-        ))}
-        <img className="t-fly" src="./assets/opening/gona-fly.png" alt="" draggable={false} style={{ top: L.logoTop + L.s * 4, width: FLY_W * L.s, height: FLY_H * L.s }} />
         <img className="t-logo" src="./assets/title/logo-px.png" alt="GONA GONE WILD!" draggable={false} style={{ left: L.logoLeft, top: L.logoTop, width: LOGO_W * L.s, height: LOGO_PX_H }} />
         <img className="t-subimg" src="./assets/title/subtitle-px.png" alt="고나가 떴고나!" draggable={false} style={{ left: L.subLeft, top: L.subTop, width: SUB_PX_W, height: SUB_PX_H }} />
         <div className="t-gonawrap" style={{ left: L.gonaLeft, top: L.gonaTop, width: GONA_W * L.s, height: GONA_H * L.s }}>
           <img className="t-gona" src="./assets/gona.png" alt="고나" draggable={false} />
         </div>
-        {sparks.map((p, i) => (
-          <img key={i} className="t-spark" src="./assets/opening/spark.png" alt="" draggable={false} style={{ left: p.x, top: p.y, width: SPARK * L.s, height: SPARK * L.s, ['--k' as string]: i }} />
+        {[-1, 1].map((dir) => (
+          <i key={dir} className="t-dust" style={{ left: L.gonaLeft + (GONA_W * L.s) / 2 + dir * L.s * 7 - L.s, top: L.gonaTop + GONA_H * L.s - L.s * 2, width: L.s * 2, height: L.s * 2, ['--dx' as string]: `${dir * L.s * 4}px` }} aria-hidden />
         ))}
         <p className="t-tap">TAP ANYWHERE TO START</p>
       </Fragment>
