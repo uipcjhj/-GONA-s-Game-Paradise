@@ -3,6 +3,7 @@ import { SKIN_LOADERS, loadSkin, mergeSkin, missingSlots, resolveSkinId, type Sk
 import { UI_SLOT_KEYS, type ResolvedSkin, type Skin } from './types';
 import { SORT_SLOT_KEYS } from '../games/sort/slots';
 import { TOWER_SLOT_KEYS } from '../games/tower/slots';
+import { TOYROOM_SLOT_KEYS } from '../games/toyroom/slots';
 import { scoreboardView } from './viewmodel';
 import type { EngineSnapshot } from '../core/engine';
 
@@ -10,7 +11,8 @@ const dummy = () => null;
 const fullUi = Object.fromEntries(UI_SLOT_KEYS.map((k) => [k, dummy]));
 const fullSort = Object.fromEntries(SORT_SLOT_KEYS.map((k) => [k, dummy]));
 const fullTower = Object.fromEntries(TOWER_SLOT_KEYS.map((k) => [k, dummy]));
-const full = (id: string, extra: Partial<Skin> = {}): Skin => ({ id, name: id, ui: fullUi, sort: fullSort, tower: fullTower, tokens: { '--a': '1' }, ...extra }) as Skin;
+const fullToy = Object.fromEntries(TOYROOM_SLOT_KEYS.map((k) => [k, dummy]));
+const full = (id: string, extra: Partial<Skin> = {}): Skin => ({ id, name: id, ui: fullUi, sort: fullSort, tower: fullTower, toyroom: fullToy, tokens: { '--a': '1' }, ...extra }) as Skin;
 const loaderOf = (m: Record<string, Skin>): Record<string, SkinLoader> => Object.fromEntries(Object.entries(m).map(([k, v]) => [k, async () => ({ default: v })]));
 
 describe('스킨 선택', () => {
@@ -31,6 +33,7 @@ describe('스킨 합성(슬롯 단위 독립 교체)', () => {
     expect(merged.ui.Background).toBe(base.ui.Background);
     expect(merged.sort.Friend).toBe(base.sort.Friend);
     expect(merged.tower.PieceArt).toBe(base.tower.PieceArt);
+    expect(merged.toyroom.ToyArt).toBe(base.toyroom.ToyArt);
     expect(merged.id).toBe('over');
   });
   it('토큰은 병합(위 스킨이 우선)', () => {
@@ -43,6 +46,7 @@ describe('스킨 합성(슬롯 단위 독립 교체)', () => {
     expect(missing).toContain('ui.ButtonFace');
     expect(missing).toContain('sort.Friend');
     expect(missing).toContain('tower.PieceArt');
+    expect(missing).toContain('toyroom.ToyArt');
     expect(missingSlots(mergeSkin(null, full('f')))).toEqual([]);
   });
 });
@@ -74,7 +78,8 @@ describe('스킨 로더(extends 체인)', () => {
     for (const k of ['Friend', 'StageFrame', 'BinFace'] as const) expect(wf.sort[k], k).not.toBe(temp.sort[k]);
     for (const k of ['Panel', 'Lives', 'Mascot'] as const) expect(wf.ui[k], k).toBe(temp.ui[k]);
     for (const k of ['RulePanel', 'InfoBar', 'Feedback', 'Announce'] as const) expect(wf.sort[k], k).toBe(temp.sort[k]);
-    for (const k of TOWER_SLOT_KEYS) expect(wf.tower[k], k).toBe(temp.tower[k]); // 탑 슬롯은 와이어프레임이 덮어쓰지 않음 → temp 상속
+    for (const k of TOWER_SLOT_KEYS) expect(wf.tower[k], k).toBe(temp.tower[k]); // 탑·장난감방 슬롯은 와이어프레임이 덮어쓰지 않음 → temp 상속
+    for (const k of TOYROOM_SLOT_KEYS) expect(wf.toyroom[k], k).toBe(temp.toyroom[k]);
     expect(wf.tokens['--sc-card-w']).not.toBe(temp.tokens['--sc-card-w']);
   });
 });

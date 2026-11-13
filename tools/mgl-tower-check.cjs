@@ -208,7 +208,7 @@ async function startFree(page, level = 1) {
       const { ctx, page, errors } = await mk(9);
       await startFree(page, 10);          // 접시가 가장 좁은 L10
       const s = await stage(page);
-      check(`${tag} L10: 목표 178 · 바람 알림 표시`, s.goal === 178 && (await page.locator('[data-testid=wind]').count()) === 1, `goal ${s.goal}`);
+      check(`${tag} L10: 목표 170 · 바람 알림 표시`, s.goal === 170 && (await page.locator('[data-testid=wind]').count()) === 1, `goal ${s.goal}`);
       await snap(page, w, h, '10-L10-aim');
       await layout(page, `${tag} L10 플레이`);
       let sawFeedback = false;
@@ -228,7 +228,7 @@ async function startFree(page, level = 1) {
       await ctx.close();
     }
 
-    // ── D. 레벨별 화면: L4(방향 무작위 → 회전 필요) · L8(바람) 의 조작과 표시
+    // ── D. 레벨별 화면: L4(방향 무작위·안내선) · L8 · L9(바람) 의 조작과 표시
     {
       const { ctx, page, errors } = await mk(9);
       await startFree(page, 4);
@@ -239,11 +239,15 @@ async function startFree(page, level = 1) {
       await page.goto(url, { waitUntil: 'networkidle' });
       await startFree(page, 8);
       const s8 = await stage(page);
-      await snap(page, w, h, '13-L8-aim');
-      check(`${tag} L8: 안내선 없음 · 바람 알림 표시`, s8.goal === 154 && (await page.locator('.tw-guide').evaluate((e) => e.style.display === 'none')) && (await page.locator('[data-testid=wind]').count()) === 1);
+      check(`${tag} L8: 목표 142 · 안내선 없음 · 바람은 아직 없음`, s8.goal === 142 && (await page.locator('.tw-guide').evaluate((e) => e.style.display === 'none')) && (await page.locator('[data-testid=wind]').count()) === 0);
+      await page.goto(url, { waitUntil: 'networkidle' });
+      await startFree(page, 9);
+      const s9 = await stage(page);
+      await snap(page, w, h, '13-L9-aim');
+      check(`${tag} L9: 목표 156 · 바람 알림 표시(도전 구간)`, s9.goal === 156 && (await page.locator('[data-testid=wind]').count()) === 1);
       const r = await botPlay(page, { max: 4, jitter: 2 });
-      check(`${tag} L8: 4조각 놓는 동안 오류 없이 진행(${r.n}조각)`, r.n >= 2);
-      await snap(page, w, h, '14-L8-tower');
+      check(`${tag} L9: 4조각 놓는 동안 오류 없이 진행(${r.n}조각)`, r.n >= 2);
+      await snap(page, w, h, '14-L9-tower');
       check(`${tag} 콘솔 오류 없음 (D)`, errors.length === 0, errors.join('|'));
       await ctx.close();
     }

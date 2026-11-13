@@ -147,6 +147,11 @@ describe('TowerGame — 종료 조건', () => {
 });
 
 describe('TowerGame — 레벨 규칙·결정성', () => {
+  it('가중치: 쐐기 비율이 낮은 레벨(L6)은 높은 레벨(L9)보다 덜 나옴', () => {
+    const share = (level: number) => { let n = 0, s = 0; for (let seed = 0; seed < 150; seed++) { const g = createGame(level, seed); for (const k of [g.current.kind, ...g.queue]) { n++; if (k === 'slice') s++; } } return s / n; };
+    expect(share(6)).toBeLessThan(share(9));
+    expect(share(5)).toBe(0);
+  });
   it('정확한 봇은 L1~L3 를 클리어', () => {
     for (const lvl of [1, 2, 3]) {
       const g = createGame(lvl, 11 + lvl);
@@ -160,17 +165,17 @@ describe('TowerGame — 레벨 규칙·결정성', () => {
     const once = () => { const g = createGame(4, 21); play(g, lcg(3), { smart: true, jitter: 3 }); return g.pieces().map((p) => `${p.kind}:${p.body.position.x.toFixed(4)},${p.body.position.y.toFixed(4)}`).join('|') + g.phase + g.falls; };
     expect(once()).toBe(once());
   });
-  it('바람은 L8+ 에서 불고, 떨어지는 조각만 날림(같은 조건에서 바람 없을 때와 착지 위치가 다름)', () => {
+  it('바람은 L9+ 에서 불고, 떨어지는 조각만 날림(같은 조건에서 바람 없을 때와 착지 위치가 다름)', () => {
     const land = (wind: number) => {
-      const g = mk({ ...difficulty(8), wind, pool: ['toast'], randomAngle: false }, 8, 5);
+      const g = mk({ ...difficulty(9), wind, pool: ['toast'], randomAngle: false }, 9, 5);
       let t = 0; while (Math.abs(g.windNow) < 0.5 && t < 20000) { g.step(1000 / 60); t += 1000 / 60; } // 돌풍이 가장 센 때까지
       // 같은 순간의 상태를 비교하기 위해 바람 유무 각각 새로 만들어 동일 시각에 놓음
-      const h = mk({ ...difficulty(8), wind, pool: ['toast'], randomAngle: false }, 8, 5);
+      const h = mk({ ...difficulty(9), wind, pool: ['toast'], randomAngle: false }, 9, 5);
       for (let s = 0; s < t / (1000 / 60); s++) h.step(1000 / 60);
       h.setAim(PLATE_X); h.release(); run(h, 1500);
       return { x: [...h.world.pieces.values()][0]?.body.position.x ?? NaN, wind: h.windNow };
     };
-    const a = land(difficulty(8).wind), b = land(0);
+    const a = land(difficulty(9).wind), b = land(0);
     expect(Math.abs(a.wind)).toBeGreaterThan(0.3);
     expect(b.wind).toBe(0);
     expect(Math.abs(a.x - b.x)).toBeGreaterThan(1);

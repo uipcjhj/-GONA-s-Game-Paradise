@@ -151,3 +151,24 @@ body { color: var(--line); }
 .tf-tw-fb.fell { background: #ffe1dd; }
 .tf-tw-fb.fell b { color: var(--red); }
 .tf-tw-wind { padding: 3px 8px; font-size: 12px; font-weight: 700; background: var(--cream); box-shadow: 0 0 0 2px var(--line); letter-spacing: 1px; }
+
+/* ── 장난감방: 방 배경 · 선반 · 장난감 · 정보 (임시) */
+.tf-room { position: absolute; inset: 0; background: #ffe9c8; background-image: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.35) 0 14px, transparent 14px 28px); }
+.tf-shelf { position: absolute; inset: 0; }
+.tf-shelf::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: var(--wood); box-shadow: 0 0 0 2px var(--line), 0 4px 0 2px #8f5c3a; }
+.tf-shelf-cells { position: absolute; left: 8px; right: 8px; top: 2px; bottom: 10px; display: grid; }
+.tf-shelf-cells i { display: flex; align-items: center; justify-content: center; font-style: normal; font-size: 18px; box-shadow: inset 0 -2px 0 rgba(143, 92, 58, 0.25); }
+.tf-shelf-cells i.lock { background: rgba(59, 42, 63, 0.16); box-shadow: inset 0 0 0 2px rgba(59, 42, 63, 0.35); }
+.tf-shelf.source { background: rgba(255, 216, 74, 0.35); }
+.tf-shelf.target { background: rgba(95, 207, 95, 0.22); }
+.tf-shelf.blocked { background: rgba(232, 88, 79, 0.14); }
+.tf-toy { display: block; }
+.tf-tr-meter { display: flex; align-items: center; gap: 6px; padding: 6px 10px; flex-wrap: wrap; }
+.tf-tr-chip { padding: 3px 8px; font-size: 12px; font-weight: 700; background: var(--cream); box-shadow: 0 0 0 2px var(--line); white-space: nowrap; }
+.tf-tr-chip.big { font-size: 15px; background: var(--gold); }
+.tf-tr-chip.warn { background: #ffb0a8; }
+.tf-tr-fb { padding: 6px 12px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; background: var(--cream); box-shadow: 0 0 0 2px var(--line), 3px 3px 0 2px var(--line); }
+.tf-tr-fb b { font-size: 16px; }
+.tf-tr-fb.set { background: var(--gold); }
+.tf-tr-fb.chain { background: #ffd0f0; }
+.tf-tr-fb.warn { background: #ffe1dd; }

@@ -1,5 +1,6 @@
 /** 아슬아슬 탑 — 난이도 · 점수 규칙(순수 함수). 물리는 physics.ts, 진행은 game.ts */
 import type { PieceKind } from './pieces';
+import { TOWER_LEVELS } from './tuning';
 
 export const MAX_LEVEL = 10;
 
@@ -11,6 +12,8 @@ export interface TowerParams {
   plateW: number;
   /** 등장 가능한 간식 */
   pool: PieceKind[];
+  /** 간식별 등장 비율(기본 1) */
+  weights: Partial<Record<PieceKind, number>>;
   /** 쓸 수 있는 조각 수(전부 쓰면 실패) — 낭비하지 말고 전략적으로 */
   budget: number;
   /** 이만큼 떨어뜨리면 실패 */
@@ -33,39 +36,31 @@ export interface TowerParams {
   holdMs: number;
 }
 
-/** 레벨별 등장 간식 — 한 레벨에 하나씩 새로운 모양이 늘어남 */
-const POOLS: PieceKind[][] = [
-  ['toast', 'macaron', 'pudding'],
-  ['toast', 'macaron', 'pudding', 'cake'],
-  ['toast', 'macaron', 'pudding', 'cake', 'banana'],
-  ['toast', 'macaron', 'pudding', 'cake', 'banana', 'cone'],
-  ['toast', 'macaron', 'pudding', 'cake', 'banana', 'cone', 'donut'],
-  ['toast', 'macaron', 'pudding', 'cake', 'banana', 'cone', 'donut', 'slice'],
-];
-
-/** 바람 기준 세기(8레벨): 한 번 떨어지는 동안 최대 약 6 월드 단위 옆으로 휨(세기에 비례, 측정값) */
+/** 바람 기준 세기(1 배율): 한 번 떨어지는 동안 최대 약 6 월드 단위 옆으로 휨(세기에 비례, 측정값) */
 export const WIND_BASE = 0.00009;
 /** 바람 세기 → 휨(월드 단위) 환산(물리 측정: 0.00008 ≈ 5.3) */
 export const WIND_TO_DRIFT = 5.3 / 0.00008;
 
+/** 레벨 → 난이도 파라미터. 숫자는 전부 tuning.ts 의 표에서 옴(코드에 박지 않음) */
 export function difficulty(level: number): TowerParams {
   const l = Math.min(Math.max(1, Math.floor(level)), MAX_LEVEL);
-  const goalH = 70 + 12 * (l - 1);
+  const t = TOWER_LEVELS[l - 1];
   return {
     level: l,
-    goalH,
-    plateW: 124 - 3 * (l - 1),
-    pool: POOLS[Math.min(POOLS.length - 1, l - 1)],
-    budget: Math.ceil(goalH / 15) + 5,
-    maxFalls: l <= 6 ? 4 : 3,
-    preview: l <= 4 ? 2 : 1,
-    guide: l <= 4,
-    showCom: l <= 7,
-    randomAngle: l >= 4,
-    frictionMul: l >= 9 ? 0.8 : 1,
-    wind: l < 8 ? 0 : l === 8 ? WIND_BASE : l === 9 ? WIND_BASE * 1.6 : WIND_BASE * 2.4,
-    swaps: l <= 4 ? 3 : l <= 7 ? 2 : 1,
+    goalH: t.goalH,
+    plateW: t.plateW,
+    pool: t.pool,
+    weights: t.weights ?? {},
+    budget: t.budget,
+    maxFalls: t.maxFalls,
+    preview: t.preview,
+    guide: t.guide,
+    showCom: t.showCom,
+    randomAngle: t.randomAngle,
+    frictionMul: t.frictionMul,
+    wind: t.wind * WIND_BASE,
     windPeriodMs: 6000,
+    swaps: t.swaps,
     holdMs: 1200,
   };
 }

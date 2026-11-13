@@ -23,6 +23,7 @@ describe('게임 레지스트리 (두 모드가 공유)', () => {
     const ids = selectGames(ALL_GAMES, '').map((g) => g.id);
     expect(ids).toContain('sort');
     expect(ids).toContain('tower');
+    expect(ids).toContain('toyroom');
     expect(ids).not.toContain('tap-test');
   });
   it('?games= 로 점검용 선택, 알 수 없는 값은 기본으로', () => {

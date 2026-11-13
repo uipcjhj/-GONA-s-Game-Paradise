@@ -6,6 +6,7 @@
 import type { Skin, UiSlots } from '../types';
 import type { SortSlots } from '../../games/sort/slots';
 import type { TowerSlots, TowerPieceView } from '../../games/tower/slots';
+import type { ToyRoomSlots } from '../../games/toyroom/slots';
 import { gonaUrl } from '../../assets';
 import { Mascot as BaseMascot } from '../components';
 import { condLabel, type Card, type Cond } from '../../games/sort/logic';
@@ -202,6 +203,51 @@ const Notice: TowerSlots['Notice'] = ({ wind }) => (
   </div>
 );
 
+// ─────────────────────────── 장난감방 슬롯 (임시: 단순 도형 장난감 6종 + 별 + 자물쇠)
+const TOY_COL = ['#ef6a5b', '#4a8fe8', '#9aa5b5', '#ffd84a', '#b57b4e', '#ffb347'];
+const ToyArt: ToyRoomSlots['ToyArt'] = ({ toy, state }) => {
+  const line = '#3b2a3f';
+  const col = toy.wild ? '#ffd84a' : TOY_COL[toy.type] ?? '#aaa';
+  let body: React.ReactNode;
+  if (toy.wild) body = <polygon points="16,3 20,12 29,12 22,18 25,28 16,22 7,28 10,18 3,12 12,12" fill={col} stroke={line} strokeWidth="2" strokeLinejoin="miter" />;
+  else if (toy.type === 0) body = (<><circle cx="16" cy="16" r="12" fill={col} stroke={line} strokeWidth="2" /><path d="M16 4 C9 10 9 22 16 28" fill="none" stroke="#fff" strokeWidth="2.5" /><path d="M16 4 C23 10 23 22 16 28" fill="none" stroke="#4a8fe8" strokeWidth="2.5" /><circle cx="11" cy="11" r="2" fill="#fff" opacity="0.8" /></>);
+  else if (toy.type === 1) body = (<><rect x="5" y="5" width="22" height="22" fill={col} stroke={line} strokeWidth="2" /><text x="16" y="23" textAnchor="middle" fontSize="16" fontWeight="700" fill="#fff" fontFamily="Galmuri11, sans-serif">A</text></>);
+  else if (toy.type === 2) body = (<><rect x="7" y="9" width="18" height="16" fill={col} stroke={line} strokeWidth="2" /><rect x="15" y="3" width="2" height="6" fill={line} /><rect x="10" y="13" width="4" height="4" fill="#fff" /><rect x="18" y="13" width="4" height="4" fill="#fff" /><rect x="11" y="20" width="10" height="2" fill={line} /></>);
+  else if (toy.type === 3) body = (<><rect x="3" y="14" width="26" height="9" fill={col} stroke={line} strokeWidth="2" /><rect x="9" y="8" width="13" height="7" fill={col} stroke={line} strokeWidth="2" /><circle cx="9" cy="25" r="3.5" fill={line} /><circle cx="23" cy="25" r="3.5" fill={line} /></>);
+  else if (toy.type === 4) body = (<><circle cx="9" cy="8" r="4" fill={col} stroke={line} strokeWidth="2" /><circle cx="23" cy="8" r="4" fill={col} stroke={line} strokeWidth="2" /><circle cx="16" cy="18" r="11" fill={col} stroke={line} strokeWidth="2" /><rect x="11" y="15" width="3" height="3" fill={line} /><rect x="18" y="15" width="3" height="3" fill={line} /><rect x="14" y="21" width="4" height="3" fill={line} /></>);
+  else body = (<><polygon points="6,24 6,15 12,8 20,8 22,13 29,15 22,17 25,24" fill={col} stroke={line} strokeWidth="2" strokeLinejoin="miter" /><rect x="14" y="11" width="3" height="3" fill={line} /><polygon points="22,13 29,15 22,17" fill="#ef6a5b" /></>);
+  return (
+    <svg className={`tf-toy ${state}`} viewBox="0 0 32 32" width="100%" height="100%" aria-hidden="true">
+      {body}
+      {toy.fixed && (<g><rect x="19" y="19" width="11" height="9" fill="#ffe7a0" stroke={line} strokeWidth="1.5" /><path d="M21.5 19 V16 a3 3 0 0 1 6 0 V19" fill="none" stroke={line} strokeWidth="1.5" /></g>)}
+    </svg>
+  );
+};
+const Shelf: ToyRoomSlots['ShelfFrame'] = ({ capacity, locked, state }) => (
+  <div className={`tf-shelf ${state}`}>
+    <div className="tf-shelf-cells" style={{ gridTemplateColumns: `repeat(${capacity}, 1fr)` }}>
+      {Array.from({ length: capacity }, (_, j) => (
+        <i key={j} className={j >= capacity - locked ? 'lock' : ''}>{j >= capacity - locked ? '🔒' : ''}</i>
+      ))}
+    </div>
+  </div>
+);
+const RoomBackdrop: ToyRoomSlots['Backdrop'] = () => <div className="tf-room" />;
+const ToyMeter: ToyRoomSlots['Meter'] = ({ movesLeft, limit, par, sets, total, undoLeft }) => (
+  <div className="tf-tr-meter">
+    <span className={`tf-tr-chip big${movesLeft <= 2 ? ' warn' : ''}`}>이동 {movesLeft}/{limit}</span>
+    <span className="tf-tr-chip">세트 {sets}/{total}</span>
+    <span className="tf-tr-chip" title="3별 기준">★ {par}</span>
+    <span className="tf-tr-chip">되돌리기 {undoLeft}</span>
+  </div>
+);
+const ToyFeedback: ToyRoomSlots['Feedback'] = ({ kind, text, sub }) => (
+  <div className={`tf-tr-fb ${kind}`}>
+    <b>{text}</b>
+    {sub && <span>{sub}</span>}
+  </div>
+);
+
 const temp: Skin = {
   id: 'temp',
   name: '임시 스킨 (기능 검증용)',
@@ -210,5 +256,6 @@ const temp: Skin = {
   ui: { Background, ButtonFace, Panel, Scoreboard, Lives, Mascot },
   sort: { Friend, RulePanel, StageFrame, BinFace, InfoBar, Feedback, Announce },
   tower: { Backdrop, PieceArt, PlateArt, Meter: TowerMeter, NextQueue, Feedback: TowerFeedback, Notice },
+  toyroom: { Backdrop: RoomBackdrop, ShelfFrame: Shelf, ToyArt, Meter: ToyMeter, Feedback: ToyFeedback },
 };
 export default temp;

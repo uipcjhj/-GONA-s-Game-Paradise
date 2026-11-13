@@ -66,7 +66,13 @@ export class TowerGame {
     this.rot = params.randomAngle ? this.randomRot() : 0;
   }
 
-  private randomKind(): PieceKind { return this.params.pool[Math.floor(this.rng() * this.params.pool.length)]; }
+  private randomKind(): PieceKind {
+    const { pool, weights } = this.params;
+    const w = pool.map((k) => weights[k] ?? 1);
+    let r = this.rng() * w.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < pool.length; i++) { r -= w[i]; if (r < 0) return pool[i]; }
+    return pool[pool.length - 1];
+  }
   private randomRot(): number { return Math.floor(this.rng() * 4); }
 
   /** 미리 보기(다음 조각들) */

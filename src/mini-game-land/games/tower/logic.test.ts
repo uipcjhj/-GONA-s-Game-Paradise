@@ -4,6 +4,7 @@ import {
   classify, difficulty, keepsCombo, placementPoints, tiltOf, timeLimitSec, type Placement,
 } from './logic';
 import { ALL_KINDS } from './pieces';
+import { TOWER_LEVELS } from './tuning';
 
 describe('난이도 설계', () => {
   const L = Array.from({ length: MAX_LEVEL }, (_, i) => difficulty(i + 1));
@@ -33,16 +34,24 @@ describe('난이도 설계', () => {
       expect(L[i].preview).toBeLessThanOrEqual(L[i - 1].preview);
     }
   });
-  it('조각 방향 무작위 L4+, 바람 L8+(점점 세짐), 미끄러움 L9+', () => {
+  it('조각 방향 무작위 L4+, 바람은 L9+(도전 구간)에서 점점 세짐, 미끄러움 L9+', () => {
     expect(L.map((p) => p.randomAngle)).toEqual([false, false, false, true, true, true, true, true, true, true]);
-    expect(L.map((p) => p.wind > 0)).toEqual([false, false, false, false, false, false, false, true, true, true]);
-    expect(L[8].wind).toBeGreaterThan(L[7].wind);
+    expect(L.map((p) => p.wind > 0)).toEqual([false, false, false, false, false, false, false, false, true, true]);
     expect(L[9].wind).toBeGreaterThan(L[8].wind);
-    expect(L[7].wind).toBe(WIND_BASE);
+    expect(L[8].wind).toBe(WIND_BASE);
     expect(L[8].frictionMul).toBeLessThan(1);
+    expect(L[9].frictionMul).toBeLessThanOrEqual(L[8].frictionMul);
   });
-  it('초반은 기회 4번, 후반은 3번', () => {
-    expect(L.map((p) => p.maxFalls)).toEqual([4, 4, 4, 4, 4, 4, 3, 3, 3, 3]);
+  it('기회는 L1~8 은 4번, 도전 구간(L9~10)은 3번', () => {
+    expect(L.map((p) => p.maxFalls)).toEqual([4, 4, 4, 4, 4, 4, 4, 4, 3, 3]);
+  });
+  it('쐐기는 L6 에서 낮은 비율로 시작해 서서히 늘어남(난이도 절벽 방지)', () => {
+    const w = (i: number) => L[i].weights.slice ?? 1;
+    expect(L[4].pool).not.toContain('slice');
+    expect(L[5].pool).toContain('slice');
+    expect(w(5)).toBeLessThan(w(6));
+    expect(w(6)).toBeLessThan(w(7));
+    expect(w(7)).toBeLessThanOrEqual(w(8));
   });
   it('범위 밖 레벨은 클램프', () => {
     expect(difficulty(0)).toEqual(difficulty(1));
@@ -80,5 +89,26 @@ describe('놓기 평가 · 점수 규칙', () => {
     expect(tiltOf(Math.PI / 2 + 0.2)).toBeCloseTo(0.2);
     expect(tiltOf(-0.3)).toBeCloseTo(0.3);
     expect(tiltOf(Math.PI / 4)).toBeCloseTo(Math.PI / 4);
+  });
+});
+
+describe('설정 테이블(tuning.ts) — 코드가 아니라 값으로 난이도를 조정', () => {
+  it('10레벨분이 있고 difficulty 가 표의 값을 그대로 씀', () => {
+    expect(TOWER_LEVELS).toHaveLength(MAX_LEVEL);
+    for (let l = 1; l <= MAX_LEVEL; l++) {
+      const t = TOWER_LEVELS[l - 1], p = difficulty(l);
+      expect([p.goalH, p.plateW, p.budget, p.maxFalls, p.swaps, p.preview, p.guide, p.showCom, p.randomAngle, p.frictionMul]).toEqual([t.goalH, t.plateW, t.budget, t.maxFalls, t.swaps, t.preview, t.guide, t.showCom, t.randomAngle, t.frictionMul]);
+      expect(p.wind).toBeCloseTo(t.wind * WIND_BASE, 12);
+      expect(p.pool).toEqual(t.pool);
+    }
+  });
+  it('값의 유효성: 가중치는 등장 간식에 대해서만 · 양수, 값 범위 정상', () => {
+    for (const t of TOWER_LEVELS) {
+      for (const [k, w] of Object.entries(t.weights ?? {})) { expect(t.pool).toContain(k); expect(w).toBeGreaterThan(0); }
+      expect(t.goalH).toBeGreaterThan(30); expect(t.plateW).toBeGreaterThan(60); expect(t.plateW).toBeLessThanOrEqual(150);
+      expect(t.budget).toBeGreaterThanOrEqual(6); expect(t.maxFalls).toBeGreaterThanOrEqual(2);
+      expect(t.frictionMul).toBeGreaterThan(0.5); expect(t.wind).toBeGreaterThanOrEqual(0);
+      expect(t.swaps).toBeGreaterThanOrEqual(0);
+    }
   });
 });
