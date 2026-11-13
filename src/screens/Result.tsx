@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import PixelIcon from '../components/PixelIcon';
+import { playUi } from '../sfx';
 import { ISLANDS } from '../data/islands';
 import { getAchievement } from '../platform/achievements';
 import { CODEX } from '../platform/codex';
@@ -12,7 +14,7 @@ import PixelPanel from '../ui/PixelPanel';
 
 /** 게임이 끝나고 돌아왔을 때 한 번만 보여 주는 결과 화면. 여러 판이 쌓여 있으면 가장 최근 판 + 합산 보상 */
 export default function Result({ outcomes, onClose, onProfile }: { outcomes: ResultOutcome[]; onClose: () => void; onProfile: () => void }) {
-  const { launch } = usePlayer();
+  const { launch, player } = usePlayer();
   const last = outcomes[outcomes.length - 1];
   const r = last.result;
   const island = ISLANDS.find((i) => i.id === r.gameId);
@@ -27,11 +29,34 @@ export default function Result({ outcomes, onClose, onProfile }: { outcomes: Res
   const lvTo = last.levelTo;
   const rec = last.record;
   const cleared = r.outcome === 'cleared';
+  const reduce = !!player?.settings.reduceMotion;
+  // 점수 카운트업 + 효과음(클리어·신기록=팡파레 / 게임 오버=하강음 → 레벨업 → 업적)
+  const [shown, setShown] = useState(reduce ? r.score : 0);
+  useEffect(() => {
+    const timers: number[] = [];
+    playUi(cleared || newBest ? 'fanfare' : 'over');
+    if (lvTo > lvFrom) timers.push(window.setTimeout(() => playUi('levelup'), 900));
+    if (ach.length) timers.push(window.setTimeout(() => playUi('achieve'), lvTo > lvFrom ? 1700 : 900));
+    if (reduce) return () => timers.forEach(clearTimeout);
+    let raf = 0;
+    const t0 = performance.now();
+    const step = (t: number) => {
+      const k = Math.min(1, (t - t0) / 800);
+      setShown(Math.round(r.score * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => {
+      cancelAnimationFrame(raf);
+      timers.forEach(clearTimeout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const play = () => {
     if (island?.url) window.location.href = launch(island.id, island.url);
   };
   return (
-    <div className="p-result" role="dialog" aria-label="게임 결과" data-testid="result">
+    <div className="p-result" role="dialog" aria-label="게임 결과" data-testid="result" data-best={newBest ? '1' : '0'}>
       <div className="p-scroll">
         <div className="p-ribbon">RESULT</div>
         <PixelPanel>
@@ -40,8 +65,8 @@ export default function Result({ outcomes, onClose, onProfile }: { outcomes: Res
               {gameName(r.gameId, r.subGameId)}
             </p>
             <span className={`p-chip ${cleared ? 'gold' : 'soon'}`}>{cleared ? '★ CLEAR!' : 'GAME OVER'}</span>
-            <b className="p-bigscore" data-testid="result-score">
-              {fmtScore(r.score)}
+            <b className="p-bigscore" data-testid="result-score" data-value={r.score} aria-label={`점수 ${fmtScore(r.score)}`}>
+              {fmtScore(shown)}
             </b>
             {newBest && (
               <span className="p-chip ok" data-testid="result-newbest">
@@ -62,10 +87,16 @@ export default function Result({ outcomes, onClose, onProfile }: { outcomes: Res
               <b>+{xp}</b> XP
             </span>
             <span>
-              <PixelIcon name="coin" size={1.5} /> <b>+{coins}</b> 코인
+              <i className="p-coinpop" aria-hidden="true" /> <b>+{coins}</b> 코인
             </span>
-            {lvTo > lvFrom && <span className="p-chip gold">LEVEL UP! LV{lvTo}</span>}
           </div>
+          {lvTo > lvFrom && (
+            <div className="p-row" style={{ justifyContent: 'center', marginTop: 8 }}>
+              <span className="p-levelup" data-testid="result-levelup">
+                LEVEL UP! LV{lvFrom} → LV{lvTo}
+              </span>
+            </div>
+          )}
           {capped && <p className="p-muted">오늘 이 게임의 보상 한도(또는 최소 플레이 시간)에 닿아 일부만 받았어요. 기록은 그대로 남아요.</p>}
           {ach.map((id) => (
             <p key={id} className="p-gainline">

@@ -1,4 +1,5 @@
 import PixelIcon from '../components/PixelIcon';
+import { playUi } from '../sfx';
 import { addDays, dateKST } from '../platform/kst';
 import { attendanceReward, getMission, weekDays } from '../platform/missions';
 import { usePlayer } from '../platform/PlayerContext';
@@ -27,7 +28,10 @@ export default function Missions({ onBack, onToast }: { onBack: () => void; onTo
   const streak = m.attendance.streak;
   const doClaim = (id: string) => {
     const r = claimMission(id);
-    if (r.ok) onToast(`미션 완료! +${r.coins} 코인 · +${r.xp} XP`);
+    if (r.ok) {
+      playUi('claim');
+      onToast(`미션 완료! +${r.coins} 코인 · +${r.xp} XP`);
+    }
   };
   const row = (id: string, value: number, claimed: boolean) => {
     const def = getMission(id);
@@ -75,7 +79,10 @@ export default function Missions({ onBack, onToast }: { onBack: () => void; onTo
             data-testid="attendance-claim"
             onClick={() => {
               const r = claimAttendance();
-              if (r.ok) onToast(`출석 보상! +${r.coins} 코인`);
+              if (r.ok) {
+                playUi('coin');
+                onToast(`출석 보상! +${r.coins} 코인`);
+              }
             }}
           >
             {claimedToday ? '오늘 출석 완료' : `출석 보상 받기 (+${attendanceReward(streak)})`}

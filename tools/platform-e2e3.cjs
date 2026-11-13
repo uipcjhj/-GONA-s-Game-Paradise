@@ -114,7 +114,7 @@ const noHScroll = (page) => page.evaluate(() => document.documentElement.scrollW
     if (process.env.DBG) { await page.waitForTimeout(1500); console.log('DBG', page.url(), await keys(page, 'gp.v1.'), await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('gp.v1.rejected')).map((k) => [k, localStorage.getItem(k)])))); }
     await page.waitForSelector('[data-testid=result]', { timeout: 8000 });
     const rtxt = await page.locator('[data-testid=result]').innerText();
-    ok(`[${tag}] 복귀 → 결과 화면: 편가르기 · 점수 · XP/코인`, rtxt.includes('편가르기') && /\+\d+\s*XP/.test(rtxt) && (await page.locator('[data-testid=result-score]').innerText()) === String(env.result.score).replace(/\B(?=(\d{3})+(?!\d))/g, ','));
+    ok(`[${tag}] 복귀 → 결과 화면: 편가르기 · 점수 · XP/코인`, rtxt.includes('편가르기') && /\+\d+\s*XP/.test(rtxt) && Number(await page.locator('[data-testid=result-score]').getAttribute('data-value')) === env.result.score);
     ok(`[${tag}] 결과 화면 가로 스크롤 없음`, await noHScroll(page));
     await page.screenshot({ path: path.join(out, `03-paradise-result_${tag}.png`) });
     const pl = await player(page);

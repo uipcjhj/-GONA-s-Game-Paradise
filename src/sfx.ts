@@ -87,3 +87,45 @@ export function setMuted(m: boolean): void {
   }
   if (m) stopAllSfx();
 }
+
+/**
+ * 게임천국 UI 효과음 (오리지널 합성음 · 파일 없음). `gona.mute` 를 따르고, 같은 소리를 짧은 시간에 겹쳐 내지 않음.
+ * 사용자 터치 이후에만 소리가 남(iOS Safari). 배경음은 없음.
+ */
+export type UiCue = 'tap' | 'tab' | 'open' | 'close' | 'coin' | 'buy' | 'equip' | 'claim' | 'achieve' | 'levelup' | 'fanfare' | 'over' | 'error';
+const lastCue: Partial<Record<UiCue, number>> = {};
+export function playUi(cue: UiCue): void {
+  const c = ac();
+  if (!c || muted()) return;
+  if (c.state === 'suspended') void c.resume();
+  if (c.state !== 'running') return;
+  const now = c.currentTime;
+  if ((lastCue[cue] ?? -1) > now - 0.06) return; // 연타 겹침 방지
+  lastCue[cue] = now;
+  const t = now + 0.01;
+  const seq = (notes: [number, number, number][], type: OscillatorType = 'square', vol = 0.07) => notes.forEach(([f, at, d]) => tone(c, t + at, f, d, type, vol));
+  switch (cue) {
+    case 'tap': tone(c, t, 880, 0.04, 'square', 0.05); break;
+    case 'tab': tone(c, t, 660, 0.05, 'square', 0.05, 990); break;
+    case 'open': tone(c, t, 440, 0.08, 'square', 0.05, 880); break;
+    case 'close': tone(c, t, 700, 0.07, 'square', 0.045, 350); break;
+    case 'coin': seq([[988, 0, 0.06], [1319, 0.06, 0.14]]); break;
+    case 'buy': seq([[784, 0, 0.06], [988, 0.06, 0.06], [1319, 0.12, 0.16]]); break;
+    case 'equip': seq([[523, 0, 0.05], [784, 0.05, 0.09]], 'triangle', 0.12); break;
+    case 'claim': seq([[784, 0, 0.06], [1047, 0.07, 0.06], [1319, 0.14, 0.18]]); break;
+    case 'achieve': seq([[659, 0, 0.08], [784, 0.08, 0.08], [988, 0.16, 0.08], [1319, 0.24, 0.26]], 'square', 0.06); break;
+    case 'levelup': seq([[523, 0, 0.08], [659, 0.08, 0.08], [784, 0.16, 0.08], [1047, 0.24, 0.08], [1319, 0.32, 0.3]], 'square', 0.065); break;
+    case 'fanfare': seq([[784, 0, 0.1], [784, 0.12, 0.08], [1047, 0.22, 0.32]], 'square', 0.07); seq([[392, 0, 0.1], [392, 0.12, 0.08], [523, 0.22, 0.32]], 'triangle', 0.1); break;
+    case 'over': seq([[523, 0, 0.12], [440, 0.13, 0.12], [349, 0.26, 0.3]], 'triangle', 0.12); break;
+    case 'error': tone(c, t, 196, 0.12, 'square', 0.06, 150); break;
+  }
+}
+/** 진동(설정이 켜져 있고 지원 기기일 때만) */
+export function buzz(on: boolean, ms = 18): void {
+  if (!on) return;
+  try {
+    navigator.vibrate?.(ms);
+  } catch {
+    /* 미지원 */
+  }
+}

@@ -142,6 +142,22 @@ const PlateArt: TowerSlots['PlateArt'] = ({ width }: { width: number }) => (
   </div>
 );
 
+const NextQueue: TowerSlots['NextQueue'] = ({ next }) => (
+  <div className="tf-tw-next px-next">
+    <span>NEXT</span>
+    {next.map((p, i) => {
+      const w = p.bbox.x1 - p.bbox.x0, h = p.bbox.y1 - p.bbox.y0, k = Math.min(1, 34 / Math.max(w, h));
+      return (
+        <div key={i} className="tf-tw-next-slot" style={{ width: 40, height: 40 }}>
+          <div style={{ transform: `scale(${k})`, position: 'absolute', left: 20, top: 20 }}>
+            <PieceArt piece={p} />
+          </div>
+        </div>
+      );
+    })}
+  </div>
+);
+
 // ─────────────────────────── 장난감방
 const ToyArt: ToyRoomSlots['ToyArt'] = ({ toy, state }) => (
   <span className={`tf-toy px-toy ${state}`} data-fixed={toy.fixed ? '1' : '0'}>
@@ -169,7 +185,7 @@ const pixel: Skin = {
   tokens: { '--mgl-page-bg': '#5ec4f5', '--sc-card-w': '112px', '--sc-card-h': '120px', '--mgl-btn-depth': '4px' },
   ui: { Background, ButtonFace, Panel, Lives },
   sort: { Friend, BinFace, StageFrame },
-  tower: { Backdrop: TowerBackdrop, PieceArt, PlateArt },
+  tower: { Backdrop: TowerBackdrop, PieceArt, PlateArt, NextQueue },
   toyroom: { Backdrop: RoomBackdrop, ShelfFrame: Shelf, ToyArt },
 };
 export default pixel;

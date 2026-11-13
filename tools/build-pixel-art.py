@@ -176,11 +176,13 @@ c.r(0, 1, 16, 1, hx('e0a86c'))
 c.save(MINI, 'tile-wood.png')
 
 # ───────────────────── 9-slice UI 프레임 (12×12, 코너 4) — 미니게임과 게임천국이 같이 씀
+UI_INK = hx('3b1b5e')  # 게임천국 UI 외곽선(보라) — 미니게임은 네이비
 def frame(name, fill, light, dark, line=NAVY, outdirs=(MINI, UI)):
-    c = C(12, 12)
     rows = ['..oooooooo..', '.oLLLLLLLLo.', 'oLLFFFFFFFLo', 'oLFFFFFFFFDo', 'oLFFFFFFFFDo', 'oLFFFFFFFFDo', 'oLFFFFFFFFDo', 'oLFFFFFFFFDo', 'oLFFFFFFFFDo', 'oLFFFFFFFDDo', '.oDDDDDDDDo.', '..oooooooo..']
-    c.rows(0, 0, rows, {'o': line, 'L': light, 'F': fill, 'D': dark})
-    for d in outdirs: c.save(d, f'{name}.png')
+    for d in outdirs:
+        c = C(12, 12)
+        c.rows(0, 0, rows, {'o': (UI_INK if d == UI and line == NAVY else line), 'L': light, 'F': fill, 'D': dark})
+        c.save(d, f'{name}.png')
 frame('frame-panel', CREAM, WHITE, CREAM2)
 frame('frame-btn', hx('ffd84a'), hx('fff1a0'), hx('e8a92c'))
 frame('frame-btn-sub', WHITE, hx('ffffff'), hx('d9d9e6'))

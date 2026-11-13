@@ -185,3 +185,62 @@
 
 /* 설정: 움직임 줄이기 (반복 애니메이션만 끔 — 고나 이동 등 조작 피드백은 유지) */
 [data-reduce-motion='1'] .p-hop, [data-reduce-motion='1'] .p-slots i.cur, [data-reduce-motion='1'] .glow, [data-reduce-motion='1'] .glow i, [data-reduce-motion='1'] .star { animation: none !important; }
+
+/* ═══ 완성도 패스: 코드 도트 9-slice 틀(./art, tools/build-pixel-art.py) · 리본 머리 · 눌림 깊이 ═══ */
+.p-panel { border: 8px solid transparent; border-image: url('./art/frame-panel.png') 4 fill / 8px stretch; background: none; box-shadow: none; padding: 2px 4px 4px; filter: drop-shadow(0 4px 0 rgba(59, 27, 94, 0.35)); image-rendering: pixelated; }
+.p-panel h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; padding: 0; font-size: 13px; color: var(--ink); }
+.p-panel h3::before { content: ''; width: 10px; height: 10px; flex: none; background: url('./art/star.png') 0 0 / 10px 10px no-repeat; image-rendering: pixelated; }
+.p-btn { border: 8px solid transparent; border-image: url('./art/frame-btn.png') 4 fill / 8px stretch; background: none; box-shadow: none; padding: 0 6px; min-height: 44px; filter: drop-shadow(0 4px 0 var(--ink)); image-rendering: pixelated; }
+.p-btn:active { transform: translateY(4px); filter: none; box-shadow: none; }
+.p-btn.sub { border-image-source: url('./art/frame-btn-sub.png'); background: none; box-shadow: none; }
+.p-btn.danger { border-image-source: url('./art/frame-btn-danger.png'); background: none; box-shadow: none; }
+.p-btn.off, .p-btn:disabled { border-image-source: url('./art/frame-btn-off.png'); background: none; box-shadow: none; filter: none; }
+.p-btn.sm { min-height: 40px; padding: 0 4px; }
+.p-btn.big { min-height: 52px; }
+.p-menu button { border: 8px solid transparent; border-image: url('./art/frame-panel.png') 4 fill / 8px stretch; background: none; box-shadow: none; padding: 0 6px; min-height: 56px; margin: 0; filter: drop-shadow(0 4px 0 var(--ink)); image-rendering: pixelated; }
+.p-menu button:active { transform: translateY(4px); filter: none; }
+.p-modal { border: 8px solid transparent; border-image: url('./art/frame-panel.png') 4 fill / 8px stretch; background: none; box-shadow: none; padding: 6px 6px; filter: drop-shadow(0 6px 0 rgba(59, 27, 94, 0.5)); image-rendering: pixelated; animation: p-modal-in 0.18s steps(3); }
+.p-modal h3 { align-self: flex-start; background: var(--ink); color: #fff4d6; padding: 5px 10px 6px; font-size: 13px; box-shadow: 0 3px 0 rgba(59, 27, 94, 0.35); }
+@keyframes p-modal-in { from { transform: translateY(16px) scale(0.92); } to { transform: none; } }
+.p-shopitem, .p-cx { border: 8px solid transparent; border-image: url('./art/frame-panel.png') 4 fill / 8px stretch; background: none; box-shadow: none; padding: 4px 2px; filter: drop-shadow(0 3px 0 rgba(59, 27, 94, 0.35)); image-rendering: pixelated; }
+.p-shopitem[data-state='equipped'] { border-image-source: url('./art/frame-mint.png'); background: none; }
+.p-cx.lock { border-image-source: url('./art/frame-btn-off.png'); background: none; filter: grayscale(0.6); }
+.p-cx:active { transform: translateY(3px); }
+.p-toast { border: 8px solid transparent; border-image: url('./art/frame-dark.png') 4 fill / 8px stretch; background: none; padding: 2px 8px; image-rendering: pixelated; animation: p-toast-in 0.22s steps(3); }
+@keyframes p-toast-in { from { transform: translate(-50%, -14px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+.p-ribbon { background: #ef6a5b; color: #fff; text-shadow: 0 2px #a8452a; box-shadow: 0 0 0 2px #fff4d6, 0 0 0 4px var(--ink), 0 6px 0 0 var(--ink); padding: 6px 16px 7px; letter-spacing: 3px; font-size: 13px; }
+.p-tabs button { border: 0; box-shadow: var(--notch), inset 0 -3px 0 #d9d9e6; margin: 3px; background: #fff; }
+.p-tabs button.on { background: #ffc21a; box-shadow: var(--notch), inset 0 -3px 0 #e8a92c, 0 4px 0 0 var(--ink); transform: translateY(-2px); }
+.p-stat { border: 0; box-shadow: var(--notch), inset 0 -3px 0 #e8d5a0; background: #fffaf0; margin: 3px; }
+.p-stat b { color: var(--ink); }
+.p-recrow { border: 0; box-shadow: var(--notch); margin: 3px; }
+.p-ranklist li { border: 0; box-shadow: var(--notch); margin: 3px; }
+.p-ranklist li.first { background: #fff0b8; box-shadow: var(--notch), inset 0 -3px 0 #ffc21a; }
+.p-day { border: 0; box-shadow: var(--notch); margin: 3px 1px; }
+.p-day.cur { box-shadow: var(--notch), 0 0 0 5px #ffc21a; }
+.p-mission[data-state='done'] .p-mission-main b::after { content: ' ✓'; color: #4ea43f; }
+.p-mission[data-state='done'] .p-btn:not(:disabled) { animation: p-nudge 0.9s steps(2) infinite; }
+@keyframes p-nudge { 50% { transform: translateY(-3px); } }
+
+/* 결과 화면 연출 */
+.p-bigscore { position: relative; font-variant-numeric: tabular-nums; }
+.p-result[data-best='1'] .p-bigscore::before, .p-result[data-best='1'] .p-bigscore::after { content: ''; position: absolute; top: 4px; width: 16px; height: 16px; background: url('./art/spark.png') 0 0 / 16px 16px; image-rendering: pixelated; animation: p-twinkle 0.6s steps(2) infinite; }
+.p-result[data-best='1'] .p-bigscore::before { left: -22px; }
+.p-result[data-best='1'] .p-bigscore::after { right: -22px; animation-delay: 0.3s; }
+@keyframes p-twinkle { 50% { transform: scale(0.5); opacity: 0.4; } }
+.p-result .p-panel { animation: p-rise 0.3s steps(4) both; }
+.p-result .p-panel:nth-of-type(2) { animation-delay: 0.15s; }
+.p-result .p-panel:nth-of-type(3) { animation-delay: 0.3s; }
+@keyframes p-rise { from { transform: translateY(18px); opacity: 0; } to { transform: none; opacity: 1; } }
+.p-levelup { align-self: center; padding: 6px 14px; background: #ffc21a; color: var(--ink); font-weight: 700; font-size: 15px; letter-spacing: 2px; box-shadow: var(--notch), 0 5px 0 0 var(--ink); animation: p-stamp 0.45s steps(5) both, p-blink3 0.8s steps(2) 0.5s infinite; }
+@keyframes p-stamp { 0% { transform: scale(2.4); opacity: 0; } 60% { transform: scale(0.9); opacity: 1; } 100% { transform: none; } }
+@keyframes p-blink3 { 50% { background: #fff4b0; } }
+.p-coinpop { display: inline-block; width: 20px; height: 20px; background: url('./art/coin.png') 0 0 / 20px 20px; image-rendering: pixelated; vertical-align: -4px; animation: p-coin 0.6s steps(4) infinite alternate; }
+@keyframes p-coin { 50% { transform: scaleX(0.3); } }
+.p-coinchip.bump { animation: p-bump 0.4s steps(3); }
+@keyframes p-bump { 40% { transform: scale(1.25); } }
+[data-reduce-motion='1'] .p-result .p-panel, [data-reduce-motion='1'] .p-levelup, [data-reduce-motion='1'] .p-coinpop, [data-reduce-motion='1'] .p-modal, [data-reduce-motion='1'] .p-toast, [data-reduce-motion='1'] .p-mission .p-btn { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .p-result .p-panel, .p-levelup, .p-coinpop, .p-modal, .p-toast { animation: none !important; } }
+/* 버튼 아래 그림자(4px)만큼 띄워 다음 글과 겹치지 않게 */
+.p-panel .p-btn, .p-scroll > .p-btn, .p-scroll > .p-row { margin-bottom: 4px; }
+.p-panel .p-btn + .p-muted, .p-panel .p-row + .p-muted, .p-panel input + .p-muted { margin-top: 8px; }

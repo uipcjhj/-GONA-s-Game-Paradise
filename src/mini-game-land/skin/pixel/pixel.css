@@ -124,7 +124,7 @@
 
 /* ── 장난감방 */
 .px-room { position: absolute; inset: 0; background: url('./art/tile-wall.png') 0 0 / 32px 32px; image-rendering: pixelated; }
-.px-room::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 18%; background: url('./art/tile-wood.png') 0 0 / 32px 16px; image-rendering: pixelated; box-shadow: 0 -3px 0 var(--line); }
+.px-room::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 6%; background: url('./art/tile-wood.png') 0 0 / 32px 16px; image-rendering: pixelated; box-shadow: 0 -3px 0 var(--line); }
 .px-shelf::after { background: url('./art/tile-wood.png') 0 0 / 32px 16px !important; image-rendering: pixelated; box-shadow: 0 0 0 2px var(--line), 0 4px 0 2px #7a4a24 !important; }
 .px-shelf .tf-shelf-cells i { box-shadow: inset 0 -2px 0 rgba(122, 74, 36, 0.3); }
 .px-shelf .tf-shelf-cells i.lock { background: rgba(43, 29, 74, 0.18); box-shadow: inset 0 0 0 2px rgba(43, 29, 74, 0.4); }
@@ -140,3 +140,5 @@
 /* 홈의 고나 받침(작은 잔디 섬) */
 .mgl-frame[data-skin='pixel'] .mgl-hero-wrap { position: relative; }
 .mgl-frame[data-skin='pixel'] .mgl-hero-wrap::after { content: ''; position: absolute; left: 50%; bottom: -14px; width: 132px; height: 20px; margin-left: -66px; background: var(--grass); box-shadow: inset 0 4px 0 #b3f56d, inset 0 -8px 0 #b57b4e, 0 0 0 2px var(--line), 0 4px 0 2px var(--line); z-index: -1; }
+
+.mgl-frame[data-skin='pixel'] .px-next { color: #fff; text-shadow: 0 2px var(--navy), 2px 0 var(--navy), -2px 0 var(--navy); font-size: 12px; }

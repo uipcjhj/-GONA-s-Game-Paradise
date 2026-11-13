@@ -6,6 +6,7 @@ import IslandPanel from './components/IslandPanel';
 import WorldMap from './components/WorldMap';
 import Title from './components/Title';
 import { getMission } from './platform/missions';
+import { playUi } from './sfx';
 import { usePlayer } from './platform/PlayerContext';
 import { useBackLayer } from './platform/useBackLayer';
 import Achievements from './screens/Achievements';
@@ -48,6 +49,7 @@ export default function App() {
   // 새 소식(업적·도감·칭호)은 토스트로 한 번에 알림
   useEffect(() => {
     if (!news.length) return;
+    playUi(news.some((n) => n.kind === 'achievement') ? 'achieve' : 'claim');
     notify(news.length > 1 ? `${news[0].text} 외 ${news.length - 1}건` : news[0].text);
     clearNews();
   }, [news, notify, clearNews]);
@@ -132,8 +134,14 @@ export default function App() {
     );
   }
 
+  // 공통 버튼 터치음(탭 전환은 별도 소리). 결과·보상 소리는 각 화면에서
+  const onTapSound = (e: React.MouseEvent) => {
+    const el = (e.target as HTMLElement).closest('button, a, [role=tab]');
+    if (!el || (el as HTMLButtonElement).disabled || el.closest('[data-sfx=off]')) return;
+    playUi(el.getAttribute('role') === 'tab' || el.classList.contains('nav-btn') ? 'tab' : 'tap');
+  };
   return (
-    <div className="frame" style={{ width: frameW }}>
+    <div className="frame" style={{ width: frameW }} onClickCapture={onTapSound}>
       <header className="top hud">
         <PlayerButton player={player} onClick={() => goTab('profile')} />
         <div className="logo">

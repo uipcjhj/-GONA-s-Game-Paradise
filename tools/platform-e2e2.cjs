@@ -95,7 +95,9 @@ async function afterReturn(page) { await page.waitForURL((u) => !/fake-game/.tes
     ok(`[${tag}] 세션: gameId·playerId·returnUrl`, sess.gameId === 'food-island' && sess.playerId.length > 8 && sess.returnUrl === `${origin}/`);
     await afterReturn(page);
     await page.waitForSelector('[data-testid=result]', { timeout: 8000 });
-    ok(`[${tag}] 복귀 → 타이틀 건너뛰고 결과 화면`, await page.locator('[data-testid=result-score]').innerText() === '12,345');
+    ok(`[${tag}] 복귀 → 타이틀 건너뛰고 결과 화면`, Number(await page.locator('[data-testid=result-score]').getAttribute('data-value')) === 12345);
+    await page.waitForTimeout(1100);
+    ok(`[${tag}] 결과 점수 카운트업이 최종값에 도달`, (await page.locator('[data-testid=result-score]').innerText()) === '12,345');
     const rtxt = await page.locator('[data-testid=result]').innerText();
     ok(`[${tag}] 결과: CLEAR · 첫 기록 · XP/코인 · 업적`, rtxt.includes('CLEAR') && rtxt.includes('첫 기록') && /\+\d+\s*XP/.test(rtxt) && rtxt.includes('업적 달성'));
     ok(`[${tag}] 결과: 내 기록 4칸 + 가로 스크롤 없음`, rtxt.includes('최고 점수') && (await noHScroll(page)));

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { playUi } from '../sfx';
 import CoinChip from '../ui/CoinChip';
 import { getItem, shopList, type ItemKind, type ShopItem } from '../platform/shop';
 import { usePlayer } from '../platform/PlayerContext';
@@ -49,7 +50,7 @@ export default function Shop({ onBack, onToast }: { onBack: () => void; onToast:
                 <b>{it.name}</b>
                 {it.desc && <small>{it.desc}</small>}
                 {has ? (
-                  <PixelButton small variant="sub" disabled={on} onClick={() => equip(it.id, it.kind) && onToast(`${it.name} 장착`)}>
+                  <PixelButton small variant="sub" disabled={on} onClick={() => { if (equip(it.id, it.kind)) { playUi('equip'); onToast(`${it.name} 장착`); } }}>
                     {on ? '장착 중' : '장착'}
                   </PixelButton>
                 ) : (
@@ -77,9 +78,13 @@ export default function Shop({ onBack, onToast }: { onBack: () => void; onToast:
             const r = buy(ask.id);
             setAsk(null);
             if (r.ok) {
+              playUi('buy');
               equip(ask.id, ask.kind);
               onToast(`${ask.name} 구매·장착!`);
-            } else onToast(r.error === 'coins' ? '코인이 모자라요' : '구매할 수 없어요');
+            } else {
+              playUi('error');
+              onToast(r.error === 'coins' ? '코인이 모자라요' : '구매할 수 없어요');
+            }
           }}
         />
       )}
