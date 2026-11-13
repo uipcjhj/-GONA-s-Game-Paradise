@@ -54,6 +54,86 @@ def despeckle(idx, protect=None):
     return out
 
 
+def soften_horizon(canvas):
+    """수평선 부분 수정: 일자로 그어진 흰 줄을 없애고 '아지랑이(하늘) → 먼 바다 → 가까운 바다'로 자연스럽게 잇는다.
+    구름·섬·나무·거품 등은 건드리지 않고, 하늘/바다 파랑 픽셀만 다시 칠한다 (배경을 새로 생성하지 않음)."""
+    import random
+    rnd = random.Random(7)
+    H, W, _ = canvas.shape
+    white_rows = [(int((canvas[y].min(axis=1) > 235).sum()), y) for y in range(H)]
+    cnt, hz = max(white_rows)
+    assert cnt > 80, '수평선 흰 줄을 찾지 못함'
+
+    def blue(c):   # 하늘·바다의 파란 계열만 대상 (구름·나무·섬은 제외)
+        return int(c[2]) >= 235 and int(c[0]) < 45 and int(c[1]) >= 140
+
+    def hx(h):
+        return np.array([int(h[i:i + 2], 16) for i in (1, 3, 5)], dtype=np.uint8)
+
+    # ① 하늘 쪽 아지랑이 — 수평선으로 갈수록 연해지는 6단계 팔레트 + 2×2 규칙 디더(경계 줄무늬 방지)
+    HAZE = [hx(c) for c in ('#12a7fd', '#2bb3fd', '#4fc4fe', '#78d3fe', '#a3e2ff', '#c8eeff', '#e0f6ff')]
+    BAYER = [[0, 2], [3, 1]]
+    top = hz - 9
+    for y in range(top, hz):
+        f = ((y - top + 1) / 9.0) ** 1.35 * (len(HAZE) - 1)
+        for x in range(W):
+            if not blue(canvas[y, x]):
+                continue
+            lv = f + (BAYER[y % 2][x % 2] - 1.5) / 4.0
+            canvas[y, x] = HAZE[int(np.clip(round(lv), 0, len(HAZE) - 1))]
+    # ② 수평선 행: 직선 대신 아주 연한 하늘색 + 군데군데 반짝이는 흰 점
+    for x in range(W):
+        c = canvas[hz, x]
+        if int(c.min()) > 235 or blue(c):
+            canvas[hz, x] = hx('#e6f7ff') if rnd.random() > 0.28 else hx('#bfeaff')
+    # ③ 바다: 먼 곳(연한 청록) → 가까운 곳(원래 파랑)으로 점점 진해지는 띠 (띠 높이는 아래로 갈수록 커짐 = 원근감)
+    BANDS = [(1, 2, '#9ee3fb'), (3, 4, '#6fd3f8'), (5, 7, '#45c3f7'), (8, 11, '#1fb0f6'), (12, 16, '#08a2f5')]
+    DASH = {1: ('#d6f3ff', 2), 2: ('#d6f3ff', 2), 3: ('#b9ebfc', 3), 4: ('#b9ebfc', 3), 5: ('#8fdcf9', 4), 6: ('#8fdcf9', 4), 7: ('#8fdcf9', 4)}
+    for r in range(1, 17):
+        y = hz + r
+        if y >= H:
+            break
+        band = next((b for b in BANDS if b[0] <= r <= b[1]), None)
+        if band is None:
+            continue
+        col = hx(band[2])
+        nxt = next((b for b in BANDS if b[0] == band[1] + 1), None)
+        for x in range(W):
+            if not blue(canvas[y, x]):
+                continue
+            c = col
+            if nxt is not None and r == band[1] and (x + y) % 2 == 0:   # 띠 경계는 디더로 부드럽게
+                c = hx(nxt[2])
+            canvas[y, x] = c
+    # ④ 잔물결: 가까울수록 길고 간격이 넓은 가로 점선 (연한 하이라이트)
+    for r in range(1, 12):
+        y = hz + r
+        if y >= H:
+            break
+        col, ln = DASH.get(r, ('#8fdcf9', 5)) if r < 8 else ('#5cc8f8', 5 + (r - 8))
+        gap = 5 + r
+        x = rnd.randrange(0, gap)
+        while x < W - ln:
+            if all(blue(canvas[y, x + k]) or tuple(canvas[y, x + k]) in {tuple(hx(b[2])) for b in BANDS} for k in range(ln)):
+                canvas[y, x:x + ln] = hx(col)
+            x += ln + gap + rnd.randrange(0, 6)
+    # ⑤ 반짝임: 먼 바다 쪽에 작은 흰 점 · 십자 반짝이
+    spots = 0
+    tries = 0
+    while spots < 11 and tries < 400:
+        tries += 1
+        x = rnd.randrange(2, W - 3)
+        y = hz + rnd.randrange(1, 10)
+        if blue(canvas[y, x]) or tuple(canvas[y, x]) in {tuple(hx(b[2])) for b in BANDS}:
+            canvas[y, x] = hx('#ffffff')
+            if spots % 3 == 0 and y > hz + 2:       # 가끔 십자(+) 모양
+                for dx, dy in ((-1, 0), (1, 0), (0, -1)):
+                    if tuple(canvas[y + dy, x + dx]) in {tuple(hx(b[2])) for b in BANDS} or blue(canvas[y + dy, x + dx]):
+                        canvas[y + dy, x + dx] = hx('#e6f7ff')
+            spots += 1
+    return hz
+
+
 def build_bg():
     im = np.array(Image.open(os.path.join(SRC, 'bg8-original.png')).convert('RGB'))
     idx, pal = quantize(im, 44)       # 절벽 주황·꽃 분홍 같은 작은 색 영역까지 살리려면 28색으로는 부족
@@ -78,7 +158,9 @@ def build_bg():
         seen[y, x] = True
         canvas[y, x] = sky
         stack += [(y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)]
+    hz = soften_horizon(canvas)
     Image.fromarray(canvas, 'RGB').save(os.path.join(OUT, 'title-bg-px.png'))
+    print('수평선 행', hz, '→ 아지랑이 · 먼 바다 띠 · 잔물결 · 반짝임 적용')
     print('title-bg-px.png', BG_W, 'x', BG_H, '색', len({tuple(c) for c in canvas.reshape(-1, 3)}), '| 도트 배율 4px')
 
 
