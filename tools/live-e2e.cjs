@@ -165,7 +165,7 @@ const foodScoreText = (page) => page.evaluate(() => (document.querySelector('.ov
       await startNewGame(page, input);
       await playBot(page, input, { stop: 'death', dieAfterSec: 9999, maxMin: 0.2 }); // 약 12초 플레이 후 중단(죽지 않음)
       await page.reload();
-      await page.waitForSelector('.op-skip, .cover', { timeout: 15000 });
+      await page.waitForSelector('#game canvas', { timeout: 15000 });
       ok(`[${tag}] 게임 중 새로고침 → 결과 inbox 없음(끝나지 않은 판은 기록 안 함)`, (await keys(page, 'gp.v1.inbox.')).length === 0);
       await page.goto(PARADISE);
       await page.waitForSelector('.title');
