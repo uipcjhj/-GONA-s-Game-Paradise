@@ -1,0 +1,155 @@
+/* GONA's Mini Game Land — 독립 모듈 스타일 (mgl- 접두). 게임천국 styles.css 는 불러오지 않음.
+   방향: 90년대 게임보이·슈퍼패미컴 느낌 — 각진 모서리, 굵은 외곽선, 딱딱한(번짐 없는) 그림자, 그라데이션 없음. */
+:root {
+  --line: #3b2a3f;
+  --cream: #fff4d6;
+  --cream2: #f3dfa8;
+  --wood: #b57b4e;
+  --gold: #ffd84a;
+  --sea: #1daefd;
+  --seaD: #0b79c9;
+  --green: #5fcf5f;
+  --red: #e8584f;
+  --ink2: #6b5470;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  background: #6cc8fb;
+  background-image: radial-gradient(#8bd6ff 1px, transparent 1px);
+  background-size: 8px 8px;
+  font-family: Galmuri11, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  color: var(--line);
+  overflow: hidden;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+img { display: block; -webkit-user-drag: none; image-rendering: pixelated; }
+button { font: inherit; color: inherit; cursor: pointer; }
+h1, h2, h3, p { margin: 0; }
+
+.mgl-frame {
+  height: 100vh; height: 100dvh;
+  width: 100%; max-width: 480px; margin: 0 auto;
+  background: var(--sea);
+  background-image: radial-gradient(#4cc1ff 1px, transparent 1px);
+  background-size: 8px 8px;
+  display: flex; flex-direction: column; position: relative; overflow: hidden;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  box-shadow: 0 0 0 2px #fff8;
+}
+
+/* ── 버튼: 각진 도트 버튼. 딱딱한 아래 그림자, 눌리면 내려앉음 */
+.mgl-btn {
+  min-height: 44px; padding: 8px 16px;
+  background: var(--cream); border: 0; border-radius: 0;
+  box-shadow: 0 0 0 2px var(--line), 0 5px 0 2px var(--line);
+  font-weight: 700; font-size: 15px; line-height: 1.2; text-align: center;
+  color: var(--line); text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
+  touch-action: manipulation;
+  margin-bottom: 5px;
+}
+.mgl-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 0 0 2px var(--line), 0 1px 0 2px var(--line); }
+.mgl-btn:disabled { background: #cdbf9a; color: #8a7a8f; cursor: default; }
+.mgl-btn-primary { background: var(--gold); }
+.mgl-btn-lg { min-height: 52px; font-size: 17px; }
+.mgl-btn-sm { min-height: 44px; font-size: 13px; padding: 6px 12px; }
+.mgl-icon-btn { min-width: 44px; padding: 0 8px; font-size: 16px; }
+
+/* ── 공통 화면 */
+.mgl-screen {
+  flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: 12px;
+  padding: 16px 16px 12px; overflow-y: auto; border: 0; background: none; text-align: center; width: 100%;
+}
+.mgl-h { font-size: 22px; color: #fff; text-shadow: -2px 0 var(--seaD), 2px 0 var(--seaD), 0 -2px var(--seaD), 0 2px var(--seaD); text-align: center; }
+.mgl-list { display: flex; flex-direction: column; gap: 12px; }
+.mgl-card {
+  background: var(--cream); border: 0; border-radius: 0; padding: 12px 14px; text-align: left;
+  box-shadow: 0 0 0 2px var(--line), 4px 4px 0 2px var(--line); margin-right: 4px;
+}
+.mgl-card h3 { font-size: 16px; margin-bottom: 4px; }
+.mgl-card p { font-size: 13px; line-height: 1.45; }
+.mgl-card-btn { width: calc(100% - 4px); min-height: 44px; }
+.mgl-card-btn:active { transform: translate(3px, 3px); box-shadow: 0 0 0 2px var(--line), 1px 1px 0 2px var(--line); }
+.mgl-sub { font-size: 12px; color: var(--ink2); }
+.mgl-card .mgl-sub, .mgl-intro .mgl-sub { color: var(--ink2); }
+.mgl-intro .mgl-sub { color: #fff; text-shadow: 0 1px var(--seaD); }
+.mgl-center-text { text-align: center; color: #fff; text-shadow: 0 1px var(--seaD); }
+.mgl-temp { font-style: normal; font-size: 10px; margin-left: 6px; padding: 1px 4px; background: var(--gold); box-shadow: 0 0 0 1px var(--line); vertical-align: middle; }
+.mgl-how { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6; }
+.mgl-actions { display: flex; flex-direction: column; gap: 6px; margin-top: auto; padding: 8px 4px 0; }
+.mgl-note { font-size: 11px; color: #fff; text-shadow: 0 1px var(--seaD); text-align: center; }
+.mgl-grow { flex: 1; }
+.mgl-center { display: flex; align-items: center; justify-content: center; height: 100%; color: #fff; }
+.mgl-stepper { display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 17px; font-weight: 700; color: #fff; text-shadow: 0 2px var(--seaD); }
+
+/* ── 홈 */
+.mgl-home { align-items: center; justify-content: space-between; padding-top: 20px; }
+.mgl-title h1 { display: flex; flex-direction: column; gap: 2px; font-size: 26px; line-height: 1.05; color: #fff; text-shadow: -2px 0 var(--seaD), 2px 0 var(--seaD), 0 -2px var(--seaD), 0 2px var(--seaD), 3px 3px 0 var(--seaD); }
+.mgl-title h1 span:last-child { color: var(--gold); }
+.mgl-title p { margin-top: 8px; font-size: 13px; font-weight: 700; color: #fff7a8; text-shadow: 0 1px var(--seaD), 1px 0 var(--seaD), -1px 0 var(--seaD); }
+.mgl-hero { width: 81px; height: 102px; flex: none; } /* 27×34 ×3 정수 배율 */
+.mgl-menu { width: 100%; display: flex; flex-direction: column; gap: 6px; padding: 0 12px; }
+.mgl-foot { width: 100%; display: flex; justify-content: space-between; gap: 8px; padding: 0 12px; }
+
+/* ── 라운드: HUD + 플레이 영역 */
+.mgl-round { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+.mgl-hud { flex: none; padding: 8px 10px 4px; display: flex; flex-direction: column; gap: 4px; background: var(--seaD); box-shadow: 0 3px 0 var(--line); position: relative; z-index: 2; }
+.mgl-hud-row { display: flex; align-items: center; gap: 8px; }
+.mgl-hud .mgl-btn { margin-bottom: 5px; }
+.mgl-time { position: relative; flex: 1; height: 24px; background: #1b3a5c; box-shadow: 0 0 0 2px var(--line); overflow: hidden; }
+.mgl-time-fill { position: absolute; inset: 0 auto 0 0; background: var(--green); }
+.mgl-time.warn .mgl-time-fill { background: var(--red); }
+.mgl-time-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; text-shadow: 0 1px var(--line), 1px 0 var(--line), -1px 0 var(--line); }
+.mgl-score { min-width: 68px; text-align: right; font-size: 19px; font-weight: 700; color: var(--gold); text-shadow: 0 2px var(--line), 2px 0 var(--line), -2px 0 var(--line), 0 -1px var(--line); font-variant-numeric: tabular-nums; }
+.mgl-hud-sub { min-height: 22px; font-size: 12px; color: #fff; }
+.mgl-label { font-size: 12px; font-weight: 700; color: #fff; text-shadow: 0 1px var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%; }
+.mgl-combo { font-size: 12px; font-weight: 700; color: var(--gold); text-shadow: 0 1px var(--line); }
+.mgl-lives { display: inline-flex; gap: 3px; font-size: 17px; line-height: 1; text-shadow: 0 1px var(--line), 1px 0 var(--line), -1px 0 var(--line); }
+.mgl-lives .on { color: #ff5a6e; }
+.mgl-lives .off { color: #9fd2f0; }
+.mgl-play { flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; touch-action: none; }
+
+.mgl-overlay { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; background: rgba(27, 58, 92, 0.72); }
+.mgl-overlay-pass { pointer-events: none; background: rgba(27, 58, 92, 0.35); }
+.mgl-big { font-size: 44px; font-weight: 700; color: #fff; text-shadow: -3px 0 var(--line), 3px 0 var(--line), 0 -3px var(--line), 0 3px var(--line), 4px 4px 0 var(--line); }
+.mgl-big.clear, .clear { color: var(--gold); }
+.mgl-big.fail { color: #ff8a8a; }
+.mgl-panel { width: min(80%, 300px); display: flex; flex-direction: column; gap: 6px; padding: 16px 14px 10px; background: var(--cream); box-shadow: 0 0 0 2px var(--line), 4px 4px 0 2px var(--line); text-align: center; }
+.mgl-panel h2 { font-size: 20px; margin-bottom: 8px; }
+
+/* ── 결과 / 안내 카드 */
+.mgl-result { align-items: stretch; }
+.mgl-result-head { font-size: 28px; text-align: center; color: #fff; text-shadow: -2px 0 var(--line), 2px 0 var(--line), 0 -2px var(--line), 0 2px var(--line), 3px 3px 0 var(--line); margin-top: 12px; }
+.mgl-result-head.clear { color: var(--gold); }
+.mgl-result-head.fail { color: #ff8a8a; }
+.mgl-badge { align-self: center; padding: 4px 10px; background: var(--gold); font-size: 13px; font-weight: 700; box-shadow: 0 0 0 2px var(--line), 3px 3px 0 2px var(--line); }
+.mgl-lines { margin: 4px 4px 0 0; padding: 10px 14px; background: var(--cream); box-shadow: 0 0 0 2px var(--line), 4px 4px 0 2px var(--line); }
+.mgl-lines > div { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; }
+.mgl-lines > div + div { border-top: 2px dotted var(--cream2); }
+.mgl-lines .strong { font-weight: 700; font-size: 16px; }
+.mgl-lines dt, .mgl-lines dd { margin: 0; }
+.mgl-intro { align-items: center; justify-content: center; gap: 14px; cursor: pointer; }
+.mgl-intro-round { font-size: 30px; font-weight: 700; color: #fff; text-shadow: -2px 0 var(--seaD), 2px 0 var(--seaD), 0 -2px var(--seaD), 0 2px var(--seaD), 3px 3px 0 var(--seaD); }
+.mgl-intro-round.clear { color: var(--gold); }
+.mgl-intro-round.fail { color: #ffb0b0; }
+.mgl-intro-title { font-size: 24px; font-weight: 700; color: var(--gold); text-shadow: -2px 0 var(--line), 2px 0 var(--line), 0 -2px var(--line), 0 2px var(--line); }
+
+/* ── 임시 테스트 게임(고나 콕콕) */
+.tt { height: 100%; display: flex; flex-direction: column; padding: 10px 14px 14px; gap: 8px; }
+.tt-info { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; color: #fff; text-shadow: 0 2px var(--seaD); }
+.tt-miss { letter-spacing: 2px; }
+.tt-grid { flex: 1 1 0; min-height: 0; width: 100%; max-width: 360px; margin: 0 auto; display: grid; gap: 10px; }
+.tt-cell { position: relative; padding: 0; border: 0; border-radius: 0; background: #7fd0ff; box-shadow: 0 0 0 2px var(--line), inset 0 -6px 0 #55b8f0; display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
+.tt-cell[data-kind='gona'] { background: var(--cream); box-shadow: 0 0 0 2px var(--line), inset 0 -6px 0 var(--cream2); }
+.tt-cell[data-kind='decoy'] { background: #ffd0cc; box-shadow: 0 0 0 2px var(--line), inset 0 -6px 0 #f0a8a2; }
+.tt-gona { width: 81px; height: 102px; max-height: 90%; object-fit: contain; pointer-events: none; }
+.tt-decoy { width: 56px; height: 56px; background: var(--red); box-shadow: 0 0 0 3px var(--line); color: #fff; font-size: 28px; font-weight: 700; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+
+@media (max-height: 560px) {
+  .mgl-hero { display: none; }
+  .mgl-title h1 { font-size: 22px; }
+}
