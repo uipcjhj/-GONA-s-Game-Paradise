@@ -1,0 +1,6 @@
+# 예시 — 실제 값을 커밋하지 마세요. (wrangler dev 로컬 개발용 .dev.vars 로 복사해 사용)
+TOKEN_PEPPER=change-me-to-a-long-random-secret
+ALLOWED_ORIGINS=https://uipcjhj.github.io
+# 로컬 테스트에서만: 출시 전 게임(sky/mini) 제출 허용
+# ALLOW_TEST_GAMES=1
+# MIN_PARTICIPANTS=20

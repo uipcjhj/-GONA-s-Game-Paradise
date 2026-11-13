@@ -1,0 +1,12 @@
+{
+  "name": "gona-paradise-ranking",
+  "private": true,
+  "version": "0.1.0",
+  "description": "고나 게임천국 온라인 랭킹 서버 (Cloudflare Workers + D1) — 로컬 모의 환경으로만 검증됨, 배포하지 않음",
+  "type": "module",
+  "scripts": {
+    "dev:mock": "node scripts/dev-server.ts",
+    "test": "cd .. && npx vitest run backend"
+  },
+  "devDependencies": {}
+}
