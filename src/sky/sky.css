@@ -1,0 +1,77 @@
+/* GONA's Sky Adventure — 독립 스타일 (기존 styles.css 와 같은 팔레트·테두리 규칙) */
+.sky {
+  position: fixed; inset: 0; z-index: 50; background: #6fb9e8; color: #3b2a3f;
+  font-family: Galmuri11, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  display: flex; flex-direction: column; align-items: center; overflow: hidden;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overscroll-behavior: none;
+}
+.sky * { box-sizing: border-box; }
+.sky-loading { margin: auto; font-weight: 700; color: #fff7dc; text-shadow: 0 2px #3b2a3f; }
+
+.sky-select { padding: calc(env(safe-area-inset-top) + 8px) 12px calc(env(safe-area-inset-bottom) + 8px); gap: 6px; overflow-y: auto; touch-action: pan-y; justify-content: center; }
+.sky-clouds {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0.9;
+  background: url(/assets/sky/cloud-0.png) 14% 12% / 108px auto no-repeat, url(/assets/sky/cloud-2.png) 80% 60% / 140px auto no-repeat, url(/assets/sky/cloud-1.png) 6% 78% / 76px auto no-repeat;
+  image-rendering: pixelated;
+}
+.sky-head { text-align: center; position: relative; }
+.sky-head h1 {
+  margin: 0; font-size: 22px; line-height: 1.15; color: #fff7dc; letter-spacing: 1px;
+  text-shadow: -2px 0 #3b2a3f, 2px 0 #3b2a3f, 0 -2px #3b2a3f, 0 2px #3b2a3f, -2px -2px #3b2a3f, 2px 2px #3b2a3f, 2px -2px #3b2a3f, -2px 2px #3b2a3f, 0 4px #3b2a3f;
+}
+.sky-tag { display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 700; padding: 3px 6px 4px; background: #ffd84a; border: 2px solid #3b2a3f; }
+
+/* 선택 화면의 고나(원본 프레임 + 날개 4프레임 애니메이션) — 정수 3배 */
+.sky-hero { position: relative; width: 156px; height: 108px; margin: 2px 0; transform-origin: center; }
+.sky-body, .sky-wing { position: absolute; image-rendering: pixelated; }
+.sky-body { left: 30px; top: 0; width: 99px; height: 102px; background: url(/assets/sky/gona-body.png) 0 0 / 396px 102px no-repeat; animation: skybob 1.2s steps(2) infinite; }
+.sky-wing { width: 84px; height: 78px; top: 4px; background: url(/assets/sky/gona-wings.png) 0 0 / 336px 78px no-repeat; animation: skyflap 0.5s steps(4) infinite, skybob 1.2s steps(2) infinite; }
+.sky-wing-r { left: 84px; }
+.sky-wing-l { left: -12px; transform: scaleX(-1); }
+@keyframes skyflap { to { background-position: -336px 0; } }
+@keyframes skybob { 0%, 100% { margin-top: 0; } 50% { margin-top: -3px; } }
+
+.sky-pick { margin: 0; font-size: 13px; font-weight: 700; color: #fff7dc; text-shadow: 0 2px #3b2a3f; position: relative; }
+.sky-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; width: 100%; max-width: 372px; position: relative; }
+.sky-card {
+  width: 100%; min-height: 108px; padding: 6px 2px 4px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px;
+  font-family: inherit; color: #3b2a3f; background: #fff4d6; border: 3px solid #3b2a3f; box-shadow: inset 0 3px 0 #fff, 0 3px 0 rgba(0, 0, 0, 0.25); cursor: pointer;
+}
+.sky-card img { height: 56px; image-rendering: pixelated; object-fit: contain; }
+.sky-card b { font-size: 12px; }
+.sky-card span { font-size: 9px; line-height: 1.2; word-break: keep-all; }
+.sky-card.on { background: #ffd84a; box-shadow: inset 0 -4px 0 #e8a92c, 0 0 0 3px #fff7dc, 0 3px 0 3px #3b2a3f; transform: translateY(-2px); }
+.sky-desc { margin: 0; font-size: 12px; font-weight: 700; color: #3b2a3f; background: #fff4d6; border: 3px solid #3b2a3f; padding: 6px 10px; position: relative; text-align: center; }
+.sky-row { display: flex; gap: 8px; position: relative; }
+.sky-btn {
+  min-height: 44px; padding: 0 16px; font-family: inherit; font-size: 15px; font-weight: 700; color: #3b2a3f; background: #fff4d6; border: 3px solid #3b2a3f;
+  box-shadow: inset 0 -5px 0 #d8c9a4, 0 3px 0 rgba(0, 0, 0, 0.3); cursor: pointer;
+}
+.sky-btn:active { transform: translateY(2px); box-shadow: inset 0 -3px 0 #d8c9a4; }
+.sky-btn-go { background: #ffd84a; box-shadow: inset 0 -5px 0 #e8a92c, 0 3px 0 rgba(0, 0, 0, 0.3); min-width: 120px; }
+.sky-help { margin: 0; font-size: 10px; line-height: 1.5; text-align: center; color: #fff7dc; text-shadow: 0 1px #3b2a3f; position: relative; }
+.sky-best { margin: 0; font-size: 11px; font-weight: 700; color: #ffd84a; text-shadow: 0 2px #3b2a3f; position: relative; }
+
+.sky-play { justify-content: center; background: #6fb9e8; }
+.sky-stage { position: relative; flex: none; }
+.sky-canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; image-rendering: pixelated; touch-action: none; background: #6fb9e8; }
+.sky-act {
+  position: absolute; bottom: calc(env(safe-area-inset-bottom) * 0 + 14px); width: 76px; height: 52px; font-family: inherit; font-size: 15px; font-weight: 700; color: #3b2a3f;
+  border: 3px solid #3b2a3f; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer;
+}
+.sky-charge { left: 8px; background: #ffd84a; box-shadow: inset 0 -5px 0 #e8a92c, 0 3px 0 rgba(0, 0, 0, 0.3); }
+.sky-bomb { right: 8px; background: #ff9ec0; box-shadow: inset 0 -5px 0 #d9407a, 0 3px 0 rgba(0, 0, 0, 0.3); }
+.sky-act:active { transform: translateY(2px); filter: brightness(1.08); }
+.sky-pause {
+  position: absolute; top: 6px; left: 50%; margin-left: -18px; width: 36px; height: 36px; padding: 0; font-family: inherit; font-size: 14px; font-weight: 700; color: #3b2a3f;
+  background: #fff4d6; border: 3px solid #3b2a3f; box-shadow: inset 0 -3px 0 #d8c9a4; cursor: pointer;
+}
+.sky-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(59, 42, 63, 0.55); }
+.sky-panel {
+  width: 78%; max-width: 300px; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; align-items: stretch; text-align: center;
+  background: #fff4d6; border: 3px solid #3b2a3f; box-shadow: inset 0 3px 0 #fff, 0 3px 0 rgba(0, 0, 0, 0.3);
+}
+.sky-panel h2 { margin: 0 0 2px; font-size: 20px; color: #c8386a; text-shadow: 0 2px #fff; }
+.sky-panel dl { margin: 0 0 4px; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 13px; text-align: left; }
+.sky-panel dt { font-weight: 700; } .sky-panel dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .sky-wing, .sky-body { animation: none; } }

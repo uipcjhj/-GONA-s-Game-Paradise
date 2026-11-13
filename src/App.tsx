@@ -7,6 +7,12 @@ import { ProfileView, RankingView } from './components/InfoViews';
 import WorldMap from './components/WorldMap';
 import PixelLeaf from './components/PixelLeaf';
 import Title from './components/Title';
+import SkyGame from './sky/SkyGame';
+
+/** 슈팅게임은 개발판 전용: 정식 배포 화면에서는 입장 버튼이 열리지 않음 (개발 서버 · ?dev · #sky 에서만) */
+/** 미리보기 전용 빌드(VITE_SKY_PREVIEW=1): 열자마자 슈팅게임이 시작 */
+const SKY_PREVIEW = import.meta.env.VITE_SKY_PREVIEW === '1';
+const SKY_DEV = SKY_PREVIEW || import.meta.env.DEV || /[?&]dev(=|&|$)/.test(location.search) || location.hash === '#sky';
 
 const HEADER_PX = 48;
 const NAV_PX = 66; // 떠 있는 내비게이션이 차지하는 아래쪽 자리(안전 영역 제외)
@@ -14,13 +20,21 @@ const MAX_FRAME = 600;
 const POPUP_PX = 80; // 팝업 높이(대략)
 
 export default function App() {
-  const [screen, setScreen] = useState<'title' | 'map'>('title');
+  const [screen, setScreen] = useState<'title' | 'map' | 'sky'>(() => (SKY_PREVIEW || location.hash === '#sky' ? 'sky' : 'title'));
   const [tab, setTab] = useState<Tab>('map');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [vp, setVp] = useState({ w: window.innerWidth, h: window.innerHeight });
   const [area, setArea] = useState({ w: 0, h: 0 });
   const mapBox = useRef<HTMLDivElement>(null);
-  const selected = ISLANDS.find((i) => i.id === selectedId) ?? null;
+  const found = ISLANDS.find((i) => i.id === selectedId) ?? null;
+  const selected =
+    found && found.id === 'sky-battle' && SKY_DEV
+      ? { ...found, status: 'open' as const, gameTitle: "GONA's Sky Adventure", tagline: '건버드 스타일 세로 슈팅 · 개발판(테스트)' }
+      : found;
+  const exitSky = () => {
+    history.replaceState(null, '', location.pathname + location.search);
+    setScreen('map');
+  };
 
   useEffect(() => {
     const on = () => setVp({ w: window.innerWidth, h: window.innerHeight });
@@ -55,6 +69,7 @@ export default function App() {
 
   const onArrive = useCallback((id: string | null) => setSelectedId(id), []);
 
+  if (screen === 'sky') return <SkyGame onExit={exitSky} />;
   if (screen === 'title') return <Title onStart={() => setScreen('map')} />;
 
   return (
@@ -78,7 +93,7 @@ export default function App() {
                 </div>
               </div>
             )}
-            {selected && <IslandPanel island={selected} onClose={() => setSelectedId(null)} />}
+            {selected && <IslandPanel island={selected} onClose={() => setSelectedId(null)} onEnter={selected.id === 'sky-battle' && SKY_DEV ? () => setScreen('sky') : undefined} />}
           </div>
         )}
         {tab === 'profile' && <ProfileView />}
