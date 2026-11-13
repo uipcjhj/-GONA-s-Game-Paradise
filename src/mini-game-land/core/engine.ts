@@ -41,7 +41,7 @@ export interface RoundSummary {
 export interface EngineOptions {
   limitMs: number | null;
   onFinish: (s: RoundSummary) => void;
-  sfx?: (name: SfxName) => void;
+  sfx?: (name: SfxName, pitch?: number) => void;
   readyMs?: number;
   resumeMs?: number;
   env?: FrameEnv;
@@ -85,7 +85,8 @@ export class RoundEngine {
         return () => void this.frameSubs.delete(cb);
       },
       listen: (target, type, fn, o) => this.gameDisposer.listen(target, type, fn, o),
-      sfx: (n) => this.opts.sfx?.(n),
+      // 정답음은 콤보가 쌓일수록 음이 올라감(최대 +40%) — 손맛 피드백
+      sfx: (n) => this.opts.sfx?.(n, n === 'good' ? 1 + Math.min(10, this.combo) * 0.04 : 1),
       finish: (r) => this.finish(r, 'game'),
     };
   }

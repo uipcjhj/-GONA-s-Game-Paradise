@@ -31,7 +31,7 @@ export default function Round({ game, level, seed, mode, timeScale = 1, hud, onE
     () =>
       new RoundEngine({
         limitMs: effectiveLimitMs(game.timeLimitSec(level, mode), timeScale),
-        sfx: (n) => audio.play(n),
+        sfx: (n, pitch) => audio.play(n, pitch),
         onFinish: (s) => {
           audio.play(s.outcome === 'clear' ? 'clear' : s.reason === 'quit' ? 'pause' : 'fail');
           setSummary(s);

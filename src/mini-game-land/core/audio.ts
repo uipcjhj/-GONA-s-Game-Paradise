@@ -54,7 +54,7 @@ export class AudioSystem {
     this.muted = m;
   }
 
-  play(name: SfxName) {
+  play(name: SfxName, pitch = 1) {
     const ctx = this.ctx;
     if (!ctx || this.muted || ctx.state !== 'running') return;
     const t0 = ctx.currentTime;
@@ -63,8 +63,8 @@ export class AudioSystem {
       const gain = ctx.createGain();
       const start = t0 + (n.at ?? 0);
       osc.type = n.t ?? 'square';
-      osc.frequency.setValueAtTime(n.f, start);
-      if (n.to) osc.frequency.linearRampToValueAtTime(n.to, start + n.d);
+      osc.frequency.setValueAtTime(n.f * pitch, start);
+      if (n.to) osc.frequency.linearRampToValueAtTime(n.to * pitch, start + n.d);
       gain.gain.setValueAtTime(n.v ?? 0.06, start);
       gain.gain.exponentialRampToValueAtTime(0.0001, start + n.d);
       osc.connect(gain).connect(ctx.destination);

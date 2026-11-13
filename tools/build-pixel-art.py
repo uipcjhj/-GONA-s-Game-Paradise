@@ -201,4 +201,13 @@ c = C(10, 10); c.rows(0, 0, ['..oooooo..', '.oYYYYYYo.', 'oYhYYYYDYo', 'oYhYooYD
 c = C(11, 11); c.rows(0, 0, ['.....o.....', '....oYo....', '....oYo....', 'oooooYooooo', 'oYYYYhYYYYo', '.oYYhYYYYo.', '..oYYYYYo..', '..oYYoYYo..', '.oYYo.oYYo.', '.oYo...oYo.', '.oo.....oo.'], {'o': INK, 'Y': hx('ffd84a'), 'h': hx('fff4b0')}); c.save(UI, 'star.png'); c.save(MINI, 'star.png')
 c = C(9, 8); c.rows(0, 0, ['.oo...oo.', 'oRRo.oRRo', 'oRhRoRRRo', 'oRRRRRRRo', '.oRRRRRo.', '..oRRRo..', '...oRo...', '....o....'], {'o': INK, 'R': hx('ef5b6b'), 'h': hx('ffc2cc')}); c.save(MINI, 'heart.png'); c.save(UI, 'heart.png')
 c = C(9, 8); c.rows(0, 0, ['.oo...oo.', 'o..o.o..o', 'o...o...o', 'o.......o', '.o.....o.', '..o...o..', '...o.o...', '....o....'], {'o': hx('8a7a9a')}); c.save(MINI, 'heart-off.png')
+# 탑 아이콘: 접시 위에 식빵·푸딩·마카롱 쌓기 (20×24)
+c = C(20, 24)
+c.rows(0, 0, [
+    '.......oooooo.......', '......oPPPPPPo......', '......oWWWWWWo......', '......oPPPPPPo......', '.......oooooo.......',
+    '.....oooooooooo.....', '....oCCCCCCCCCCo....', '....oYYYYYYYYYYo....', '....oYYYYYYYYYYo....', '....oYYYYYYYYYYo....', '.....oooooooooo.....',
+    '..oooooooooooooooo..', '..oTTTTTTTTTTTTTTo..', '..oBBBBBBBBBBBBBBo..', '..oBBbBBBBBBbBBBBo..', '..oBBBBBBbBBBBBBBo..', '..oBBBBBBBBBBBBBBo..', '..oooooooooooooooo..',
+    'oooooooooooooooooooo', 'oWWWWWWWWWWWWWWWWWWo', 'oooooooooooooooooooo', '........oSSo........', '........oSSo........', '........oooo........'],
+    {'o': INK, 'P': hx('ff9fb8'), 'W': hx('fff4d6'), 'C': hx('b8642e'), 'Y': hx('f9e49a'), 'T': hx('fbe3b0'), 'B': hx('f0c987'), 'b': hx('c9944f'), 'S': hx('a86b35')})
+c.save(MINI, 'icon-tower.png')
 print('ok')

@@ -60,6 +60,31 @@ const Lives: UiSlots['Lives'] = ({ lives, max }) => (
   </span>
 );
 
+/** 전광판: 콤보 단계(2·5·10·20↑)에 따라 표시가 커지고 색이 바뀜 */
+const comboTier = (c: number) => (c >= 20 ? 4 : c >= 10 ? 3 : c >= 5 ? 2 : c >= 2 ? 1 : 0);
+const Scoreboard: UiSlots['Scoreboard'] = ({ view, pauseButton }) => (
+  <div className="mgl-hud px-hud" data-tier={comboTier(view.combo)}>
+    <div className="mgl-hud-row">
+      {pauseButton}
+      <div className={`mgl-time${view.timeWarn ? ' warn' : ''}`} aria-label={view.timeSec == null ? '시간 무제한' : `남은 시간 ${view.timeSec}초`}>
+        <div className="mgl-time-fill" style={{ width: `${view.timePct}%` }} />
+        <span className="mgl-time-num">{view.timeSec == null ? '∞' : view.timeSec}</span>
+      </div>
+      <div className="mgl-score">{view.score.toLocaleString('en-US')}</div>
+    </div>
+    <div className="mgl-hud-row mgl-hud-sub">
+      <span className="mgl-label">{view.label}</span>
+      {view.combo >= 2 && (
+        <span key={view.combo} className="mgl-combo">
+          COMBO ×{view.combo}
+        </span>
+      )}
+      <span className="mgl-grow" />
+      {view.lives != null ? <Lives lives={view.lives} max={view.maxLives ?? 5} /> : <span className="mgl-label">LV {view.level}</span>}
+    </div>
+  </div>
+);
+
 // ─────────────────────────── 편가르기
 const Friend: SortSlots['Friend'] = ({ card }) => (
   <div className="sc-card px-friend" data-color={card.color} data-face={card.face} data-feature={card.feature}>
@@ -183,7 +208,7 @@ const pixel: Skin = {
   name: '고나 픽셀 UI (코드 도트)',
   extends: 'temp',
   tokens: { '--mgl-page-bg': '#5ec4f5', '--sc-card-w': '112px', '--sc-card-h': '120px', '--mgl-btn-depth': '4px' },
-  ui: { Background, ButtonFace, Panel, Lives },
+  ui: { Background, ButtonFace, Panel, Lives, Scoreboard },
   sort: { Friend, BinFace, StageFrame },
   tower: { Backdrop: TowerBackdrop, PieceArt, PlateArt, NextQueue },
   toyroom: { Backdrop: RoomBackdrop, ShelfFrame: Shelf, ToyArt },
