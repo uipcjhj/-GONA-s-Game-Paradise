@@ -159,3 +159,31 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .row { border-bottom-color: #cfeaff; }
 .row b { color: #e0608e; }
 .view .note { color: #1b6aa5; }
+
+/* ───────── 타이틀 화면 (정적) : 배경 · 로고 · 고나 · 문구는 서로 독립된 레이어 ───────── */
+.title { position: fixed; inset: 0; z-index: 20; cursor: pointer; outline: none; background: #3a9de0; overflow: hidden; }
+.title.leaving { animation: fadeout 0.2s steps(4) forwards; }
+@keyframes fadeout { to { opacity: 0; } }
+.t-stage { position: relative; width: min(100vw, 560px); height: 100vh; height: 100dvh; margin: 0 auto; overflow: hidden; }
+.t-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 72%; }
+.t-head {
+  position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top) + 8%);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; pointer-events: none;
+}
+.t-logo { width: min(90%, 480px); height: auto; filter: drop-shadow(0 4px 0 rgba(58, 27, 94, 0.35)); }
+.t-sub {
+  margin: 2px 0 0; font-size: 26px; line-height: 1.1; font-weight: 700; letter-spacing: 1px; color: #ffd23f;
+  -webkit-text-stroke: 6px #3b1b5e; paint-order: stroke fill; text-shadow: 0 3px 0 #3b1b5e;
+}
+.t-gona {
+  position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 17%); transform: translateX(-50%);
+  image-rendering: pixelated; pointer-events: none; filter: drop-shadow(0 5px 0 rgba(70, 50, 20, 0.28));
+}
+.t-tap {
+  position: absolute; left: 0; right: 0; margin: 0; text-align: center; bottom: calc(env(safe-area-inset-bottom) + 5%);
+  font-size: 15px; font-weight: 700; letter-spacing: 1px; color: #fff7dc; pointer-events: none;
+  -webkit-text-stroke: 5px #3b1b5e; paint-order: stroke fill; text-shadow: 0 3px 0 #3b1b5e;
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink { 0%, 100% { opacity: 1; } 55% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .t-tap { animation: none; } }

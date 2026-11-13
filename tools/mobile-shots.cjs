@@ -32,6 +32,9 @@ async function capture(browser, url, tag, [w, h]) {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   await page.goto(url);
+  if (await page.waitForSelector('.title, .hit', { timeout: 10000 }).then((el) => el.evaluate((n) => n.classList.contains('title')))) {
+    await page.touchscreen.tap(w / 2, h / 2); // 타이틀 → 월드맵 (실제 흐름 그대로)
+  }
   await page.waitForSelector('.hit', { timeout: 10000 });
   await page.waitForTimeout(700);
   const name = `${w}x${h}`;
