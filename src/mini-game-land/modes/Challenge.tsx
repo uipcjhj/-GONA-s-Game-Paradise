@@ -13,7 +13,7 @@ import {
   type RoundPlan,
 } from '../core/session';
 import { recordChallenge } from '../core/storage';
-import { LivesBar } from '../ui/Hud';
+import { Button, LivesBar, Panel } from '../skin/components';
 import ResultScreen from '../ui/ResultScreen';
 import Round from '../ui/Round';
 import { audio, store } from '../services';
@@ -84,24 +84,22 @@ export default function Challenge({ exit }: { exit: () => void }) {
     return (
       <div className="mgl-screen" data-testid="challenge-start">
         <h2 className="mgl-h">랜덤 챌린지</h2>
-        <section className="mgl-card">
+        <Panel tone="card">
           <ol className="mgl-how">
             <li>여러 미니게임이 무작위로 나와요</li>
             <li>성공하면 점수, 실패하면 목숨 −1</li>
             <li>목숨은 {CHALLENGE.startLives}개 · {CHALLENGE.lifeEvery}연속 성공마다 +1 (최대 {CHALLENGE.maxLives})</li>
             <li>라운드가 갈수록 어려워져요</li>
           </ol>
-        </section>
+        </Panel>
         <p className="mgl-sub mgl-center-text">
           최고 {best.bestScore.toLocaleString('en-US')}점 · {best.bestRound}라운드
         </p>
         <div className="mgl-actions">
-          <button type="button" className="mgl-btn mgl-btn-primary mgl-btn-lg" data-testid="start" onClick={begin}>
+          <Button variant="primary" size="lg" data-testid="start" onClick={begin}>
             도전 시작!
-          </button>
-          <button type="button" className="mgl-btn" onClick={exit}>
-            돌아가기
-          </button>
+          </Button>
+          <Button onClick={exit}>돌아가기</Button>
         </div>
       </div>
     );

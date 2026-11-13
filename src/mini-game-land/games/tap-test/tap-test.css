@@ -1,0 +1,10 @@
+/* 임시 테스트 게임(개발용) 모양 — 최종 디자인 아님 */
+.tt { height: 100%; display: flex; flex-direction: column; padding: 10px 14px 14px; gap: 8px; }
+.tt-info { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; color: #fff; text-shadow: 0 2px #0b79c9; }
+.tt-miss { letter-spacing: 2px; }
+.tt-grid { flex: 1 1 0; min-height: 0; width: 100%; max-width: 360px; margin: 0 auto; display: grid; gap: 10px; }
+.tt-cell { position: relative; padding: 0; border: 0; border-radius: 0; background: #7fd0ff; box-shadow: 0 0 0 2px #3b2a3f, inset 0 -6px 0 #55b8f0; display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
+.tt-cell[data-kind='gona'] { background: #fff4d6; box-shadow: 0 0 0 2px #3b2a3f, inset 0 -6px 0 #f3dfa8; }
+.tt-cell[data-kind='decoy'] { background: #ffd0cc; box-shadow: 0 0 0 2px #3b2a3f, inset 0 -6px 0 #f0a8a2; }
+.tt-gona { width: 81px; height: 102px; max-height: 90%; object-fit: contain; pointer-events: none; }
+.tt-decoy { width: 56px; height: 56px; background: #e8584f; box-shadow: 0 0 0 3px #3b2a3f; color: #fff; font-size: 28px; font-weight: 700; display: flex; align-items: center; justify-content: center; pointer-events: none; }

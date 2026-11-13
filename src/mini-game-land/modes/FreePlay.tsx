@@ -7,6 +7,7 @@ import { roundScore } from '../core/scoring';
 import { finishFreeRound, startFree, type FreeState } from '../core/session';
 import { gameRecord, recordFreeRound } from '../core/storage';
 import type { MiniGameModule } from '../core/types';
+import { Button, Panel } from '../skin/components';
 import ResultScreen from '../ui/ResultScreen';
 import Round from '../ui/Round';
 import { store } from '../services';
@@ -53,10 +54,9 @@ export default function FreePlay({ exit }: { exit: () => void }) {
           {GAMES.map((g) => {
             const r = gameRecord(store.get(), g.id);
             return (
-              <button
+              <Button
                 key={g.id}
-                type="button"
-                className="mgl-card mgl-card-btn"
+                variant="card"
                 data-testid={`pick-${g.id}`}
                 onClick={() => {
                   setPickLevel(1);
@@ -71,14 +71,12 @@ export default function FreePlay({ exit }: { exit: () => void }) {
                 <p className="mgl-sub">
                   최고 {r.bestScore.toLocaleString('en-US')}점 · 클리어 LV {r.bestLevel}
                 </p>
-              </button>
+              </Button>
             );
           })}
         </div>
         <div className="mgl-actions">
-          <button type="button" className="mgl-btn" onClick={exit}>
-            돌아가기
-          </button>
+          <Button onClick={exit}>돌아가기</Button>
         </div>
       </div>
     );
@@ -91,30 +89,28 @@ export default function FreePlay({ exit }: { exit: () => void }) {
     return (
       <div className="mgl-screen" data-testid="free-prepare">
         <h2 className="mgl-h">{g.meta.title}</h2>
-        <section className="mgl-card">
+        <Panel tone="card">
           <h3>하는 방법</h3>
           <ol className="mgl-how">
             {g.meta.howTo.map((t) => (
               <li key={t}>{t}</li>
             ))}
           </ol>
-        </section>
+        </Panel>
         <div className="mgl-stepper" data-testid="stepper">
-          <button type="button" className="mgl-btn mgl-icon-btn" aria-label="레벨 내리기" disabled={lvl <= 1} onClick={() => setPickLevel(lvl - 1)}>
+          <Button size="icon" aria-label="레벨 내리기" disabled={lvl <= 1} onClick={() => setPickLevel(lvl - 1)}>
             ◀
-          </button>
+          </Button>
           <span data-testid="start-level">시작 LV {lvl}</span>
-          <button type="button" className="mgl-btn mgl-icon-btn" aria-label="레벨 올리기" disabled={lvl >= unlocked} onClick={() => setPickLevel(lvl + 1)}>
+          <Button size="icon" aria-label="레벨 올리기" disabled={lvl >= unlocked} onClick={() => setPickLevel(lvl + 1)}>
             ▶
-          </button>
+          </Button>
         </div>
         <div className="mgl-actions">
-          <button type="button" className="mgl-btn mgl-btn-primary mgl-btn-lg" data-testid="start" onClick={() => begin(g, lvl)}>
+          <Button variant="primary" size="lg" data-testid="start" onClick={() => begin(g, lvl)}>
             시작!
-          </button>
-          <button type="button" className="mgl-btn" onClick={() => setStage({ kind: 'select' })}>
-            뒤로
-          </button>
+          </Button>
+          <Button onClick={() => setStage({ kind: 'select' })}>뒤로</Button>
         </div>
       </div>
     );

@@ -3,7 +3,9 @@ import { effectiveLimitMs } from '../core/difficulty';
 import { RoundEngine, type RoundSummary } from '../core/engine';
 import type { MiniGameModule, Mode } from '../core/types';
 import { audio } from '../services';
-import Hud, { type HudInfo } from './Hud';
+import { Button, Panel } from '../skin/components';
+import { useSkin } from '../skin/context';
+import { scoreboardView, type HudInfo } from '../skin/viewmodel';
 
 const END_OVERLAY_MS = 900;
 
@@ -61,10 +63,30 @@ export default function Round({ game, level, seed, mode, timeScale = 1, hud, onE
   const View = useMemo(() => lazy(game.load), [game]);
   const params = useMemo(() => game.difficulty(level), [game, level]);
 
+  const { Scoreboard } = useSkin().ui;
+  const view = scoreboardView(snap, hud);
   const paused = snap.phase === 'paused';
   return (
-    <div className="mgl-round" data-phase={snap.phase}>
-      <Hud snap={snap} info={hud} onPause={() => engine.pause()} />
+    <div
+      className="mgl-round"
+      data-testid="round"
+      data-phase={snap.phase}
+      data-score={view.score}
+      data-combo={view.combo}
+      data-time={view.timeSec ?? ''}
+      data-lives={hud.lives ?? ''}
+      data-level={hud.level ?? ''}
+    >
+      <div className="mgl-slot-scoreboard">
+        <Scoreboard
+          view={view}
+          pauseButton={
+            <Button size="icon" data-testid="pause" aria-label="일시정지" onClick={() => engine.pause()} disabled={snap.phase === 'done'}>
+              Ⅱ
+            </Button>
+          }
+        />
+      </div>
       <div className="mgl-play">
         <Suspense fallback={<div className="mgl-center">불러오는 중…</div>}>
           <View params={params} level={level} seed={seed} ctx={engine.ctx} />
@@ -82,20 +104,15 @@ export default function Round({ game, level, seed, mode, timeScale = 1, hud, onE
         )}
         {paused && (
           <div className="mgl-overlay" data-testid="paused">
-            <div className="mgl-panel">
+            <Panel tone="popup">
               <h2>일시정지</h2>
-              <button type="button" className="mgl-btn mgl-btn-primary" data-testid="resume" onClick={() => engine.resume()}>
+              <Button variant="primary" data-testid="resume" onClick={() => engine.resume()}>
                 계속하기
-              </button>
-              <button
-                type="button"
-                className="mgl-btn"
-                data-testid="quit"
-                onClick={() => (confirmQuit ? engine.quit() : setConfirmQuit(true))}
-              >
+              </Button>
+              <Button data-testid="quit" onClick={() => (confirmQuit ? engine.quit() : setConfirmQuit(true))}>
                 {confirmQuit ? (mode === 'challenge' ? '정말 나갈까요? 챌린지가 끝나요' : '정말 나갈까요?') : '나가기'}
-              </button>
-            </div>
+              </Button>
+            </Panel>
           </div>
         )}
         {snap.phase === 'done' && summary && summary.reason !== 'quit' && (

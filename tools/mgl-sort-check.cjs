@@ -43,7 +43,7 @@ async function layout(page, tag) {
       if (b.width < 44 || b.height < 44) bad.push(`작음: ${el.textContent.trim().slice(0, 12)} ${Math.round(b.width)}x${Math.round(b.height)}`);
     }
     // 핵심 요소가 보이는 영역 안에 있는지(카드·규칙·분류함·HUD)
-    for (const sel of ['.sc-rule', '.sc-stage', '.sc-bins', '.mgl-hud', '[data-testid=card]']) {
+    for (const sel of ['.sc-rulebox', '.sc-stage', '.sc-bins', '.mgl-slot-scoreboard', '[data-testid=card]']) {
       const el = document.querySelector(sel);
       if (!el) continue;
       const b = el.getBoundingClientRect();
@@ -54,7 +54,7 @@ async function layout(page, tag) {
     }
     // 카드와 규칙 배너·분류함이 서로 겹치지 않는지
     const rect = (s) => { const e = document.querySelector(s); return e ? e.getBoundingClientRect() : null; };
-    const card = rect('[data-testid=card]'), rule = rect('.sc-rule'), bins = rect('.sc-bins');
+    const card = rect('[data-testid=card]'), rule = rect('.sc-rulebox'), bins = rect('.sc-bins');
     if (card && rule && card.top < rule.bottom) bad.push('카드가 규칙 배너와 겹침');
     if (card && bins && card.bottom > bins.top) bad.push('카드가 분류함과 겹침');
     return { sx: de.scrollWidth > vw, sy: de.scrollHeight > vh, bad };
@@ -128,7 +128,9 @@ async function playAll(page, { hows = ['tap', 'swipe'], maxCards = 30 } = {}) {
   return n;
 }
 const waitPlaying = async (page) => { await page.locator('[data-testid=ready]').waitFor({ timeout: 8000 }).catch(() => {}); await page.locator('[data-testid=ready]').waitFor({ state: 'detached', timeout: 4000 }); await page.locator('[data-testid=card]').waitFor({ timeout: 8000 }); };
-const score = async (page) => Number((await page.locator('[data-testid=score]').innerText()).replace(/,/g, ''));
+const roundAttr = (page, name) => page.locator('[data-testid=round]').getAttribute(`data-${name}`);
+const stageAttr = (page, name) => page.locator('[data-testid=stage]').getAttribute(`data-${name}`);
+const score = async (page) => Number(await roundAttr(page, 'score'));
 
 async function startFree(page, level = 1) {
   await tapSel(page, '[data-testid=go-free]');
@@ -180,14 +182,14 @@ async function backToMenu(page) {
       await waitPlaying(page);
       await snap(page, w, h, '03-L1-play');
       await layout(page, `${tag} L1 플레이`);
-      const info = await page.evaluate(() => ({ hint: document.querySelector('[data-testid=rule-hint]').textContent, bins: [...document.querySelectorAll('.sc-bin')].length, progress: document.querySelector('[data-testid=progress]').textContent }));
-      check(`${tag} L1: 단일 조건·분류함 2개·목표 10장`, info.bins === 2 && info.progress.includes('/10'), JSON.stringify(info));
+      const info = { kind: (await readStage(page)).rule.kind, bins: await page.locator('.sc-bin').count(), goal: await stageAttr(page, 'goal') };
+      check(`${tag} L1: 단일 조건·분류함 2개·목표 10장`, info.kind === 'single' && info.bins === 2 && info.goal === '10', JSON.stringify(info));
       let n = 0;
       const t0 = await score(page);
       for (; n < 4; n++) await playCard(page, n % 2 ? 'swipe' : 'tap');
       check(`${tag} 분류함 탭·스와이프 모두 정답 처리 → 점수 증가`, (await score(page)) >= t0 + 400, `${t0} → ${await score(page)}`);
-      check(`${tag} 카드 요소는 항상 1개(중복 렌더링·누수 없음)`, (await page.locator('[data-testid=card]').count()) === 1 && (await page.locator('.sc-card-wrap').count()) === 1);
-      check(`${tag} 연속 정답 → 콤보 표시`, (await page.locator('[data-testid=combo]').count()) === 1, await page.locator('[data-testid=combo]').first().innerText().catch(() => ''));
+      check(`${tag} 카드 요소는 항상 1개(중복 렌더링·누수 없음)`, (await page.locator('[data-testid=card]').count()) === 1 && (await page.locator('.sc-slot-current').count()) === 1);
+      check(`${tag} 연속 정답 → 콤보 표시`, Number(await roundAttr(page, 'combo')) >= 2, `combo=${await roundAttr(page, 'combo')}`);
       await snap(page, w, h, '04-L1-combo');
       await playAll(page);
       await page.locator('[data-testid=result]').waitFor({ timeout: 8000 });
@@ -212,7 +214,7 @@ async function backToMenu(page) {
       await page.locator('[data-testid=feedback][data-kind=wrong]').waitFor({ timeout: 2000 });
       const fb = await page.locator('[data-testid=feedback]').innerText();
       check(`${tag} 오답 피드백: 설명(○/×)과 정답 방향 표시`, /정답은/.test(fb) && /[○×]/.test(fb), fb.replace(/\n/g, ' / '));
-      check(`${tag} 오답 후 콤보 초기화·실수 1`, (await page.locator('[data-testid=combo]').count()) === 0 && (await page.locator('[data-testid=mistakes]').getAttribute('data-mistakes')) === '1');
+      check(`${tag} 오답 후 콤보 초기화·실수 1`, (await roundAttr(page, 'combo')) === '0' && (await stageAttr(page, 'mistakes')) === '1');
       check(`${tag} 오답 후에도 카드 요소 1개`, (await page.locator('[data-testid=card]').count()) === 1);
       await snap(page, w, h, '06-wrong-feedback');
       await layout(page, `${tag} 오답 피드백`);
@@ -250,7 +252,7 @@ async function backToMenu(page) {
         check(`${tag} L${lv}: 허용된 규칙 종류(${st.rule.kind})`, kindOk);
         await snap(page, w, h, `10-L${lv}-play`);
         await layout(page, `${tag} L${lv} 플레이(${st.rule.kind})`);
-        const goal = Number((await page.locator('[data-testid=progress]').innerText()).split('/')[1]);
+        const goal = Number(await stageAttr(page, 'goal'));
         check(`${tag} L${lv}: 목표 카드 수 ${goal}`, goal === 10 + Math.round(((lv - 1) * 6) / 9));
         let sawAnnounce = false, sawReversed = false, sawMiddle = false, n = 0;
         while (n < 40 && !(await page.locator('[data-testid=result]').count())) {
@@ -284,7 +286,7 @@ async function backToMenu(page) {
       await waitPlaying(page);
       await layout(page, `${tag} 챌린지 플레이`);
       await snap(page, w, h, '20-challenge-play');
-      check(`${tag} 챌린지 HUD: 목숨 3·모듈 동일(분류함 존재)`, (await page.locator('[data-testid=lives]').getAttribute('data-lives')) === '3' && (await page.locator('.sc-bin').count()) === 2);
+      check(`${tag} 챌린지 HUD: 목숨 3·모듈 동일(분류함 존재)`, (await roundAttr(page, 'lives')) === '3' && (await page.locator('.sc-bin').count()) === 2);
       await playAll(page);
       await page.locator('[data-testid=summary]').waitFor({ timeout: 8000 });
       check(`${tag} 챌린지 클리어 요약`, (await page.locator('[data-testid=summary]').innerText()).includes('CLEAR'));
@@ -294,7 +296,7 @@ async function backToMenu(page) {
       await page.locator('[data-testid=summary]').waitFor({ timeout: 8000 });
       check(`${tag} 챌린지 실수 3번 → MISS(목숨 −1)`, (await page.locator('[data-testid=summary]').innerText()).includes('MISS'));
       await page.locator('[data-testid=ready]').waitFor({ timeout: 6000 });
-      check(`${tag} 챌린지 목숨 2개`, (await page.locator('[data-testid=lives]').getAttribute('data-lives')) === '2');
+      check(`${tag} 챌린지 목숨 2개`, (await roundAttr(page, 'lives')) === '2');
       await page.locator('[data-testid=ready]').waitFor({ state: 'detached', timeout: 4000 });
       await tapSel(page, '[data-testid=pause]');
       await tapSel(page, '[data-testid=quit]');

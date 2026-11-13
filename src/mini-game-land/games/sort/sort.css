@@ -1,0 +1,32 @@
+/* 편가르기 — 기반 레이아웃·동작(드래그 영역, 카드 자리, 이동 애니메이션 타이밍). 모양은 스킨 슬롯이 그림. */
+:root { --sc-card-w: 112px; --sc-card-h: 112px; }
+.sc { height: 100%; display: flex; flex-direction: column; padding: 8px 10px 6px; gap: 6px; }
+.sc-rulebox, .sc-infobox { flex: none; }
+.sc-stage { position: relative; flex: 1 1 0; min-height: 0; touch-action: none; }
+.sc-stagedeco { position: absolute; inset: 0; pointer-events: none; }
+
+/* 카드 자리: 스킨 토큰(--sc-card-w/h)만큼 가운데에 놓임. 안쪽 Friend 는 100% 채움 */
+.sc-slot { position: absolute; left: 50%; top: 50%; width: var(--sc-card-w); height: var(--sc-card-h); margin: calc(var(--sc-card-h) / -2) 0 0 calc(var(--sc-card-w) / -2); }
+.sc-slot > * { width: 100%; height: 100%; }
+.sc-slot-current { z-index: 3; cursor: grab; animation: sc-in 0.14s steps(3); }
+.sc-slot-current.sc-hidden { visibility: hidden; }
+.sc-slot-next { z-index: 1; transform: translateY(-20px) scale(0.9); opacity: 0.9; pointer-events: none; }
+.sc-slot-leaving { z-index: 4; pointer-events: none; animation: sc-fly-l 0.2s steps(5) forwards; }
+.sc-slot-leaving.sc-fly-1 { animation-name: sc-fly-u; }
+.sc-slot-leaving.sc-fly-2 { animation-name: sc-fly-r; }
+@keyframes sc-in { from { transform: translateY(14px) scale(0.9); } to { transform: none; } }
+@keyframes sc-fly-l { to { transform: translateX(-190px) rotate(-18deg); opacity: 0; } }
+@keyframes sc-fly-r { to { transform: translateX(190px) rotate(18deg); opacity: 0; } }
+@keyframes sc-fly-u { to { transform: translateY(-190px); opacity: 0; } }
+
+.sc-fb-wrap { position: absolute; left: 6px; right: 6px; top: 4px; z-index: 6; pointer-events: none; display: flex; }
+.sc-fb-wrap[data-kind='correct'] { justify-content: flex-end; }
+.sc-fb-wrap[data-kind='wrong'] > * { flex: 1; }
+.sc-announce-wrap { position: absolute; inset: 0; z-index: 7; pointer-events: none; display: flex; }
+.sc-announce-wrap > * { flex: 1; }
+
+/* 분류함: 버튼(터치 영역)은 기반, 안쪽 겉모습은 BinFace */
+.sc-bins { flex: none; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-right: 3px; }
+.sc-bins[data-bins='3'] { grid-template-columns: repeat(3, 1fr); }
+.sc-bin { min-height: 72px; margin-bottom: var(--mgl-btn-depth); }
+.sc-bin .mgl-face { align-items: stretch; }

@@ -46,6 +46,8 @@ async function tapEl(page, sel) {
 }
 const snap = (page, w, h, name) => page.screenshot({ path: `${outDir}/${w}x${h}-${name}.png` });
 const text = (page, sel) => page.locator(sel).first().innerText();
+// 점수·시간·목숨은 스킨과 무관한 기반 속성(data-*)에서 읽음
+const roundAttr = (page, name) => page.locator('[data-testid=round]').getAttribute(`data-${name}`);
 
 /** 보이는 고나를 실제 터치로 눌러 라운드를 클리어 (gona 가 없으면 잠깐 대기) */
 async function botPlay(page, { until, maxMs = 30000 }) {
@@ -98,10 +100,10 @@ async function botPlay(page, { until, maxMs = 30000 }) {
     await page.locator('[data-kind="gona"]').first().waitFor({ timeout: 5000 });
     await snap(page, w, h, '05-playing');
     await layout(page, `${tag} 플레이`);
-    const s0 = Number((await text(page, '[data-testid=score]')).replace(/,/g, ''));
-    await botPlay(page, { until: '[data-testid=score]:text-matches("^[1-9]")', maxMs: 5000 });
+    const s0 = Number(await roundAttr(page, 'score'));
+    await botPlay(page, { until: '[data-testid=round]:not([data-score="0"])', maxMs: 5000 });
     await sleep(200);
-    const s1 = Number((await text(page, '[data-testid=score]')).replace(/,/g, ''));
+    const s1 = Number(await roundAttr(page, 'score'));
     check(`${tag} 터치로 고나 콕 → 점수 증가`, s1 > s0, `${s0} → ${s1}`);
 
     // 일시정지 → 시간 정지 → 재개 카운트다운
@@ -109,9 +111,9 @@ async function botPlay(page, { until, maxMs = 30000 }) {
     await page.locator('[data-testid=paused]').waitFor();
     await snap(page, w, h, '06-paused');
     await layout(page, `${tag} 일시정지`);
-    const t0 = await text(page, '[data-testid=time]');
+    const t0 = await roundAttr(page, 'time');
     await sleep(1600);
-    const t1 = await text(page, '[data-testid=time]');
+    const t1 = await roundAttr(page, 'time');
     check(`${tag} 일시정지 중 시간 정지`, t0 === t1, `${t0} → ${t1}`);
     await tapEl(page, '[data-testid=resume]');
     await page.locator('[data-testid=resuming]').waitFor();
@@ -135,7 +137,7 @@ async function botPlay(page, { until, maxMs = 30000 }) {
     // 다음 레벨 → 레벨 2, 난이도 상승(HUD LV)
     await tapEl(page, '[data-testid=next]');
     await page.locator('[data-testid=ready]').waitFor();
-    check(`${tag} 다음 레벨 LV 2 시작`, (await page.locator('.mgl-hud').innerText()).includes('LV 2'));
+    check(`${tag} 다음 레벨 LV 2 시작`, (await roundAttr(page, 'level')) === '2');
     await page.locator('[data-testid=ready]').waitFor({ state: 'detached', timeout: 4000 });
     await tapEl(page, '[data-testid=pause]');
     await tapEl(page, '[data-testid=quit]'); // 1회: 확인 문구
@@ -159,7 +161,7 @@ async function botPlay(page, { until, maxMs = 30000 }) {
     await layout(page, `${tag} 챌린지-인트로`);
     await tapEl(page, '[data-testid=intro]'); // 탭하면 건너뜀
     await page.locator('[data-testid=ready]').waitFor();
-    check(`${tag} 챌린지: 목숨 3개로 시작`, (await page.locator('[data-testid=lives]').getAttribute('data-lives')) === '3');
+    check(`${tag} 챌린지: 목숨 3개로 시작`, (await roundAttr(page, 'lives')) === '3');
     await page.locator('[data-testid=ready]').waitFor({ state: 'detached', timeout: 4000 });
     await snap(page, w, h, '11-challenge-playing');
     await layout(page, `${tag} 챌린지-플레이`);
@@ -177,7 +179,7 @@ async function botPlay(page, { until, maxMs = 30000 }) {
     check(`${tag} 챌린지: 시간 초과 → 실패 요약`, failed && (await text(page, '[data-testid=summary]')).includes('MISS'));
     await snap(page, w, h, '13-challenge-miss');
     await page.locator('[data-testid=ready]').waitFor({ timeout: 6000 });
-    check(`${tag} 챌린지: 실패 후 목숨 2개`, (await page.locator('[data-testid=lives]').getAttribute('data-lives')) === '2');
+    check(`${tag} 챌린지: 실패 후 목숨 2개`, (await roundAttr(page, 'lives')) === '2');
 
     // 나가기 → 종료·기록
     await page.locator('[data-testid=ready]').waitFor({ state: 'detached', timeout: 4000 });

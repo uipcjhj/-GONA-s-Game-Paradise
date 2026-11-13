@@ -1,4 +1,5 @@
 import { useEffect, useReducer, useRef } from 'react';
+import './tap-test.css';
 import type { GameViewProps } from '../../core/types';
 import { gonaUrl } from '../../assets';
 import { BASE_POINTS, createState, status, step, tap, type TapParams } from './logic';

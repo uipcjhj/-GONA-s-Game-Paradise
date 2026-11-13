@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Button, Panel } from '../skin/components';
 
 export interface ResultLine {
   label: string;
@@ -36,20 +37,22 @@ export default function ResultScreen({
           {b}
         </div>
       ))}
-      <dl className="mgl-lines">
-        {lines.map((l) => (
-          <div key={l.label} className={l.strong ? 'strong' : ''}>
-            <dt>{l.label}</dt>
-            <dd>{l.value}</dd>
-          </div>
-        ))}
-      </dl>
+      <Panel tone="board">
+        <dl className="mgl-lines">
+          {lines.map((l) => (
+            <div key={l.label} className={l.strong ? 'strong' : ''}>
+              <dt>{l.label}</dt>
+              <dd>{l.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </Panel>
       {children}
       <div className="mgl-actions">
         {actions.map((a) => (
-          <button key={a.label} type="button" className={`mgl-btn${a.primary ? ' mgl-btn-primary' : ''}`} data-testid={a.testId} onClick={a.onClick}>
+          <Button key={a.label} variant={a.primary ? 'primary' : 'normal'} data-testid={a.testId} onClick={a.onClick}>
             {a.label}
-          </button>
+          </Button>
         ))}
       </div>
     </div>

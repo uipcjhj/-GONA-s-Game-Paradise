@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { gonaUrl } from '../assets';
+import { Button, LinkButton, Mascot } from '../skin/components';
 import { audio, store } from '../services';
 
 export type Screen = 'home' | 'free' | 'challenge' | 'records';
@@ -21,25 +21,27 @@ export default function Home({ go }: { go: (s: Screen) => void }) {
         </h1>
         <p>고나의 미니게임천국</p>
       </div>
-      <img src={gonaUrl} alt="고나" className="mgl-hero" draggable={false} />
+      <div className="mgl-hero-wrap">
+        <Mascot pose="idle" scale={3} />
+      </div>
       <div className="mgl-menu">
-        <button type="button" className="mgl-btn mgl-btn-primary mgl-btn-lg" data-testid="go-free" onClick={() => go('free')}>
+        <Button variant="primary" size="lg" data-testid="go-free" onClick={() => go('free')}>
           자유 플레이
-        </button>
-        <button type="button" className="mgl-btn mgl-btn-lg" data-testid="go-challenge" onClick={() => go('challenge')}>
+        </Button>
+        <Button size="lg" data-testid="go-challenge" onClick={() => go('challenge')}>
           랜덤 챌린지
-        </button>
-        <button type="button" className="mgl-btn" data-testid="go-records" onClick={() => go('records')}>
+        </Button>
+        <Button data-testid="go-records" onClick={() => go('records')}>
           내 기록
-        </button>
+        </Button>
       </div>
       <div className="mgl-foot">
-        <a className="mgl-btn mgl-btn-sm" href="../" data-testid="back-hub">
+        <LinkButton size="sm" href="../" data-testid="back-hub">
           ← 게임천국
-        </a>
-        <button type="button" className="mgl-btn mgl-btn-sm" data-testid="sound" aria-pressed={!muted} onClick={toggle}>
+        </LinkButton>
+        <Button size="sm" data-testid="sound" aria-pressed={!muted} onClick={toggle}>
           소리 {muted ? '꺼짐' : '켜짐'}
-        </button>
+        </Button>
       </div>
       {!store.persistent && <p className="mgl-note">이 브라우저에서는 기록이 저장되지 않아요.</p>}
     </div>

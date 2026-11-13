@@ -1,48 +1,26 @@
 import { useCallback, useEffect, useReducer, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
+import './sort.css';
 import type { GameViewProps } from '../../core/types';
-import { gonaUrl } from '../../assets';
+import { useSkin } from '../../skin/context';
 import {
-  CLEAR_BONUS, FAST_BONUS, answer, binCount, binLabels, condLabel, createState, currentCard, isLocked, isReversed,
-  ruleHint, status, swipeToBin, tick, type Card, type Cond, type SortParams,
+  CLEAR_BONUS, FAST_BONUS, answer, binCount, binLabels, createState, currentCard, isLocked, isReversed,
+  ruleHint, status, swipeToBin, tick, type Card, type SortParams,
 } from './logic';
 
-/** 임시 도형으로 그린 고나 친구(색·표정·특징). 최종 에셋 도착 전 기능 확인용. */
-const EYES: Record<string, [string, string]> = { smile: ['^', '^'], cry: ['T', 'T'], angry: ['>', '<'], sleepy: ['-', '-'] };
-
-function CardView({ card, className = '', ...rest }: { card: Card; className?: string } & React.HTMLAttributes<HTMLDivElement>) {
-  const [l, r] = EYES[card.face];
-  return (
-    <div className={`sc-card ${className}`} data-color={card.color} data-face={card.face} data-feature={card.feature} {...rest}>
-      {card.feature === 'hat' && <i className="sc-hat" />}
-      {card.feature === 'ribbon' && <i className="sc-ribbon" />}
-      <div className="sc-eyes"><b>{l}</b><b>{r}</b></div>
-      {card.feature === 'glasses' && <div className="sc-glasses"><i /><i /></div>}
-      <div className="sc-mouth" />
-    </div>
-  );
-}
-
-function CondChip({ c }: { c: Cond }) {
-  return (
-    <span className="sc-chip" data-axis={c.axis} data-value={c.value}>
-      {c.axis === 'color' && <span className="sc-dot" data-color={c.value} />}
-      {condLabel(c)}
-    </span>
-  );
-}
-
-const ARROW = ['◀', '▲', '▶'];
-const arrowOf = (bin: number, bins: number) => (bins === 2 ? ARROW[bin === 0 ? 0 : 2] : ARROW[bin]);
-
+/**
+ * 편가르기 화면 — 동작(판정·스와이프·분류함 탭·타이밍)만 담당하고, 겉모습은 전부 스킨 슬롯(skin.sort.*)에 넘깁니다.
+ * 슬롯이 바뀌어도 아래의 data-* 속성과 터치 영역은 그대로여야 합니다(점검 스크립트가 이 속성을 읽음).
+ */
 interface Leaving { id: number; card: Card; bin: number; bins: number }
 interface Feedback { id: number; kind: 'correct' | 'wrong'; text: string; sub?: string }
 
 export default function SortView({ params, seed, ctx }: GameViewProps<SortParams>) {
+  const { sort: S } = useSkin();
   const stateRef = useRef(createState(params, seed));
   const [, bump] = useReducer((n: number) => n + 1, 0);
   const [leaving, setLeaving] = useState<Leaving | null>(null);
   const [fb, setFb] = useState<Feedback | null>(null);
-  const [shake, setShake] = useState(0);
+  const [happy, setHappy] = useState(0);
   const idRef = useRef(0);
   const cardRef = useRef<HTMLDivElement>(null);
   const binsRef = useRef<HTMLDivElement>(null);
@@ -68,6 +46,11 @@ export default function SortView({ params, seed, ctx }: GameViewProps<SortParams
     const t = window.setTimeout(() => setFb(null), fb.kind === 'wrong' ? 2200 : 700);
     return () => window.clearTimeout(t);
   }, [fb]);
+  useEffect(() => {
+    if (!happy) return;
+    const t = window.setTimeout(() => setHappy(0), 900);
+    return () => window.clearTimeout(t);
+  }, [happy]);
 
   const submit = useCallback(
     (bin: number) => {
@@ -83,9 +66,10 @@ export default function SortView({ params, seed, ctx }: GameViewProps<SortParams
         const got = ctx.addScore(res.points);
         ctx.sfx('good');
         setFb({ id, kind: 'correct', text: `+${got}`, sub: res.fast ? `빠르다! +${FAST_BONUS}` : undefined });
+        if (res.combo >= 3) setHappy(id);
       } else {
         ctx.sfx('bad');
-        setShake((n) => n + 1);
+        setHappy(0);
         setFb({ id, kind: 'wrong', text: '앗, 틀렸어요!', sub: res.explain.text });
       }
       const result = status(st);
@@ -148,32 +132,15 @@ export default function SortView({ params, seed, ctx }: GameViewProps<SortParams
   const labels = binLabels(rule, reversed);
   const locked = isLocked(s);
   const announcing = s.announceMs > 0;
+  const mood = fb?.kind === 'wrong' ? 'oops' : happy ? 'happy' : 'idle';
 
   return (
-    <div className="sc" data-testid="sort" data-shake={shake % 2}>
-      <div className="sc-rule">
-        <img src={gonaUrl} alt="" className="sc-judge" draggable={false} />
-        <div className="sc-rule-body">
-          <div className="sc-rule-hint" data-testid="rule-hint">
-            {ruleHint(rule, reversed)}
-            {reversed && <em className="sc-rev" data-testid="reversed-chip">⇄ 반전 중</em>}
-          </div>
-          <div className="sc-chips">
-            {rule.conds.map((c, i) => (
-              <span key={i} className="sc-chip-wrap">
-                {i > 0 && <span className="sc-join">{rule.kind === 'and' ? '그리고' : rule.kind === 'or' ? '또는' : rule.kind === 'exclude' ? '제외' : '/'}</span>}
-                <CondChip c={c} />
-              </span>
-            ))}
-          </div>
-        </div>
+    <div className="sc" data-testid="sort">
+      <div className="sc-rulebox">
+        <S.RulePanel rule={rule} reversed={reversed} hint={ruleHint(rule, reversed)} mood={mood} />
       </div>
-
-      <div className="sc-info">
-        <span data-testid="progress">카드 {Math.min(s.index + 1, s.params.goal)}/{s.params.goal}</span>
-        <span className="sc-miss" data-testid="mistakes" data-mistakes={s.mistakes} aria-label={`실수 ${s.mistakes}/${s.params.maxMistakes}`}>
-          실수 {Array.from({ length: s.params.maxMistakes }, (_, i) => (i < s.mistakes ? '✕' : '○')).join(' ')}
-        </span>
+      <div className="sc-infobox">
+        <S.InfoBar index={s.index} goal={s.params.goal} mistakes={s.mistakes} maxMistakes={s.params.maxMistakes} bins={bins} />
       </div>
 
       <div
@@ -182,28 +149,47 @@ export default function SortView({ params, seed, ctx }: GameViewProps<SortParams
         data-rule={JSON.stringify({ kind: rule.kind, conds: rule.conds, reversed })}
         data-locked={locked ? '1' : '0'}
         data-index={s.index}
+        data-goal={s.params.goal}
+        data-mistakes={s.mistakes}
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={(e) => endDrag(e, false)}
         onPointerCancel={(e) => endDrag(e, true)}
       >
-        {next && !announcing && <CardView card={next.card} className="sc-next" />}
-        {leaving && <CardView key={`l${leaving.id}`} card={leaving.card} className={`sc-leaving sc-fly-${leaving.bins === 2 && leaving.bin === 1 ? 2 : leaving.bin}`} />}
+        <div className="sc-stagedeco">
+          <S.StageFrame locked={locked} reversed={reversed} />
+        </div>
+        {next && !announcing && (
+          <div className="sc-slot sc-slot-next">
+            <S.Friend card={next.card} />
+          </div>
+        )}
+        {leaving && (
+          <div key={`l${leaving.id}`} className={`sc-slot sc-slot-leaving sc-fly-${leaving.bins === 2 && leaving.bin === 1 ? 2 : leaving.bin}`}>
+            <S.Friend card={leaving.card} />
+          </div>
+        )}
         {rc && (
-          <div className={`sc-card-wrap${announcing ? ' sc-hidden' : ''}`} ref={cardRef} key={`c${s.index}`}>
-            <CardView card={rc.card} className="sc-current" data-testid="card" />
+          <div
+            className={`sc-slot sc-slot-current${announcing ? ' sc-hidden' : ''}`}
+            ref={cardRef}
+            key={`c${s.index}`}
+            data-testid="card"
+            data-color={rc.card.color}
+            data-face={rc.card.face}
+            data-feature={rc.card.feature}
+          >
+            <S.Friend card={rc.card} />
           </div>
         )}
         {fb && (
-          <div className={`sc-fb ${fb.kind}`} data-testid="feedback" data-kind={fb.kind} key={`f${fb.id}`}>
-            <b>{fb.text}</b>
-            {fb.sub && <span>{fb.sub}</span>}
+          <div className="sc-fb-wrap" data-testid="feedback" data-kind={fb.kind} key={`f${fb.id}`}>
+            <S.Feedback kind={fb.kind} text={fb.text} sub={fb.sub} />
           </div>
         )}
         {announcing && (
-          <div className="sc-announce" data-testid="announce">
-            ⇄ 규칙 반전!
-            <small>왼쪽과 오른쪽이 바뀌어요</small>
+          <div className="sc-announce-wrap" data-testid="announce">
+            <S.Announce title="⇄ 규칙 반전!" sub="왼쪽과 오른쪽이 바뀌어요" />
           </div>
         )}
       </div>
@@ -213,7 +199,7 @@ export default function SortView({ params, seed, ctx }: GameViewProps<SortParams
           <button
             key={i}
             type="button"
-            className="sc-bin"
+            className="mgl-hit sc-bin"
             data-testid={`bin-${i}`}
             data-bin={i}
             aria-label={`${bins === 3 ? ['왼쪽', '가운데', '오른쪽'][i] : ['왼쪽', '오른쪽'][i]} 분류함: ${label}`}
@@ -223,12 +209,12 @@ export default function SortView({ params, seed, ctx }: GameViewProps<SortParams
             }}
             onClick={(e) => e.detail === 0 && submit(i)}
           >
-            <span className="sc-arrow">{arrowOf(i, bins)}</span>
-            <span className="sc-bin-label">{label}</span>
+            <span className="mgl-face">
+              <S.BinFace index={i} bins={bins} label={label} locked={locked} />
+            </span>
           </button>
         ))}
       </div>
-      <p className="sc-tip">{bins === 3 ? '카드를 ◀ ▲ ▶ 로 밀거나 분류함을 눌러요' : '카드를 ◀ ▶ 로 밀거나 분류함을 눌러요'} </p>
     </div>
   );
 }
