@@ -82,6 +82,11 @@ export class SkyEngine {
   private px = W / 2;
   private py = H - 90;
   private pvx = 0;
+  private pvy = 0;
+  private lastMoveT = 0;
+  private shootAnimT = 0;
+  private overWon = false;
+  private lastAnim = '';
   private hp = MAX_HP;
   private inv = 0;
   private hurtT = 0;
@@ -202,7 +207,7 @@ export class SkyEngine {
   }
   /** 디버그·테스트용 상태 (자동 검수 스크립트에서 사용) */
   debug(): Record<string, number | string> {
-    return { t: +this.t.toFixed(1), hp: this.hp, score: this.score, enemies: this.en.length, ebullets: this.eb.length, pbullets: this.pb.length, boss: this.boss ? this.boss.hp : -1, power: this.power, over: this.over ? 1 : 0, px: Math.round(this.px), py: Math.round(this.py) };
+    return { t: +this.t.toFixed(1), hp: this.hp, score: this.score, enemies: this.en.length, ebullets: this.eb.length, pbullets: this.pb.length, boss: this.boss ? this.boss.hp : -1, power: this.power, over: this.over ? 1 : 0, px: Math.round(this.px), py: Math.round(this.py), anim: this.lastAnim, spriteScale: +this.spriteK().toFixed(3), S: this.S };
   }
   cheat(cmd: string): void {
     if (cmd === 'boss') this.t = Math.max(this.t, BOSS_WARN_T - 0.2);
@@ -210,6 +215,8 @@ export class SkyEngine {
     if (cmd === 'god') this.hp = 99;
     if (cmd === 'hp1') this.hp = 1;
     if (cmd === 'killboss' && this.boss) this.boss.hp = 1;
+    if (cmd === 'hurt') { this.inv = 0; this.shield = 0; this.hurtPlayer(); }
+    if (cmd === 'bombs') this.bombs = 5;
   }
 
   // ───────────── 입력 ─────────────
@@ -325,6 +332,9 @@ export class SkyEngine {
 
     if (this.over) {
       this.endT += dt;
+      // 격파: 균형을 잃고 아래로 추락 / 승리: 위로 상승
+      if (this.overWon) this.py -= 34 * dt;
+      else this.py += 46 * dt;
       this.updateFx(dt);
       this.updateEnemies(dt);
       return;
@@ -353,12 +363,14 @@ export class SkyEngine {
     if (this.inv > 0) this.inv -= dt;
     if (this.hurtT > 0) this.hurtT -= dt;
     if (this.atkT > 0) this.atkT -= dt;
+    if (this.shootAnimT > 0) this.shootAnimT -= dt;
     if (this.bombT > 0) this.updateBomb(dt);
   }
 
   // ───────────── 플레이어 ─────────────
   private updatePlayer(dt: number): void {
     const prev = this.px;
+    const prevY = this.py;
     const slow = this.charging ? 0.6 : 1;
     if (this.hasTarget) {
       const k = Math.min(1, dt * 22);
@@ -381,6 +393,9 @@ export class SkyEngine {
     }
     const v = (this.px - prev) / Math.max(dt, 0.001);
     this.pvx += (v - this.pvx) * Math.min(1, dt * 10);
+    const vy = (this.py - prevY) / Math.max(dt, 0.001);
+    this.pvy += (vy - this.pvy) * Math.min(1, dt * 10);
+    if (Math.abs(v) > 6 || Math.abs(vy) > 6) this.lastMoveT = this.t;
     if (this.charging) this.charge = Math.min(1.2, this.charge + dt);
   }
 
@@ -407,6 +422,7 @@ export class SkyEngine {
     const f = Math.min(1, c / 1.0);
     this.pb.push({ x: this.px, y: this.py - 20, vx: 0, vy: -230, r: 6 + f * 8, dmg: 10 + f * 26, kind: 'charge', pierce: true, hit: new Set(), life: 1.8, scale: 1 + f * 1.4 });
     this.atkT = 0.3;
+    this.shootAnimT = 0.34;
     this.shake = Math.max(this.shake, 0.2 + f * 0.2);
     sfx('throw', 0.8);
     for (let i = 0; i < 10; i++) this.parts.push({ x: this.px, y: this.py - 18, vx: rand(-60, 60), vy: rand(-80, -20), life: 0.4, max: 0.4, col: '#fff8d0', size: 2, g: 0 });
@@ -977,6 +993,7 @@ export class SkyEngine {
   private finish(won: boolean): void {
     if (this.over) return;
     this.over = true;
+    this.overWon = won;
     this.charging = false;
     this.endT = 0;
     stopBgm();
@@ -1025,8 +1042,6 @@ export class SkyEngine {
     // 적
     for (const e of this.en) this.drawEnemy(e);
 
-    // 적 탄
-    for (const b of this.eb) this.drawEBullet(b);
 
     // 광선
     for (const bm of this.beams) {
@@ -1050,6 +1065,10 @@ export class SkyEngine {
     // 동료 · 고나
     this.drawCompanion();
     this.drawGona();
+
+    // 적 탄 — 고나·동료·이펙트 위에 그려 탄막이 가려지지 않게
+    for (const b of this.eb) this.drawEBullet(b);
+    this.drawHitDot();
 
     // 폭탄 링
     if (this.bombT > 0) {
@@ -1223,6 +1242,10 @@ export class SkyEngine {
   }
 
   private drawGona(): void {
+    if (this.a.gonaSheet) {
+      this.drawGonaSheet(this.a.gonaSheet);
+      return;
+    }
     const g = this.g;
     const blink = this.inv > 0 && Math.floor(this.t * 16) % 2 === 0 && this.hurtT <= 0 && this.bombT <= 0;
     if (blink) return;
@@ -1272,12 +1295,76 @@ export class SkyEngine {
       g.fillStyle = k >= 1 ? '#ff6f9f' : this.charge >= 0.35 ? '#ffe34a' : '#fff';
       g.fillRect(cx - 11, cy + 19, Math.round(23 * k), 1);
     }
-    // 피격 판정 점 (작은 다이아몬드)
+  }
+
+  /** 피격 판정 점 (작은 다이아몬드) — 탄막 위에 그림 */
+  private drawHitDot(): void {
+    if (this.over) return;
+    const g = this.g;
+    const cx = Math.floor(this.px);
     g.fillStyle = '#fff';
     g.fillRect(cx, Math.floor(this.py) + 1, 1, 3);
     g.fillRect(cx - 1, Math.floor(this.py) + 2, 3, 1);
     g.fillStyle = '#e0482c';
     g.fillRect(cx, Math.floor(this.py) + 2, 1, 1);
+  }
+
+  /** 스프라이트 표시 배율: 셀 96px → 논리 48px (모든 기기에서 같은 크기 — 위치는 기기 픽셀 단위로 맞춤) */
+  private spriteK(): number {
+    return 0.5;
+  }
+
+  /** 현재 게임 상태 → 시트 행·프레임 (행: 0 비행 · 1 왼쪽 · 2 오른쪽 · 3 대기 · 4 공격 · 5 차지 · 6 폭탄 · 7 피격 · 8 격파 · 9 승리) */
+  private gonaAnim(): { row: number; frame: number; name: string } {
+    const t = this.t;
+    if (this.over) {
+      const f = Math.min(3, Math.floor(this.endT * 7));
+      return this.overWon ? { row: 9, frame: f, name: 'win' } : { row: 8, frame: f, name: 'defeat' };
+    }
+    if (this.hurtT > 0) return { row: 7, frame: Math.min(3, Math.floor((0.6 - this.hurtT) * 12)), name: 'hurt' };
+    if (this.bombT > 0) return { row: 6, frame: Math.min(3, Math.floor(((1.7 - this.bombT) / 1.7) * 4)), name: 'bomb' };
+    if (this.charging) return { row: 5, frame: Math.min(3, Math.floor((this.charge / 1.0) * 4)), name: 'charge' };
+    if (this.shootAnimT > 0) return { row: 4, frame: Math.min(3, Math.floor((0.34 - this.shootAnimT) * 12)), name: 'shoot' };
+    const vx = this.pvx;
+    if (Math.abs(vx) > 22) {
+      const strong = Math.abs(vx) > 85;
+      return { row: vx < 0 ? 1 : 2, frame: (strong ? 2 : 0) + (Math.floor(t * 8) % 2), name: (vx < 0 ? 'bankL' : 'bankR') + (strong ? '-strong' : '-weak') };
+    }
+    if (t - this.lastMoveT > 1.5 && this.dragId === null && this.keys.size === 0) return { row: 3, frame: Math.floor(t * 6) % 4, name: 'idle' };
+    // 자동 연사 중: 기본 비행에 0.5초마다 짧은 발사 포즈(공격 1·2프레임)를 섞음
+    const firing = this.bombT <= 0.9 && !this.charging;
+    const ph = t % 0.5;
+    if (firing && ph < 0.16) return { row: 4, frame: ph < 0.08 ? 1 : 2, name: 'shoot-pulse' };
+    return { row: 0, frame: Math.floor(t * 10) % 4, name: 'fly' };
+  }
+
+  /** 신규 시트로 고나 그리기 — 몸통 중심(셀 48,52)을 플레이어 위치에 고정 → 동작 전환 시 위치·크기 고정 */
+  private drawGonaSheet(sheet: HTMLImageElement): void {
+    const g = this.g;
+    const an = this.gonaAnim();
+    this.lastAnim = `${an.name}#${an.frame}`;
+    const blink = this.inv > 0 && this.hurtT <= 0 && this.bombT <= 0 && !this.over && Math.floor(this.t * 16) % 2 === 0;
+    if (blink) return;
+    const k = this.spriteK();
+    const S = this.S;
+    const dx = Math.round((this.px - 48 * k) * S) / S;
+    const dy = Math.round((this.py - 3 - 52 * k) * S) / S;
+    g.drawImage(sheet, an.frame * 96, an.row * 96, 96, 96, dx, dy, 96 * k, 96 * k);
+    const cx = Math.floor(this.px);
+    const cy = Math.floor(this.py);
+    if (this.shield > 0) {
+      const sp = this.a.img['fx-shield'];
+      g.globalAlpha = this.shield < 1.5 && Math.floor(this.t * 10) % 2 ? 0.4 : 0.9;
+      g.drawImage(sp, cx - 20, cy - 23);
+      g.globalAlpha = 1;
+    }
+    if (this.charging) {
+      const kk = Math.min(1, this.charge / 1.0);
+      g.fillStyle = '#3b2a3f';
+      g.fillRect(cx - 12, cy + 22, 25, 3);
+      g.fillStyle = kk >= 1 ? '#ff6f9f' : this.charge >= 0.35 ? '#ffe34a' : '#fff';
+      g.fillRect(cx - 11, cy + 23, Math.round(23 * kk), 1);
+    }
   }
 
   private text(s: string, x: number, y: number, col = '#fff7dc', align: CanvasTextAlign = 'left', size = 11): void {

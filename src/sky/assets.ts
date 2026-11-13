@@ -34,6 +34,8 @@ export interface Assets {
   tinyHeart: HTMLCanvasElement;
   smell: HTMLCanvasElement;
   dizzy: HTMLCanvasElement;
+  /** 신규 고나 전투 스프라이트 시트 (96×96 셀, 4열×10행). 없으면 null → 기존 그래픽 */
+  gonaSheet: HTMLImageElement | null;
   /** 흰색으로 번쩍이는 피격용 사본 (캔버스 → 흰 실루엣) */
   flash: Map<HTMLCanvasElement | HTMLImageElement, HTMLCanvasElement>;
 }
@@ -47,11 +49,20 @@ function load(name: string): Promise<HTMLImageElement> {
   });
 }
 
+function loadOptional(url: string): Promise<HTMLImageElement | null> {
+  return new Promise((res) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => res(null);
+    im.src = url;
+  });
+}
+
 let cache: Promise<Assets> | null = null;
 
 export function loadAssets(): Promise<Assets> {
   cache ??= (async () => {
-    const imgs = await Promise.all(IMG_NAMES.map(load));
+    const [imgs, gonaSheet] = await Promise.all([Promise.all(IMG_NAMES.map(load)), loadOptional(`${BASE}v2/chars/gona/sprite.png`)]);
     const img = {} as Record<ImgName, HTMLImageElement>;
     IMG_NAMES.forEach((n, i) => (img[n] = imgs[i]));
     return {
@@ -68,6 +79,7 @@ export function loadAssets(): Promise<Assets> {
       smell: smellCloud(),
       dizzy: dizzyStar(),
       flash: new Map(),
+      gonaSheet,
     };
   })();
   return cache;

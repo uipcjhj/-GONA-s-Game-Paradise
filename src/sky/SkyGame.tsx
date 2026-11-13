@@ -180,6 +180,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
               onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); engine.current?.holdCharge(true); }}
               onPointerUp={() => engine.current?.holdCharge(false)}
               onPointerCancel={() => engine.current?.holdCharge(false)}
+              onLostPointerCapture={() => engine.current?.holdCharge(false)}
               onContextMenu={(e) => e.preventDefault()}
             >
               차지
