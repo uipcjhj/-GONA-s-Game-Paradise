@@ -3,3 +3,4 @@ dist
 *.local
 shots
 __pycache__
+shots-*/
