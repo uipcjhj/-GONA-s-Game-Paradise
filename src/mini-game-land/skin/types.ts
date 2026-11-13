@@ -6,6 +6,7 @@
  */
 import type { ComponentType, ReactNode } from 'react';
 import type { SortSlots } from '../games/sort/slots';
+import type { TowerSlots } from '../games/tower/slots';
 
 export type Scene = 'menu' | 'play' | 'result';
 export type ButtonVariant = 'normal' | 'primary' | 'card';
@@ -58,6 +59,7 @@ export interface Skin {
   tokens?: Record<string, string>;
   ui?: Partial<UiSlots>;
   sort?: Partial<SortSlots>;
+  tower?: Partial<TowerSlots>;
 }
 
 export interface ResolvedSkin {
@@ -67,6 +69,7 @@ export interface ResolvedSkin {
   tokens: Record<string, string>;
   ui: UiSlots;
   sort: SortSlots;
+  tower: TowerSlots;
 }
 
 export const UI_SLOT_KEYS: (keyof UiSlots)[] = ['Background', 'ButtonFace', 'Panel', 'Scoreboard', 'Lives', 'Mascot'];

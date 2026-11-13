@@ -1,4 +1,5 @@
 import { SORT_SLOT_KEYS } from '../games/sort/slots';
+import { TOWER_SLOT_KEYS } from '../games/tower/slots';
 import { UI_SLOT_KEYS, type ResolvedSkin, type Skin } from './types';
 
 export type SkinLoader = () => Promise<{ default: Skin }>;
@@ -25,6 +26,7 @@ export function mergeSkin(base: ResolvedSkin | null, over: Skin): ResolvedSkin {
     tokens: { ...(base?.tokens ?? {}), ...(over.tokens ?? {}) },
     ui: { ...(base?.ui ?? {}), ...(over.ui ?? {}) } as ResolvedSkin['ui'],
     sort: { ...(base?.sort ?? {}), ...(over.sort ?? {}) } as ResolvedSkin['sort'],
+    tower: { ...(base?.tower ?? {}), ...(over.tower ?? {}) } as ResolvedSkin['tower'],
   };
 }
 
@@ -33,6 +35,7 @@ export function missingSlots(skin: ResolvedSkin): string[] {
   return [
     ...UI_SLOT_KEYS.filter((k) => !skin.ui[k]).map((k) => `ui.${k}`),
     ...SORT_SLOT_KEYS.filter((k) => !skin.sort[k]).map((k) => `sort.${k}`),
+    ...TOWER_SLOT_KEYS.filter((k) => !skin.tower[k]).map((k) => `tower.${k}`),
   ];
 }
 

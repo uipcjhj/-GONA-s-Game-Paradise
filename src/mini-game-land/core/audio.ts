@@ -28,6 +28,8 @@ export const SFX: Record<SfxName, Tone[]> = {
   pause: [{ f: 440, d: 0.08, t: 'triangle', v: 0.08 }],
   lifeup: [660, 880, 1320].map((f, i) => ({ f, d: 0.1, t: 'square' as const, v: 0.06, at: i * 0.08 })),
   start: [{ f: 784, d: 0.12, t: 'square', v: 0.06 }],
+  drop: [{ f: 520, d: 0.14, t: 'triangle', v: 0.06, to: 260 }],
+  thud: [{ f: 150, d: 0.09, t: 'square', v: 0.09, to: 70 }],
 };
 
 export class AudioSystem {

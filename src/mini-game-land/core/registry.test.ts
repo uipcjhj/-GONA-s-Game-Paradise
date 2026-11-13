@@ -22,6 +22,7 @@ describe('게임 레지스트리 (두 모드가 공유)', () => {
   it('기본 목록은 임시(개발용) 게임을 숨기고 편가르기를 포함', () => {
     const ids = selectGames(ALL_GAMES, '').map((g) => g.id);
     expect(ids).toContain('sort');
+    expect(ids).toContain('tower');
     expect(ids).not.toContain('tap-test');
   });
   it('?games= 로 점검용 선택, 알 수 없는 값은 기본으로', () => {

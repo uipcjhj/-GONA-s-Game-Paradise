@@ -130,3 +130,24 @@ body { color: var(--line); }
 .sc-bin-label { font-size: 13px; font-weight: 700; line-height: 1.2; text-align: center; word-break: keep-all; }
 .sc-bins[data-hint='0'] .sc-bin:nth-child(1) .tf-bin, .sc-bins[data-hint='1'] .sc-bin:nth-child(2) .tf-bin, .sc-bins[data-hint='2'] .sc-bin:nth-child(3) .tf-bin { background: var(--gold); }
 .tf-bin[data-locked='1'] { opacity: 0.75; }
+
+/* ── 아슬아슬 탑: 배경 · 조각 · 접시 · 정보 (임시) */
+.tf-tw-sky { position: absolute; inset: 0; background: #bfe9ff; background-image: linear-gradient(#8fd4ff 0 0), radial-gradient(#fff 2px, transparent 2px); background-size: 100% 38%, 28px 28px; background-repeat: no-repeat, repeat; background-position: 0 0, 0 calc(var(--tw-climb, 0) * 0.5px); }
+.tw-art { position: absolute; overflow: visible; }
+.tw-art.ghost { opacity: 0.55; }
+.tf-tw-plate { position: absolute; left: 0; top: 0; height: 12px; background: var(--wood); box-shadow: 0 0 0 2px var(--line), 0 4px 0 2px #8f5c3a; }
+.tf-tw-leg { position: absolute; left: 50%; top: 14px; width: 18px; height: 900px; margin-left: -9px; background: #8f5c3a; box-shadow: 0 0 0 2px var(--line); }
+.tf-tw-meter { display: flex; align-items: center; gap: 6px; padding: 6px 10px; }
+.tf-tw-bar { position: relative; flex: 1; height: 22px; background: #1b3a5c; box-shadow: 0 0 0 2px var(--line); overflow: hidden; }
+.tf-tw-bar i { position: absolute; inset: 0 auto 0 0; background: var(--green); }
+.tf-tw-bar span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; text-shadow: 0 1px var(--line), 1px 0 var(--line), -1px 0 var(--line); }
+.tf-tw-chip { padding: 3px 6px; font-size: 12px; font-weight: 700; background: var(--cream); box-shadow: 0 0 0 2px var(--line); white-space: nowrap; }
+.tf-tw-next { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px var(--line); }
+.tf-tw-next-slot { position: relative; background: var(--cream); box-shadow: 0 0 0 2px var(--line); }
+.tf-tw-fb { padding: 6px 12px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; box-shadow: 0 0 0 2px var(--line), 3px 3px 0 2px var(--line); background: var(--cream); }
+.tf-tw-fb b { font-size: 16px; }
+.tf-tw-fb.perfect { background: var(--gold); }
+.tf-tw-fb.shaky { background: #ffe9b8; }
+.tf-tw-fb.fell { background: #ffe1dd; }
+.tf-tw-fb.fell b { color: var(--red); }
+.tf-tw-wind { padding: 3px 8px; font-size: 12px; font-weight: 700; background: var(--cream); box-shadow: 0 0 0 2px var(--line); letter-spacing: 1px; }

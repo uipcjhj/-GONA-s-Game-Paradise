@@ -61,4 +61,4 @@ export interface MiniGameModule<P = unknown> {
   load(): Promise<{ default: ComponentType<GameViewProps<P>> }>;
 }
 
-export type SfxName = 'tap' | 'good' | 'bad' | 'clear' | 'fail' | 'tick' | 'pause' | 'lifeup' | 'start';
+export type SfxName = 'tap' | 'good' | 'bad' | 'clear' | 'fail' | 'tick' | 'pause' | 'lifeup' | 'start' | 'drop' | 'thud';
