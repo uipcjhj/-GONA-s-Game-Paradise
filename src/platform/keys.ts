@@ -15,3 +15,10 @@ export const LEGACY_KEYS = { openingSeen: 'gona.openingSeen', mute: 'gona.mute' 
 
 /** 데이터 초기화가 지우는 키 목록(= 플랫폼 키만) */
 export const RESETTABLE_KEYS: string[] = [KEYS.player, KEYS.backup, KEYS.corrupt];
+
+/** 게임 연동용 키: 세션(게임천국이 씀) · 결과 inbox(게임이 씀) · 거부된 결과 보관 */
+export const SESSION_PREFIX = `${PREFIX}session.`;
+export const INBOX_PREFIX = `${PREFIX}inbox.`;
+export const REJECTED_PREFIX = `${PREFIX}rejected.`;
+/** 초기화 때 함께 지우는 접두사 (gp.v1.* 만 — 다른 게임/기존 gona.* 키는 절대 건드리지 않음) */
+export const KEY_PREFIXES_TO_RESET: string[] = [SESSION_PREFIX, INBOX_PREFIX, REJECTED_PREFIX];

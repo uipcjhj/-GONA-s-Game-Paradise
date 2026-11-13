@@ -1,8 +1,11 @@
 import { DEFAULT_AVATAR_ID, isKnownAvatar } from './avatars';
 import { createPlayerId, createPublicCode } from './ids';
-import { KEYS, RESETTABLE_KEYS } from './keys';
+import { KEYS, KEY_PREFIXES_TO_RESET, RESETTABLE_KEYS } from './keys';
 import { checkNickname } from './nickname';
 import { parsePlayerJson } from './schema';
+import { DEFAULT_TITLE } from './content';
+import { kstDate } from './kst';
+import { defaultInventory, emptyAttendance, emptyDaily, emptyStats } from './schema';
 import { SCHEMA_VERSION, type KV, type PlayerData } from './types';
 
 /** 브라우저 localStorage (사용 불가 환경이면 null) */
@@ -21,6 +24,7 @@ export function browserStorage(): KV | null {
 export function createMemoryStorage(initial: Record<string, string> = {}): KV & { dump(): Record<string, string> } {
   const m = new Map(Object.entries(initial));
   return {
+    keys: () => [...m.keys()],
     getItem: (k) => (m.has(k) ? (m.get(k) as string) : null),
     setItem: (k, v) => void m.set(k, String(v)),
     removeItem: (k) => void m.delete(k),
@@ -100,10 +104,19 @@ export function createPlayer(nickname: string, avatarId: string, now: Date = new
       playerLevel: 1,
       totalXP: 0,
       coinBalance: 0,
-      settings: { bgm: true },
-      gameRecords: {},
-      achievements: [],
+      settings: { bgm: true, vibration: true, reduceMotion: false },
       unlockedAvatarIds: [],
+      gameRecords: {},
+      stats: emptyStats(),
+      resultLedger: [],
+      achievements: {},
+      titleId: DEFAULT_TITLE,
+      codex: {},
+      daily: emptyDaily(kstDate(now.getTime())),
+      attendance: emptyAttendance(),
+      levelRewardsGiven: 1,
+      inventory: defaultInventory(),
+      sessionRewarded: {},
     },
   };
 }
@@ -121,7 +134,13 @@ export function withProfile(p: PlayerData, patch: { nickname?: string; avatarId?
 
 /** 플랫폼 키(gp.v1.*)만 삭제. gona.openingSeen · gona.mute · 다른 게임 키는 건드리지 않음 */
 export function resetPlatformData(kv: KV): void {
-  for (const k of RESETTABLE_KEYS) {
+  let extra: string[] = [];
+  try {
+    extra = (kv.keys?.() ?? []).filter((k) => KEY_PREFIXES_TO_RESET.some((p) => k.startsWith(p)));
+  } catch {
+    /* 무시 */
+  }
+  for (const k of [...RESETTABLE_KEYS, ...extra]) {
     try {
       kv.removeItem(k);
     } catch {

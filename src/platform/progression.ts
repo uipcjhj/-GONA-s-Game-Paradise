@@ -1,12 +1,22 @@
-/** 임시 설계값(D7: 운영 전 별도 승인). Phase 1 에는 XP·코인 획득이 없어 표시용으로만 사용 */
-export function xpToNext(level: number): number {
-  return 100 + 40 * (Math.max(1, level) - 1);
+import { BALANCE } from './balance';
+
+export const xpToNext = BALANCE.xpToNext;
+
+/** 누적 XP → 레벨 */
+export function levelForXp(totalXP: number): number {
+  let level = 1;
+  let rest = totalXP;
+  while (level < BALANCE.maxLevel && rest >= BALANCE.xpToNext(level)) {
+    rest -= BALANCE.xpToNext(level);
+    level += 1;
+  }
+  return level;
 }
+/** 현재 레벨 안에서의 진행도 */
 export function xpProgress(level: number, totalXP: number): { into: number; need: number; ratio: number } {
-  // 레벨 L 시작 누적 XP = Σ_{i<L} xpToNext(i)
   let start = 0;
-  for (let i = 1; i < level; i++) start += xpToNext(i);
-  const need = xpToNext(level);
+  for (let i = 1; i < level; i++) start += BALANCE.xpToNext(i);
+  const need = BALANCE.xpToNext(level);
   const into = Math.max(0, Math.min(need, totalXP - start));
   return { into, need, ratio: need ? into / need : 0 };
 }
