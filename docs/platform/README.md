@@ -14,3 +14,6 @@
 - UI 디자인은 **최종 승인 전**(시안 수정 중)
 
 추가 문서: [PHASE1_SPEC](PHASE1_SPEC.md) (Phase 1 확정 명세) · [HUD_OPTIONS](HUD_OPTIONS.md) · [ASSETS](ASSETS.md)
+
+## Phase 2 설계 (Food Adventure 플레이 기록 연동)
+- [PHASE2_FOOD_INTEGRATION](PHASE2_FOOD_INTEGRATION.md) · [GAME_RESULT_CONTRACT](GAME_RESULT_CONTRACT.md) · 시안 `prototype/phase2.html` / `screens/phase2/`

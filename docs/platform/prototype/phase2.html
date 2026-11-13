@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Phase 2 플레이 기록 연동 — 결과 화면 시안</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.res .p{} .score-box{background:#fff4d6;box-shadow:var(--notch),inset 0 3px 0 #fff,0 6px 0 0 rgba(59,27,94,.28);padding:10px 10px 12px;text-align:center;position:relative;flex:none;margin:3px}
+.score-box small{font-size:10px;color:#5d3f86;letter-spacing:2px}
+.score-box .n{font-size:44px;font-weight:700;line-height:1.1;color:#3b1b5e;letter-spacing:1px;text-shadow:3px 3px 0 #ffc21a}
+.score-box .delta{font-size:11px;font-weight:700;margin-top:2px}
+.newbest{position:absolute;left:50%;top:-14px;transform:translateX(-50%);background:#ec5048;color:#fff;font-size:12px;font-weight:700;padding:4px 10px 5px;box-shadow:0 0 0 2px #3b1b5e;letter-spacing:1px;white-space:nowrap}
+.newbest.clear{background:#3b1b5e;color:#ffc21a}
+.gamerow{display:flex;gap:10px;align-items:center;background:#fff4d6;padding:8px;box-shadow:var(--notch),inset 0 3px 0 #fff;margin:3px;flex:none}
+.gamerow .th{width:52px;height:52px;border:3px solid var(--ink);background-image:url(assets/gona-world-map.png);background-size:600% auto;background-position:7% 17%;image-rendering:auto;flex:none}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.stat{padding:6px 3px}.stat b{font-size:13px}.stat span{font-size:9px}
+.fooddark{background:#2a1a40;color:#fff4d6;padding:14px;text-align:center;box-shadow:var(--notch);margin:3px}
+.fooddark h4{margin:0 0 6px;font-size:16px}
+.cap{font-size:10px;color:#5d3f86;text-align:center}
+.spin{width:28px;height:28px;border:4px solid var(--ink);border-top-color:var(--gold);animation:sp .8s steps(8) infinite;margin:6px auto}@keyframes sp{to{transform:rotate(360deg)}}
+.map-mini{height:190px;background:#1daefd url(assets/gona-world-map.png) 0% 22%/150% auto;image-rendering:auto;margin:3px;box-shadow:var(--notch);position:relative}
+.popup2{background:#fff4d6;margin:3px;padding:8px;box-shadow:var(--notch),inset 0 3px 0 #fff;display:grid;grid-template-columns:auto 1fr;gap:6px 10px}
+</style><style>.sample{top:auto!important;bottom:74px;right:6px}</style></head><body><div class="phone" id="app"></div>
+<div class="proto" id="proto"><button id="protoBtn">☰ 시안 목록</button><nav>
+<a href="#over">1 결과 · 게임 오버</a><a href="#best">2 결과 · 신기록</a><a href="#clear">3 결과 · 엔딩 클리어</a>
+<a href="#saving">4 저장 중</a><a href="#error">5 저장 실패(재시도)</a><a href="#dup">6 이미 반영된 기록</a>
+<a href="#island">7 섬 팝업 · 내 기록</a><a href="#profile">8 프로필 · 게임 기록</a>
+<a href="#food">9 Food 쪽 복귀 버튼(개념도)</a><a href="#import">10 기존 기록 가져오기</a></nav></div>
+<script>
+const CLEAN=new URLSearchParams(location.search).has('clean'); if(CLEAN) document.getElementById('proto').remove();
+const $=(s)=>document.querySelector(s);
+const PAL={k:'#3b5ea8',y:'#ffc21a',o:'#ff9a1c',g:'#5aa938',b:'#4aa3f0',p:'#ff8fb0',i:'#3b1b5e'};
+const IC={coin:['..kkkk..','.kyyyyk.','kyyokyyk','kyyokyyk','kyyokyyk','kyyyyyyk','.kyyyyk.','..kkkk..'],trophy:['.kkkkkkkk.','kykyyyyoky','kykyyyyoky','.kkyyyokk.','...kyok...','....kk....','...kyyk...','..kkkkkk..'],map:['..........','.kkkkkkkk.','.kggkbbyk.','.kgggkbbk.','.kkgkkbkk.','.kbbkkgggk','.kbbbkggk.','.kkkkkkkk.'],user:['...kkkk...','..kppppk..','..kpkpkk..','..kppppk..','...kkkk...','.kkgggggk.','.kgggggggk','.kkkkkkkk.'],more:['..........','..........','.kk.kk.kk.','.kk.kk.kk.','..........']};
+function ic(n,px=2){const m=IC[n];const w=Math.max(...m.map(r=>r.length));return `<svg width="${w*px}" height="${m.length*px}" viewBox="0 0 ${w} ${m.length}" shape-rendering="crispEdges">${m.flatMap((r,j)=>[...r].map((c,i)=>PAL[c]&&c!=='.'?`<rect x="${i}" y="${j}" width="1" height="1" fill="${PAL[c]}"/>`:'')).join('')}</svg>`}
+const av=(id,px)=>`<span class="av" style="width:${px}px;height:${px}px"><img src="assets/av/${id}-s.png" alt=""></span>`;
+const header=()=>`<header class="top hudb"><button class="pbtn">${av('mom',28)}<span class="meta"><span class="nm">고나짱</span><span class="lv">LV1</span></span></button><div class="logo"><h1>GONA GONE WILD!</h1><span class="ko">고나가 떴고나!</span></div><div class="coinchip">${ic('coin',1.5)}0</div></header>`;
+const nav=(cur)=>`<nav class="nav">${[['world','WORLD','map'],['profile','PROFILE','user'],['rank','RANKING','trophy'],['more','MORE','more']].map(([id,l,i])=>`<button class="${cur===id?'on':''}">${ic(i,2)}<span>${l}</span></button>`).join('')}</nav>`;
+const wrap=(cur,body)=>`${header()}<div class="screen" style="padding-bottom:calc(66px + env(safe-area-inset-bottom))"><div class="scroll">${body}</div></div>${nav(cur)}`;
+const wrapR=(body)=>`${header()}<div class="screen" style="padding-bottom:0"><div class="scroll">${body}</div></div>`;
+const rec=(o)=>`<section class="panel"><h3>내 기록 · Food Adventure <span class="sp"></span><span class="chip">${o.tag||'샘플'}</span></h3><div class="g4"><div class="stat"><b>${o.best}</b><span>최고 점수</span></div><div class="stat"><b>${o.plays}회</b><span>플레이</span></div><div class="stat"><b>${o.clears}회</b><span>클리어</span></div><div class="stat"><b>${o.last}</b><span>마지막 플레이</span></div></div></section>`;
+const game=(chip)=>`<div class="gamerow"><div class="th"></div><div style="flex:1"><b style="font-size:13px">GONA's Food Adventure</b><div class="muted">푸드 아일랜드</div></div><span class="chip ${chip[1]}">${chip[0]}</span></div>`;
+const btns=(a='▶ 다시 도전')=>`<div class="row"><button class="btn big" style="flex:1">${a}</button></div><div class="row"><button class="btn sub" style="flex:1">월드맵으로</button><button class="btn sub off" style="flex:1" disabled>랭킹 (준비 중)</button></div>`;
+const SC={
+over:()=>wrapR(`<div class="ribbon2" style="margin:2px auto">RESULT</div>${game(['게임 오버','soon'])}
+ <div class="score-box"><small>SCORE</small><div class="n">8,540</div><div class="delta muted">내 최고 12,400까지 3,860점</div></div>
+ <div class="g3"><div class="stat"><b>2단계</b><span>기어 다니는 고나</span></div><div class="stat"><b>42개</b><span>먹은 간식</span></div><div class="stat"><b>3:08</b><span>플레이 시간</span></div></div>
+ ${rec({best:'12,400',plays:'13',clears:'0',last:'방금'})}${btns()}`),
+best:()=>wrapR(`<div class="ribbon2" style="margin:2px auto">RESULT</div>${game(['게임 오버','soon'])}
+ <div class="score-box" style="margin-top:12px"><span class="newbest">★ NEW BEST! ★</span><small>SCORE</small><div class="n">15,230</div><div class="delta" style="color:#2f7a1f">이전 최고 12,400 → +2,830</div></div>
+ <div class="g3"><div class="stat"><b>3단계</b><span>직립보행 고나</span></div><div class="stat"><b>96개</b><span>먹은 간식</span></div><div class="stat"><b>5:21</b><span>플레이 시간</span></div></div>
+ ${rec({best:'15,230',plays:'14',clears:'0',last:'방금'})}${btns()}`),
+clear:()=>wrapR(`<div class="ribbon2" style="margin:2px auto">ADVENTURE CLEAR</div>${game(['모험 완료!','ok'])}
+ <div class="score-box" style="margin-top:12px"><span class="newbest clear">★ CLEAR! ★</span><small>SCORE</small><div class="n">23,780</div><div class="delta" style="color:#2f7a1f">NEW BEST · 이전 최고 15,230</div></div>
+ <div class="g3"><div class="stat"><b>4단계</b><span>자이언트 곤룡 고나</span></div><div class="stat"><b>151개</b><span>먹은 간식</span></div><div class="stat"><b>9:47</b><span>플레이 시간</span></div></div>
+ ${rec({best:'23,780',plays:'15',clears:'1',last:'방금'})}${btns('▶ 한 번 더!')}`),
+saving:()=>wrapR(`<div class="ribbon2" style="margin:2px auto">RESULT</div>${game(['기록 확인 중','blue'])}<section class="panel" style="text-align:center"><div class="spin"></div><b>플레이 기록을 저장하는 중…</b><div class="muted">게임에서 돌아왔어요. 잠깐이면 돼요.</div></section>`),
+error:()=>wrapR(`<div class="ribbon2" style="margin:2px auto">RESULT</div>${game(['저장 실패','soon'])}<div class="score-box"><small>SCORE</small><div class="n">8,540</div><div class="delta" style="color:#b3261e">아직 내 기록에 반영되지 않았어요</div></div>
+ <section class="panel"><h3>결과를 저장하지 못했어요</h3><div class="muted">이 브라우저의 저장 공간이 가득 찼거나 막혀 있을 수 있어요. 결과는 잠시 보관돼 있어서 다시 시도할 수 있어요. 계속 안 되면 설정 &gt; 백업으로 기록을 먼저 보관해 주세요.</div></section>
+ <div class="row"><button class="btn big" style="flex:1">다시 시도</button></div><div class="row"><button class="btn sub" style="flex:1">월드맵으로</button></div>`),
+dup:()=>wrapR(`<div class="ribbon2" style="margin:2px auto">RESULT</div>${game(['이미 반영됨','blue'])}<section class="panel"><h3>이미 반영된 기록이에요</h3><div class="muted">같은 판의 결과가 한 번 더 들어와서 무시했어요. 기록은 한 번만 저장돼요.</div></section>${rec({best:'15,230',plays:'14',clears:'0',last:'방금'})}<div class="row"><button class="btn big" style="flex:1">확인</button></div>`),
+island:()=>`${header()}<div class="stage" style="flex:1;background:var(--sea);position:relative;display:flex;flex-direction:column;padding-bottom:66px"><div class="map-mini"></div>
+ <div class="popup2" style="margin-top:6px"><div class="gamerow" style="grid-column:1/-1;box-shadow:none;padding:0;background:none;margin:0"><div class="th"></div><div style="flex:1"><span class="chip ok">플레이 가능</span><h2 style="margin:3px 0 0;font-size:14px">GONA's Food Adventure</h2><div class="muted">간식을 먹으며 달리는 고나의 대모험!</div></div></div>
+ <div class="g4" style="grid-column:1/-1"><div class="stat"><b>15,230</b><span>최고 점수</span></div><div class="stat"><b>14회</b><span>플레이</span></div><div class="stat"><b>0회</b><span>클리어</span></div><div class="stat"><b>오늘</b><span>마지막 플레이</span></div></div>
+ <div class="row" style="grid-column:1/-1"><button class="btn" style="flex:1.4">▶ PLAY</button><button class="btn sub" style="flex:1" disabled>랭킹</button></div></div></div>${nav('world')}<span class="sample">시안 · 샘플</span>`,
+profile:()=>wrap('profile',`<section class="panel"><h3>게임 기록</h3><div class="grid"><div class="panel" style="padding:8px;box-shadow:var(--notch)"><b style="font-size:12px">GONA's Food Adventure</b><div class="g4" style="margin-top:6px"><div class="stat"><b>15,230</b><span>최고 점수</span></div><div class="stat"><b>14회</b><span>플레이</span></div><div class="stat"><b>0회</b><span>클리어</span></div><div class="stat"><b>11.13</b><span>마지막 플레이</span></div></div><div class="muted" style="margin-top:6px">최고 단계 3/4 · 직립보행 고나 · 총 플레이 1시간 8분</div></div>
+ <div class="row" style="background:#fff;border:2px solid var(--ink);padding:7px 8px"><b style="flex:1;font-size:11px">스카이 배틀</b><span class="chip soon">COMING SOON</span></div><div class="row" style="background:#fff;border:2px solid var(--ink);padding:7px 8px"><b style="flex:1;font-size:11px">미니게임천국</b><span class="chip soon">COMING SOON</span></div></div></section>
+ <section class="panel"><h3>총 기록</h3><div class="g3"><div class="stat"><b>14회</b><span>총 플레이</span></div><div class="stat"><b>1:08:00</b><span>총 시간</span></div><div class="stat"><b>1 / 3</b><span>플레이한 게임</span></div></div></section>`),
+food:()=>`<div class="screen" style="padding:0;background:#1c1230"><div class="scroll" style="justify-content:center"><div class="cap" style="color:#fff4d6">개념도 — Food Adventure 게임 오버 화면 (기존 UI는 그대로)</div>
+ <div class="fooddark"><h4>게임 오버</h4><div style="font-size:30px;font-weight:700;color:#ffc21a">8,540</div><div class="muted" style="color:#d8c8ff">최고 12,400</div><div style="display:grid;gap:8px;margin-top:10px"><div class="btn" style="background:#ffd84a;opacity:.9">다시하기 (기존)</div><div class="btn" style="background:#ffd84a;opacity:.9">💾 이어하기 (기존)</div></div></div>
+ <div class="cap" style="color:#ffc21a;font-weight:700">▼ 게임천국에서 실행했을 때만 나타나는 작은 버튼 (신규 · 승인 필요)</div>
+ <button class="btn sub" style="box-shadow:var(--notch);background:#fff4d6;min-height:44px">🏝 게임천국으로 돌아가기</button><div class="cap" style="color:#d8c8ff">단독 실행(주소에 gp 없음)에서는 버튼이 만들어지지 않아요.<br>버튼 없이도 브라우저 뒤로가기/탭 복귀로 결과가 반영돼요.</div></div></div><span class="sample">개념도</span>`,
+import:()=>`${header()}<div class="stage" style="flex:1;position:relative;background:var(--sea);padding-bottom:66px"><div class="map-mini" style="height:100%;opacity:.55"></div><div class="scrim" style="position:absolute"><div class="panel modal"><h3 style="font-size:15px;margin:0 0 8px">Food 기록을 가져올까요?</h3><div class="muted">이 기기의 Food Adventure에서 <b>최고 점수 12,400 · 최고 3단계</b> 기록을 찾았어요. 게임천국 내 기록으로 한 번 가져올 수 있어요. (게임 원본 기록은 바뀌지 않아요)</div><div class="muted" style="margin-top:6px">가져온 기록에는 '이전 기록'이 표시되고, 온라인 랭킹에는 쓰이지 않아요.</div><div class="row" style="margin-top:10px"><button class="btn sub" style="flex:1">나중에</button><button class="btn" style="flex:1">가져오기</button></div></div></div></div>${nav('world')}<span class="sample">시안 · 샘플</span>`,
+};
+function render(){const k=location.hash.slice(1)||'over';$('#app').innerHTML=(SC[k]||SC.over)()+(CLEAN||k==='island'||k==='food'||k==='import'?'':'<span class="sample">시안 · 샘플</span>');}
+addEventListener('hashchange',render);$('#protoBtn')?.addEventListener('click',()=>$('#proto').classList.toggle('open'));render();
+</script></body></html>
