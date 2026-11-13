@@ -14,6 +14,9 @@ export type ButtonVariant = 'normal' | 'primary' | 'card';
 export type ButtonSize = 'md' | 'lg' | 'sm' | 'icon';
 export type PanelTone = 'card' | 'popup' | 'board';
 export type MascotPose = 'idle' | 'happy' | 'oops';
+export type HeadingRole = 'screen' | 'result' | 'intro-round' | 'intro-title';
+export type CalloutTone = 'ready' | 'count' | 'clear' | 'fail';
+export type CaptionRole = 'sub' | 'note' | 'centered' | 'stepper' | 'loading';
 
 /** 점수판에 그릴 값(계산은 기반이 끝냄 — 스킨은 보여주기만) */
 export interface ScoreboardView {
@@ -47,6 +50,22 @@ export interface UiSlots {
   Lives: ComponentType<{ lives: number; max: number }>;
   /** 고나 마스코트 / 심판. scale = 도트 정수 배율 */
   Mascot: ComponentType<{ pose: MascotPose; scale?: number; className?: string }>;
+  /** 화면 제목 · 결과 머리글 · 인트로 문구 */
+  Heading: ComponentType<{ role: HeadingRole; tone?: 'clear' | 'fail'; children?: ReactNode }>;
+  /** 화면 가운데 큰 문구(READY · 카운트다운 · CLEAR! · MISS · TIME UP) — 입력 없음 */
+  Callout: ComponentType<{ tone: CalloutTone; children?: ReactNode }>;
+  /** 작은 강조 딱지(NEW RECORD · 목숨 +1) */
+  Badge: ComponentType<{ children?: ReactNode }>;
+  /** 작은 보조 글씨(설명 · 안내 · 로딩) */
+  Caption: ComponentType<{ role: CaptionRole; children?: ReactNode }>;
+  /** 개발용/임시 표시 딱지 */
+  Tag: ComponentType<{ children?: ReactNode }>;
+  /** 홈 로고(타이틀 블록) */
+  Logo: ComponentType<{ lines: string[]; subtitle: string }>;
+  /** 결과 점수 내역(라벨 · 값) */
+  StatList: ComponentType<{ lines: { label: string; value: string; strong?: boolean }[] }>;
+  /** 하는 방법 목록 */
+  HowTo: ComponentType<{ steps: string[] }>;
 }
 
 export interface Skin {
@@ -75,4 +94,4 @@ export interface ResolvedSkin {
   toyroom: ToyRoomSlots;
 }
 
-export const UI_SLOT_KEYS: (keyof UiSlots)[] = ['Background', 'ButtonFace', 'Panel', 'Scoreboard', 'Lives', 'Mascot'];
+export const UI_SLOT_KEYS: (keyof UiSlots)[] = ['Background', 'ButtonFace', 'Panel', 'Scoreboard', 'Lives', 'Mascot', 'Heading', 'Callout', 'Badge', 'Caption', 'Tag', 'Logo', 'StatList', 'HowTo'];

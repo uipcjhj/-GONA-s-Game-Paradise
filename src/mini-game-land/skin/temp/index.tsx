@@ -35,6 +35,47 @@ const Mascot: UiSlots['Mascot'] = ({ pose, scale = 3, className = '' }) => (
   <img src={gonaUrl} alt="고나" className={`tf-mascot ${className}`} data-pose={pose} style={{ width: 27 * scale, height: 34 * scale }} draggable={false} />
 );
 
+const Heading: UiSlots['Heading'] = ({ role, tone, children }) => {
+  if (role === 'screen') return <h2 className="mgl-h">{children}</h2>;
+  if (role === 'result') return <h2 className={`mgl-result-head ${tone ?? ''}`}>{children}</h2>;
+  if (role === 'intro-round') return <div className={`mgl-intro-round ${tone ?? ''}`}>{children}</div>;
+  return <div className="mgl-intro-title">{children}</div>;
+};
+const Callout: UiSlots['Callout'] = ({ tone, children }) => <div className={`mgl-big ${tone === 'clear' ? 'clear' : tone === 'fail' ? 'fail' : ''}`}>{children}</div>;
+const Badge: UiSlots['Badge'] = ({ children }) => <div className="mgl-badge">{children}</div>;
+const Caption: UiSlots['Caption'] = ({ role, children }) => {
+  const cls = { sub: 'mgl-sub', note: 'mgl-note', centered: 'mgl-sub mgl-center-text', stepper: 'tf-cap-stepper', loading: 'tf-cap-loading' }[role];
+  return <p className={cls}>{children}</p>;
+};
+const Tag: UiSlots['Tag'] = ({ children }) => <em className="mgl-temp">{children}</em>;
+const Logo: UiSlots['Logo'] = ({ lines, subtitle }) => (
+  <div className="mgl-title">
+    <h1>
+      {lines.map((l) => (
+        <span key={l}>{l}</span>
+      ))}
+    </h1>
+    <p>{subtitle}</p>
+  </div>
+);
+const StatList: UiSlots['StatList'] = ({ lines }) => (
+  <dl className="mgl-lines">
+    {lines.map((l) => (
+      <div key={l.label} className={l.strong ? 'strong' : ''}>
+        <dt>{l.label}</dt>
+        <dd>{l.value}</dd>
+      </div>
+    ))}
+  </dl>
+);
+const HowTo: UiSlots['HowTo'] = ({ steps }) => (
+  <ol className="mgl-how">
+    {steps.map((t) => (
+      <li key={t}>{t}</li>
+    ))}
+  </ol>
+);
+
 const Scoreboard: UiSlots['Scoreboard'] = ({ view, pauseButton }) => (
   <div className="mgl-hud">
     <div className="mgl-hud-row">
@@ -197,6 +238,14 @@ const TowerFeedback: TowerSlots['Feedback'] = ({ kind, text, sub }) => (
     {sub && <span>{sub}</span>}
   </div>
 );
+const GoalLine: TowerSlots['GoalLine'] = () => (
+  <div className="tf-tw-goal">
+    <span>GOAL</span>
+  </div>
+);
+const Guide: TowerSlots['Guide'] = () => <div className="tf-tw-guide" />;
+const ComMarker: TowerSlots['ComMarker'] = () => <i className="tf-tw-com" />;
+const PlateBand: TowerSlots['PlateBand'] = () => <div className="tf-tw-band" />;
 const Notice: TowerSlots['Notice'] = ({ wind }) => (
   <div className="tf-tw-wind" data-dir={wind === 0 ? '0' : wind > 0 ? '1' : '-1'}>
     바람 {wind === 0 ? '잔잔' : (wind > 0 ? '▶' : '◀').repeat(Math.max(1, Math.round(Math.abs(wind) * 3)))}
@@ -253,9 +302,9 @@ const temp: Skin = {
   name: '임시 스킨 (기능 검증용)',
   temporary: true,
   tokens: { '--mgl-page-bg': '#6cc8fb', '--sc-card-w': '112px', '--sc-card-h': '112px', '--mgl-btn-depth': '5px' },
-  ui: { Background, ButtonFace, Panel, Scoreboard, Lives, Mascot },
+  ui: { Background, ButtonFace, Panel, Scoreboard, Lives, Mascot, Heading, Callout, Badge, Caption, Tag, Logo, StatList, HowTo },
   sort: { Friend, RulePanel, StageFrame, BinFace, InfoBar, Feedback, Announce },
-  tower: { Backdrop, PieceArt, PlateArt, Meter: TowerMeter, NextQueue, Feedback: TowerFeedback, Notice },
+  tower: { Backdrop, PieceArt, PlateArt, Meter: TowerMeter, NextQueue, Feedback: TowerFeedback, Notice, GoalLine, Guide, ComMarker, PlateBand },
   toyroom: { Backdrop: RoomBackdrop, ShelfFrame: Shelf, ToyArt, Meter: ToyMeter, Feedback: ToyFeedback },
 };
 export default temp;

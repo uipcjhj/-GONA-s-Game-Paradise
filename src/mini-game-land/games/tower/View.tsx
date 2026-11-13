@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import './tower.css';
+import { FX, FX_CLEANUP_MARGIN_MS } from '../../core/fx';
 import type { GameViewProps } from '../../core/types';
 import { Button } from '../../skin/components';
 import { useSkin } from '../../skin/context';
@@ -61,12 +62,12 @@ export default function TowerView({ params, seed, ctx }: GameViewProps<TowerPara
 
   useEffect(() => {
     if (!fb) return;
-    const t = window.setTimeout(() => setFb(null), fb.kind === 'fell' ? 1500 : 700);
+    const t = window.setTimeout(() => setFb(null), fb.kind === 'fell' ? FX.tower.feedbackFellMs : FX.tower.feedbackMs);
     return () => window.clearTimeout(t);
   }, [fb]);
   useEffect(() => {
     if (!shake) return;
-    const t = window.setTimeout(() => setShake(0), 160);
+    const t = window.setTimeout(() => setShake(0), FX.tower.shakeMs + FX_CLEANUP_MARGIN_MS);
     return () => window.clearTimeout(t);
   }, [shake]);
 
@@ -230,10 +231,10 @@ export default function TowerView({ params, seed, ctx }: GameViewProps<TowerPara
         <div className="tw-bg"><S.Backdrop /></div>
         <div className="tw-world" ref={worldRef}>
           <div className="tw-plate" style={{ left: PLATE_X - params.plateW / 2, top: 0 }}><S.PlateArt width={params.plateW} /></div>
-          <div className="tw-goal" style={{ left: 0, width: WORLD_W, top: -params.goalH }}><span>GOAL</span></div>
-          {params.showCom && <div className="tw-band" style={{ left: PLATE_X - params.plateW / 2, width: params.plateW, top: -3 }} />}
-          <div className="tw-guide" ref={guideRef} style={{ display: 'none' }} />
-          <div className="tw-com" ref={comRef} style={{ display: 'none' }}><i /></div>
+          <div className="tw-goal" style={{ left: 0, width: WORLD_W, top: -params.goalH }}><S.GoalLine goalH={params.goalH} /></div>
+          {params.showCom && <div className="tw-band" style={{ left: PLATE_X - params.plateW / 2, width: params.plateW, top: -3, height: 2 }}><S.PlateBand /></div>}
+          <div className="tw-guide" ref={guideRef} style={{ display: 'none' }}><S.Guide /></div>
+          <div className="tw-com" ref={comRef} style={{ display: 'none' }}><S.ComMarker /></div>
           {pieces.map((p) => (
             <div key={p.id} className="tw-piece" data-kind={p.kind} ref={(el) => { if (el) els.current.set(p.id, el); else els.current.delete(p.id); }}
               style={{ transform: `translate(${p.body.position.x}px, ${p.body.position.y}px) rotate(${p.body.angle}rad)` }}>

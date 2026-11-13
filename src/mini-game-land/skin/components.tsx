@@ -3,7 +3,7 @@
  */
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react';
 import { useSkin } from './context';
-import type { ButtonSize, ButtonVariant, MascotPose, PanelTone, Scene } from './types';
+import type { ButtonSize, ButtonVariant, CalloutTone, CaptionRole, HeadingRole, MascotPose, PanelTone, Scene } from './types';
 
 type Common = { variant?: ButtonVariant; size?: ButtonSize };
 
@@ -61,4 +61,42 @@ export function Mascot({ pose = 'idle', scale, className }: { pose?: MascotPose;
 export function LivesBar({ lives, max }: { lives: number; max: number }) {
   const L = useSkin().ui.Lives;
   return <L lives={lives} max={max} />;
+}
+
+/** 텍스트·딱지류 슬롯 래퍼. 점검용 data-testid 는 기반이 소유(스킨이 바꿔도 유지) */
+export function Heading({ role, tone, children }: { role: HeadingRole; tone?: 'clear' | 'fail'; children?: ReactNode }) {
+  const H = useSkin().ui.Heading;
+  return <H role={role} tone={tone}>{children}</H>;
+}
+export function Callout({ tone, children }: { tone: CalloutTone; children?: ReactNode }) {
+  const C = useSkin().ui.Callout;
+  return <C tone={tone}>{children}</C>;
+}
+export function Badge({ children, testId }: { children?: ReactNode; testId?: string }) {
+  const B = useSkin().ui.Badge;
+  return (
+    <span style={{ display: 'contents' }} data-testid={testId}>
+      <B>{children}</B>
+    </span>
+  );
+}
+export function Caption({ role, children }: { role: CaptionRole; children?: ReactNode }) {
+  const C = useSkin().ui.Caption;
+  return <C role={role}>{children}</C>;
+}
+export function Tag({ children }: { children?: ReactNode }) {
+  const T = useSkin().ui.Tag;
+  return <T>{children}</T>;
+}
+export function Logo({ lines, subtitle }: { lines: string[]; subtitle: string }) {
+  const L = useSkin().ui.Logo;
+  return <L lines={lines} subtitle={subtitle} />;
+}
+export function StatList({ lines }: { lines: { label: string; value: string; strong?: boolean }[] }) {
+  const L = useSkin().ui.StatList;
+  return <L lines={lines} />;
+}
+export function HowTo({ steps }: { steps: string[] }) {
+  const H = useSkin().ui.HowTo;
+  return <H steps={steps} />;
 }

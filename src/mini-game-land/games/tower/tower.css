@@ -1,4 +1,8 @@
 /* 아슬아슬 탑 — 기반 레이아웃·동작. 모양은 스킨 슬롯이 그림. */
+:root {
+  /* 탑 레이아웃 토큰(스킨 tokens 로 덮어쓰기 가능) */
+  --tw-controls-pad: 6px 10px 2px; --tw-controls-gap: 8px; --tw-btn-min-w: 88px;
+}
 .tw { height: 100%; display: flex; flex-direction: column; }
 .tw-metabox, .tw-controls { flex: none; }
 .tw-stage { position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; touch-action: none; cursor: grab; }
@@ -9,16 +13,13 @@
 .tw-piece, .tw-aim { width: 0; height: 0; will-change: transform; }
 .tw-aim { z-index: 3; }
 .tw-piece { z-index: 2; }
-.tw-goal { height: 0; border-top: 1.5px dashed #fff; opacity: 0.9; pointer-events: none; z-index: 1; }
-.tw-goal span { position: absolute; right: 2px; top: -12px; font-size: 7px; font-weight: 700; color: #fff; text-shadow: 0 1px #3b2a3f, 1px 0 #3b2a3f, -1px 0 #3b2a3f; }
-.tw-guide { z-index: 1; pointer-events: none; background: rgba(255, 255, 255, 0.28); border-left: 1px dashed rgba(255, 255, 255, 0.8); border-right: 1px dashed rgba(255, 255, 255, 0.8); }
+.tw-goal { height: 0; pointer-events: none; z-index: 1; }
+.tw-guide { z-index: 1; pointer-events: none; }
 .tw-com { z-index: 4; width: 0; height: 0; pointer-events: none; }
-.tw-com i { position: absolute; left: -4px; top: 2px; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 7px solid #5fcf5f; filter: drop-shadow(0 0 0 #3b2a3f); }
-.tw-com[data-danger='1'] i { border-bottom-color: #e8584f; }
-.tw-band { z-index: 1; height: 2px; background: #5fcf5f; pointer-events: none; opacity: 0.9; }
+.tw-band { z-index: 1; pointer-events: none; }
 .tw-fb-wrap { position: absolute; left: 0; right: 0; top: 8px; display: flex; justify-content: center; pointer-events: none; z-index: 6; }
 .tw-notice { position: absolute; right: 8px; top: 8px; pointer-events: none; z-index: 5; }
-.tw-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px 2px; }
-.tw-controls .mgl-hit { min-width: 88px; }
-.tw-shake { animation: tw-shake 0.14s steps(3); }
+.tw-controls { display: flex; align-items: center; justify-content: space-between; gap: var(--tw-controls-gap); padding: var(--tw-controls-pad); }
+.tw-controls .mgl-hit { min-width: var(--tw-btn-min-w); }
+.tw-shake { animation: tw-shake var(--mgl-fx-tower-shake, 140ms) steps(3); }
 @keyframes tw-shake { 0% { transform: translate(0, 0); } 33% { transform: translate(-2px, 2px); } 66% { transform: translate(2px, -1px); } 100% { transform: translate(0, 0); } }

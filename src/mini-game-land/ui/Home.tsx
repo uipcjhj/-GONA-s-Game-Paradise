@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, LinkButton, Mascot } from '../skin/components';
+import { Button, Caption, LinkButton, Logo, Mascot } from '../skin/components';
 import { audio, store } from '../services';
 
 export type Screen = 'home' | 'free' | 'challenge' | 'records';
@@ -14,13 +14,7 @@ export default function Home({ go }: { go: (s: Screen) => void }) {
   };
   return (
     <div className="mgl-screen mgl-home" data-testid="home">
-      <div className="mgl-title">
-        <h1>
-          <span>GONA's</span>
-          <span>Mini Game Land</span>
-        </h1>
-        <p>고나의 미니게임천국</p>
-      </div>
+      <Logo lines={["GONA's", 'Mini Game Land']} subtitle="고나의 미니게임천국" />
       <div className="mgl-hero-wrap">
         <Mascot pose="idle" scale={3} />
       </div>
@@ -43,7 +37,7 @@ export default function Home({ go }: { go: (s: Screen) => void }) {
           소리 {muted ? '꺼짐' : '켜짐'}
         </Button>
       </div>
-      {!store.persistent && <p className="mgl-note">이 브라우저에서는 기록이 저장되지 않아요.</p>}
+      {!store.persistent && <Caption role="note">이 브라우저에서는 기록이 저장되지 않아요.</Caption>}
     </div>
   );
 }

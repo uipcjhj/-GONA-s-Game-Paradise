@@ -1,17 +1,27 @@
-/* 장난감방 — 기반 레이아웃·동작(선반 줄, 칸 격자, 터치 영역). 모양은 스킨 슬롯이 그림. */
+/* 장난감방 — 기반 레이아웃·동작(선반 줄, 칸 격자, 터치 영역). 모양(색·그림)은 스킨 슬롯이 그림. */
+:root {
+  /* 장난감방 레이아웃 토큰(스킨 tokens 로 덮어쓰기 가능). 선반 높이는 선반 수(3~6)별로 따로 정함 */
+  --tr-shelf-h-3: 84px; --tr-shelf-h-4: 76px; --tr-shelf-h-5: 68px; --tr-shelf-h-6: 62px;
+  --tr-board-pad: 8px 10px; --tr-board-gap: 6px;
+  --tr-slots-pad: 0 8px; --tr-toy-max: 54px; --tr-toy-lift: -7px;
+  --tr-controls-pad: 6px 10px 2px; --tr-controls-gap: 8px;
+}
 .tr { height: 100%; display: flex; flex-direction: column; }
 .tr-metabox, .tr-controls { flex: none; }
-.tr-board { position: relative; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 8px 10px; overflow: hidden; }
+.tr-board { position: relative; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: var(--tr-board-gap); padding: var(--tr-board-pad); overflow: hidden; --tr-shelf-h: var(--tr-shelf-h-3); }
+.tr-board[data-n='4'] { --tr-shelf-h: var(--tr-shelf-h-4); }
+.tr-board[data-n='5'] { --tr-shelf-h: var(--tr-shelf-h-5); }
+.tr-board[data-n='6'] { --tr-shelf-h: var(--tr-shelf-h-6); }
 .tr-bg { position: absolute; inset: 0; pointer-events: none; }
-/* 선반 한 줄 = 터치 영역(높이 44px 이상). 높이는 선반 수에 따라 --tr-shelf-h 로 정함 */
-.tr-shelf { position: relative; flex: 0 1 var(--tr-shelf-h, 64px); min-height: 44px; display: flex; touch-action: manipulation; z-index: 1; }
+/* 선반 한 줄 = 터치 영역(최소 --mgl-tap-min). 슬롯(틀·장난감 그림)은 입력을 받지 않음(pointer-events 없음) */
+.tr-shelf { position: relative; flex: 0 1 var(--tr-shelf-h); min-height: var(--mgl-tap-min); display: flex; touch-action: manipulation; z-index: 1; }
 .tr-frame { position: absolute; inset: 0; pointer-events: none; }
-.tr-slots { position: relative; flex: 1; display: grid; grid-template-columns: repeat(var(--tr-cap, 4), 1fr); padding: 0 8px; }
+.tr-slots { position: relative; flex: 1; display: grid; grid-template-columns: repeat(var(--tr-cap, 4), 1fr); padding: var(--tr-slots-pad); }
 .tr-slot { display: flex; align-items: center; justify-content: center; min-width: 0; }
-.tr-toy { width: calc(100% - 4px); max-width: 54px; aspect-ratio: 1; pointer-events: none; transition: transform 0.08s steps(2); }
-.tr-toy.lifted { transform: translateY(-7px); z-index: 3; }
-.tr-toy.pop { animation: tr-pop 0.24s steps(4) forwards; }
+.tr-toy { width: calc(100% - 4px); max-width: var(--tr-toy-max); aspect-ratio: 1; pointer-events: none; transition: transform var(--mgl-fx-toy-select, 80ms) steps(2); }
+.tr-toy.lifted { transform: translateY(var(--tr-toy-lift)); z-index: 3; }
+.tr-toy.pop { animation: tr-pop var(--mgl-fx-toy-pop, 240ms) steps(4) forwards; }
 @keyframes tr-pop { 0% { transform: scale(1); } 40% { transform: scale(1.25); } 100% { transform: scale(0.2); opacity: 0; } }
 .tr-fb-wrap { position: absolute; left: 0; right: 0; top: 4px; display: flex; justify-content: center; pointer-events: none; z-index: 6; }
-.tr-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px 2px; }
+.tr-controls { display: flex; align-items: center; justify-content: space-between; gap: var(--tr-controls-gap); padding: var(--tr-controls-pad); }
 .tr-controls .mgl-hit { flex: 1; }

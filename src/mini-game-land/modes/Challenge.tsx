@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CHALLENGE } from '../core/difficulty';
+import { FX } from '../core/fx';
 import type { RoundSummary } from '../core/engine';
 import { GAMES, getGame } from '../core/registry';
 import { roundScore } from '../core/scoring';
@@ -13,13 +14,11 @@ import {
   type RoundPlan,
 } from '../core/session';
 import { recordChallenge } from '../core/storage';
-import { Button, LivesBar, Panel } from '../skin/components';
+import { Badge, Button, Caption, Heading, HowTo, LivesBar, Panel } from '../skin/components';
 import ResultScreen from '../ui/ResultScreen';
 import Round from '../ui/Round';
 import { audio, store } from '../services';
 
-const INTRO_MS = 1400;
-const SUMMARY_MS = 1800;
 
 type Stage =
   | { kind: 'start' }
@@ -51,11 +50,11 @@ export default function Challenge({ exit }: { exit: () => void }) {
   // 자동 진행 타이머 (언마운트·단계 변경 시 정리)
   useEffect(() => {
     if (stage.kind === 'intro') {
-      const t = window.setTimeout(() => setStage({ kind: 'play', plan: stage.plan }), INTRO_MS);
+      const t = window.setTimeout(() => setStage({ kind: 'play', plan: stage.plan }), FX.round.introMs);
       return () => window.clearTimeout(t);
     }
     if (stage.kind === 'summary' && st) {
-      const t = window.setTimeout(() => advance(st), SUMMARY_MS);
+      const t = window.setTimeout(() => advance(st), FX.round.summaryMs);
       return () => window.clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,18 +82,13 @@ export default function Challenge({ exit }: { exit: () => void }) {
     const best = store.get().challenge;
     return (
       <div className="mgl-screen" data-testid="challenge-start">
-        <h2 className="mgl-h">랜덤 챌린지</h2>
+        <Heading role="screen">랜덤 챌린지</Heading>
         <Panel tone="card">
-          <ol className="mgl-how">
-            <li>여러 미니게임이 무작위로 나와요</li>
-            <li>성공하면 점수, 실패하면 목숨 −1</li>
-            <li>목숨은 {CHALLENGE.startLives}개 · {CHALLENGE.lifeEvery}연속 성공마다 +1 (최대 {CHALLENGE.maxLives})</li>
-            <li>라운드가 갈수록 어려워져요</li>
-          </ol>
+          <HowTo steps={[`여러 미니게임이 무작위로 나와요`, `성공하면 점수, 실패하면 목숨 −1`, `목숨은 ${CHALLENGE.startLives}개 · ${CHALLENGE.lifeEvery}연속 성공마다 +1 (최대 ${CHALLENGE.maxLives})`, `라운드가 갈수록 어려워져요`]} />
         </Panel>
-        <p className="mgl-sub mgl-center-text">
+        <Caption role="centered">
           최고 {best.bestScore.toLocaleString('en-US')}점 · {best.bestRound}라운드
-        </p>
+        </Caption>
         <div className="mgl-actions">
           <Button variant="primary" size="lg" data-testid="start" onClick={begin}>
             도전 시작!
@@ -109,11 +103,11 @@ export default function Challenge({ exit }: { exit: () => void }) {
     const g = getGame(stage.plan.gameId)!;
     return (
       <button type="button" className="mgl-screen mgl-intro" data-testid="intro" onClick={() => setStage({ kind: 'play', plan: stage.plan })}>
-        <div className="mgl-intro-round">ROUND {stage.plan.round}</div>
-        <div className="mgl-intro-title">{g.meta.title}</div>
-        <div className="mgl-sub">LV {stage.plan.level}</div>
+        <Heading role="intro-round">ROUND {stage.plan.round}</Heading>
+        <Heading role="intro-title">{g.meta.title}</Heading>
+        <Caption role="sub">LV {stage.plan.level}</Caption>
         <LivesBar lives={st.lives} max={CHALLENGE.maxLives} />
-        <div className="mgl-sub">탭하면 바로 시작</div>
+        <Caption role="sub">탭하면 바로 시작</Caption>
       </button>
     );
   }
@@ -137,13 +131,13 @@ export default function Challenge({ exit }: { exit: () => void }) {
   if (stage.kind === 'summary' && st) {
     return (
       <button type="button" className="mgl-screen mgl-intro" data-testid="summary" onClick={() => advance(st)}>
-        <div className={`mgl-intro-round ${stage.outcome}`}>{stage.outcome === 'clear' ? `CLEAR  +${stage.total}` : 'MISS  목숨 −1'}</div>
-        {stage.gainedLife && <div className="mgl-badge">목숨 +1!</div>}
+        <Heading role="intro-round" tone={stage.outcome}>{stage.outcome === 'clear' ? `CLEAR  +${stage.total}` : 'MISS  목숨 −1'}</Heading>
+        {stage.gainedLife && <Badge>목숨 +1!</Badge>}
         <LivesBar lives={st.lives} max={CHALLENGE.maxLives} />
-        <div className="mgl-sub">
+        <Caption role="sub">
           누적 {st.score.toLocaleString('en-US')}점 · {st.streak}연속 성공
           {st.streak > 0 && ` (다음 목숨까지 ${CHALLENGE.lifeEvery - (st.streak % CHALLENGE.lifeEvery)})`}
-        </div>
+        </Caption>
       </button>
     );
   }

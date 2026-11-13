@@ -7,14 +7,15 @@
  * attach()/detach() 는 짝이며 반복 호출해도 안전합니다(React StrictMode 이중 실행 대비).
  */
 import { Countdown, FrameLoop, browserEnv, type FrameEnv } from './clock';
+import { FX } from './fx';
 import { Disposer } from './lifecycle';
 import { comboMultiplier } from './scoring';
 import type { FailReason, GameContext, GameResult, Outcome, SfxName } from './types';
 
 export type Phase = 'ready' | 'playing' | 'paused' | 'resuming' | 'done';
 
-export const READY_MS = 1200;
-export const RESUME_MS = 3000;
+export const READY_MS = FX.round.readyMs;
+export const RESUME_MS = FX.round.resumeMs;
 
 export interface EngineSnapshot {
   phase: Phase;

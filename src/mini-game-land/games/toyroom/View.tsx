@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import './toyroom.css';
+import { FX } from '../../core/fx';
 import type { GameViewProps } from '../../core/types';
 import { Button } from '../../skin/components';
 import { useSkin } from '../../skin/context';
@@ -13,10 +14,9 @@ import type { ToyView } from './slots';
  * 점수·상태는 이동 즉시 확정하고, 엔진이 돌려주는 단계(lift → pop → clear → place)를 순서대로 재생합니다(재생 중에는 입력 잠금).
  * 점검용 data-*: [data-testid=board] (data-shelves/caps/moves/left/limit/par/sets/total/undo/selected/busy/status)
  */
-const STEP_MS: Record<Step['kind'], number> = { lift: 90, pop: 240, clear: 110, place: 120 };
+const STEP_MS: Record<Step['kind'], number> = { lift: FX.toyroom.liftMs, pop: FX.toyroom.popMs, clear: FX.toyroom.clearMs, place: FX.toyroom.placeMs };
 
 export const toyView = (code: string): ToyView => ({ type: typeOf(code), wild: isWild(code), fixed: isFixed(code) });
-const shelfHeight = (shelves: number) => (shelves <= 3 ? 84 : shelves === 4 ? 76 : shelves === 5 ? 68 : 62);
 
 interface Fb { id: number; kind: 'set' | 'chain' | 'info' | 'warn'; text: string; sub?: string }
 
@@ -55,7 +55,7 @@ export default function ToyRoomView({ params, seed, ctx }: GameViewProps<ToyPara
 
   useEffect(() => {
     if (!fb) return;
-    const t = window.setTimeout(() => setFb(null), fb.kind === 'warn' ? 1400 : 1100);
+    const t = window.setTimeout(() => setFb(null), fb.kind === 'warn' ? FX.toyroom.feedbackWarnMs : FX.toyroom.feedbackMs);
     return () => window.clearTimeout(t);
   }, [fb]);
 
@@ -113,7 +113,8 @@ export default function ToyRoomView({ params, seed, ctx }: GameViewProps<ToyPara
       <div
         className="tr-board"
         data-testid="board"
-        style={{ ['--tr-shelf-h' as string]: `${shelfHeight(params.shelves)}px`, ['--tr-cap' as string]: C }}
+        data-n={Math.min(6, Math.max(3, params.shelves))}
+        style={{ ['--tr-cap' as string]: C }}
         data-shelves={game.state.shelves.join('|')}
         data-caps={Array.from({ length: params.shelves }, (_, i) => game.capacity(i)).join(',')}
         data-moves={game.movesUsed}

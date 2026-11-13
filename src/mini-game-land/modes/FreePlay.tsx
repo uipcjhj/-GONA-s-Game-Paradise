@@ -7,7 +7,7 @@ import { roundScore } from '../core/scoring';
 import { finishFreeRound, startFree, type FreeState } from '../core/session';
 import { gameRecord, recordFreeRound } from '../core/storage';
 import type { MiniGameModule } from '../core/types';
-import { Button, Panel } from '../skin/components';
+import { Button, Caption, Heading, HowTo, Panel, Tag } from '../skin/components';
 import ResultScreen from '../ui/ResultScreen';
 import Round from '../ui/Round';
 import { store } from '../services';
@@ -49,7 +49,7 @@ export default function FreePlay({ exit }: { exit: () => void }) {
   if (stage.kind === 'select') {
     return (
       <div className="mgl-screen" data-testid="free-select">
-        <h2 className="mgl-h">자유 플레이</h2>
+        <Heading role="screen">자유 플레이</Heading>
         <div className="mgl-list">
           {GAMES.map((g) => {
             const r = gameRecord(store.get(), g.id);
@@ -65,12 +65,12 @@ export default function FreePlay({ exit }: { exit: () => void }) {
               >
                 <h3>
                   {g.meta.title}
-                  {g.meta.temporary && <em className="mgl-temp">임시</em>}
+                  {g.meta.temporary && <Tag>임시</Tag>}
                 </h3>
                 <p>{g.meta.tagline}</p>
-                <p className="mgl-sub">
+                <Caption role="sub">
                   최고 {r.bestScore.toLocaleString('en-US')}점 · 클리어 LV {r.bestLevel}
-                </p>
+                </Caption>
               </Button>
             );
           })}
@@ -88,20 +88,16 @@ export default function FreePlay({ exit }: { exit: () => void }) {
     const lvl = Math.min(pickLevel, unlocked);
     return (
       <div className="mgl-screen" data-testid="free-prepare">
-        <h2 className="mgl-h">{g.meta.title}</h2>
+        <Heading role="screen">{g.meta.title}</Heading>
         <Panel tone="card">
           <h3>하는 방법</h3>
-          <ol className="mgl-how">
-            {g.meta.howTo.map((t) => (
-              <li key={t}>{t}</li>
-            ))}
-          </ol>
+          <HowTo steps={g.meta.howTo} />
         </Panel>
         <div className="mgl-stepper" data-testid="stepper">
           <Button size="icon" aria-label="레벨 내리기" disabled={lvl <= 1} onClick={() => setPickLevel(lvl - 1)}>
             ◀
           </Button>
-          <span data-testid="start-level">시작 LV {lvl}</span>
+          <Caption role="stepper"><span data-testid="start-level">시작 LV {lvl}</span></Caption>
           <Button size="icon" aria-label="레벨 올리기" disabled={lvl >= unlocked} onClick={() => setPickLevel(lvl + 1)}>
             ▶
           </Button>

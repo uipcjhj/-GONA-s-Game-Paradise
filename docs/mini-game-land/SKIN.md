@@ -40,9 +40,18 @@ export default pixel;
 ## 스킨이 지켜야 할 계약 (기반이 읽는 `data-*` 는 기반이 렌더 → 스킨이 바꿔도 점검이 깨지지 않음)
 - 슬롯은 부모 크기를 채우고 **입력을 받지 않음**(버튼·드래그 영역은 기반 소유). 장식 요소는 `pointer-events: none` 권장.
 - `.sc-bins[data-hint]`(드래그 중 강조할 분류함 번호) · `data-locked` 로 상태 표현 가능.
-- 아직 슬롯이 아닌 공통 요소(제목 글씨 · 큰 글씨 오버레이 · 결과 머리글 · 배지 · 인트로)는 현재 `skin/temp/temp.css` 의 `.mgl-*` 클래스가 모양을 줌 → 최종 스킨에서 **Callout / Badge / Title 슬롯으로 승격**하거나 해당 클래스를 스킨 CSS 에서 정의.
+- 공통 글씨·배지·인트로 등도 모두 슬롯: `ui.Heading / Callout / Badge / Caption / Tag / Logo / StatList / HowTo` (기반 View 는 이 컴포넌트만 호출, 모양 클래스는 스킨 소유).
+- 탑·장난감방 보조 시각도 슬롯: 탑 `GoalLine / Guide / ComMarker / PlateBand`(기반은 위치·크기만 정함), 장난감방 `Backdrop / ShelfFrame / ToyArt / Meter / Feedback`.
 - 기반 점검 속성: `[data-testid=round]` (`data-phase/score/combo/time/lives/level`), `[data-testid=stage]` (`data-index/goal/mistakes/locked/rule`), `[data-testid=card]`, `[data-testid=bin-N]`.
 
 ## 교체 가능성 검증
 - `skin/wireframe`(점검용): 배경·버튼·점수판·캐릭터·게임판 장식·분류함·카드 크기 토큰을 **일부만** 덮어쓰고, 같은 E2E(`tools/mgl-sort-check.cjs`)가 두 스킨 모두에서 통과.
 - `skin/skin.test.ts`: 슬롯 단위 합성·extends 체인·순환/누락 검출·두 스킨의 완성도.
+
+## 분리 규칙 (M1~M4 공통, `architecture.test.ts` 가 자동 검사)
+- **로직 ↔ 디자인**: `logic/engine/game/physics/solver/tuning` 은 React·CSS·이미지를 import 하지 않음. 이미지 에셋은 `skin/` 안에서만 import.
+- **충돌·터치 영역은 기반 소유**: 탑 충돌 모양·무게는 `games/tower/pieces.ts` 만 정의(스킨 아트는 무게중심 원점 기준으로 그리기만 함). 버튼(`.mgl-hit`)·분류함·선반·드래그 영역은 기반 CSS 가 크기를 정하며 슬롯은 입력을 받지 않음 → 이미지 교체로 판정이 바뀌지 않음.
+- **레이아웃·크기 토큰**: `styles.css :root` 의 `--mgl-tap-min · --mgl-btn-h-lg · --mgl-screen-pad/gap · --mgl-list-gap · --mgl-menu-gap/pad · --mgl-actions-gap/pad · --mgl-home-pad-top · --mgl-stepper-gap · --mgl-foot-gap · --mgl-intro-gap`, 게임별 `--sc-*`(카드·분류함), `--tr-*`(선반 높이·장난감 크기), `--tw-*`(조작 줄). 스킨은 `tokens` 로 덮어써서 크기·배치를 바꿈. 기반 CSS 에는 색 리터럴 없음(검사).
+- **연출 시간 단일 출처**: `core/fx.ts` → `--mgl-fx-*` CSS 변수. 스킨이 덮어써도 FX 가 우선하므로 게임 타이밍(입력 잠금·연출 길이)과 어긋나지 않음.
+- **승인 에셋 보호**: `gona.png`·`gona-world-map.png` 해시를 테스트가 고정. 의도적으로 바꿀 때만 해시 갱신.
+- 현재 임시 색·도형은 최종 기준이 아님(`temp`/`wireframe` 는 교체 증명용).

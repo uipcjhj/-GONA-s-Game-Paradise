@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Button, Panel } from '../skin/components';
+import { Badge, Button, Heading, Panel, StatList } from '../skin/components';
 
 export interface ResultLine {
   label: string;
@@ -31,21 +31,14 @@ export default function ResultScreen({
 }) {
   return (
     <div className="mgl-screen mgl-result" data-testid="result" data-tone={tone}>
-      <h2 className={`mgl-result-head ${tone}`}>{heading}</h2>
+      <Heading role="result" tone={tone}>{heading}</Heading>
       {badges.map((b) => (
-        <div key={b} className="mgl-badge" data-testid="badge">
+        <Badge key={b} testId="badge">
           {b}
-        </div>
+        </Badge>
       ))}
       <Panel tone="board">
-        <dl className="mgl-lines">
-          {lines.map((l) => (
-            <div key={l.label} className={l.strong ? 'strong' : ''}>
-              <dt>{l.label}</dt>
-              <dd>{l.value}</dd>
-            </div>
-          ))}
-        </dl>
+        <StatList lines={lines} />
       </Panel>
       {children}
       <div className="mgl-actions">

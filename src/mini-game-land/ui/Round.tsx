@@ -1,13 +1,13 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { effectiveLimitMs } from '../core/difficulty';
+import { FX } from '../core/fx';
 import { RoundEngine, type RoundSummary } from '../core/engine';
 import type { MiniGameModule, Mode } from '../core/types';
 import { audio } from '../services';
-import { Button, Panel } from '../skin/components';
+import { Button, Callout, Caption, Panel } from '../skin/components';
 import { useSkin } from '../skin/context';
 import { scoreboardView, type HudInfo } from '../skin/viewmodel';
 
-const END_OVERLAY_MS = 900;
 
 interface Props {
   game: MiniGameModule<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -49,7 +49,7 @@ export default function Round({ game, level, seed, mode, timeScale = 1, hud, onE
       onEndRef.current(summary);
       return;
     }
-    const t = window.setTimeout(() => onEndRef.current(summary), END_OVERLAY_MS);
+    const t = window.setTimeout(() => onEndRef.current(summary), FX.round.endOverlayMs);
     return () => window.clearTimeout(t);
   }, [summary]);
 
@@ -88,18 +88,18 @@ export default function Round({ game, level, seed, mode, timeScale = 1, hud, onE
         />
       </div>
       <div className="mgl-play">
-        <Suspense fallback={<div className="mgl-center">불러오는 중…</div>}>
+        <Suspense fallback={<div className="mgl-center"><Caption role="loading">불러오는 중…</Caption></div>}>
           <View params={params} level={level} seed={seed} ctx={engine.ctx} />
         </Suspense>
 
         {snap.phase === 'ready' && (
           <div className="mgl-overlay mgl-overlay-pass" data-testid="ready">
-            <div className="mgl-big">READY</div>
+            <Callout tone="ready">READY</Callout>
           </div>
         )}
         {snap.phase === 'resuming' && (
           <div className="mgl-overlay" data-testid="resuming">
-            <div className="mgl-big">{snap.gateSec}</div>
+            <Callout tone="count">{snap.gateSec}</Callout>
           </div>
         )}
         {paused && (
@@ -117,7 +117,7 @@ export default function Round({ game, level, seed, mode, timeScale = 1, hud, onE
         )}
         {snap.phase === 'done' && summary && summary.reason !== 'quit' && (
           <div className="mgl-overlay mgl-overlay-pass" data-testid="round-end">
-            <div className={`mgl-big ${summary.outcome}`}>{summary.outcome === 'clear' ? 'CLEAR!' : summary.reason === 'timeout' ? 'TIME UP' : 'MISS'}</div>
+            <Callout tone={summary.outcome}>{summary.outcome === 'clear' ? 'CLEAR!' : summary.reason === 'timeout' ? 'TIME UP' : 'MISS'}</Callout>
           </div>
         )}
       </div>

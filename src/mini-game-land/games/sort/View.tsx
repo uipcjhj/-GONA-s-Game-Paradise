@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import './sort.css';
+import { FX, FX_CLEANUP_MARGIN_MS } from '../../core/fx';
 import type { GameViewProps } from '../../core/types';
 import { useSkin } from '../../skin/context';
 import {
@@ -38,17 +39,17 @@ export default function SortView({ params, seed, ctx }: GameViewProps<SortParams
   // 효과 표시 정리(타이머는 정리 함수로 해제)
   useEffect(() => {
     if (!leaving) return;
-    const t = window.setTimeout(() => setLeaving(null), 220);
+    const t = window.setTimeout(() => setLeaving(null), FX.sort.flyMs + FX_CLEANUP_MARGIN_MS);
     return () => window.clearTimeout(t);
   }, [leaving]);
   useEffect(() => {
     if (!fb) return;
-    const t = window.setTimeout(() => setFb(null), fb.kind === 'wrong' ? 2200 : 700);
+    const t = window.setTimeout(() => setFb(null), fb.kind === 'wrong' ? FX.sort.feedbackWrongMs : FX.sort.feedbackMs);
     return () => window.clearTimeout(t);
   }, [fb]);
   useEffect(() => {
     if (!happy) return;
-    const t = window.setTimeout(() => setHappy(0), 900);
+    const t = window.setTimeout(() => setHappy(0), FX.sort.happyMs);
     return () => window.clearTimeout(t);
   }, [happy]);
 

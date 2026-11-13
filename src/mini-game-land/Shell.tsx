@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Challenge from './modes/Challenge';
 import FreePlay from './modes/FreePlay';
+import { fxCssVars } from './core/fx';
 import { Background } from './skin/components';
 import { SkinProvider, useSkin } from './skin/context';
 import { resolveSkinId } from './skin/skins';
@@ -13,8 +14,9 @@ function useSkinTokens() {
   const { tokens } = useSkin();
   useEffect(() => {
     const root = document.documentElement;
-    const keys = Object.keys(tokens);
-    keys.forEach((k) => root.style.setProperty(k, tokens[k]));
+    const all = { ...tokens, ...fxCssVars() }; // 효과 시간은 스킨이 덮어쓸 수 없음(JS 타이머와 같은 값)
+    const keys = Object.keys(all);
+    keys.forEach((k) => root.style.setProperty(k, all[k]));
     return () => keys.forEach((k) => root.style.removeProperty(k));
   }, [tokens]);
 }

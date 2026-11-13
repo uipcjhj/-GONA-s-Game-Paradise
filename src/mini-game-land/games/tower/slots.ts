@@ -31,6 +31,14 @@ export interface TowerSlots {
   Feedback: ComponentType<{ kind: 'perfect' | 'stable' | 'shaky' | 'fell'; text: string; sub?: string }>;
   /** 바람 안내 (wind: -1(왼쪽) ~ 1(오른쪽)) */
   Notice: ComponentType<{ wind: number }>;
+  /** 목표 높이 표시선. 부모(기반이 위치 지정)는 월드 폭 전체 × 높이 0. 입력 없음 */
+  GoalLine: ComponentType<{ goalH: number }>;
+  /** 낙하 안내(조각 바로 아래 기둥). 부모 크기를 100% 채움 — 크기는 기반이 매 프레임 정함 */
+  Guide: ComponentType;
+  /** 탑 전체 무게중심 마커. 부모 원점(0,0)이 마커 위치 · 부모의 data-danger="1" 이면 접시 밖(위험) */
+  ComMarker: ComponentType;
+  /** 접시 위 '안정 영역' 띠. 부모 크기를 100% 채움 */
+  PlateBand: ComponentType;
 }
 
-export const TOWER_SLOT_KEYS: (keyof TowerSlots)[] = ['Backdrop', 'PieceArt', 'PlateArt', 'Meter', 'NextQueue', 'Feedback', 'Notice'];
+export const TOWER_SLOT_KEYS: (keyof TowerSlots)[] = ['Backdrop', 'PieceArt', 'PlateArt', 'Meter', 'NextQueue', 'Feedback', 'Notice', 'GoalLine', 'Guide', 'ComMarker', 'PlateBand'];
