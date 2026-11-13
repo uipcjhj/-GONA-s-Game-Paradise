@@ -160,26 +160,29 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .row b { color: #e0608e; }
 .view .note { color: #1b6aa5; }
 
-/* ───────── 타이틀 화면 (정적) : 배경 · 로고 · 고나 · 문구 = 같은 도트 격자(--u), 독립 레이어 ───────── */
-.title { position: fixed; inset: 0; z-index: 20; cursor: pointer; outline: none; background: #2f9fe6; overflow: hidden; }
+/* ───────── 타이틀 화면 (정적) : 배경 · 로고 · 고나 · 문구는 서로 독립된 레이어 ───────── */
+.title { position: fixed; inset: 0; z-index: 20; cursor: pointer; outline: none; background: #3a9de0; overflow: hidden; }
 .title.leaving { animation: fadeout 0.2s steps(4) forwards; }
 @keyframes fadeout { to { opacity: 0; } }
-.title img { position: absolute; image-rendering: pixelated; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+.t-stage { position: relative; width: min(100vw, 560px); height: 100vh; height: 100dvh; margin: 0 auto; overflow: hidden; }
+.t-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 72%; }
+.t-head {
+  position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top) + 8%);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; pointer-events: none;
+}
+.t-logo { width: min(90%, 480px); height: auto; filter: drop-shadow(0 4px 0 rgba(58, 27, 94, 0.35)); }
 .t-sub {
-  position: absolute; left: 0; right: 0; margin: 0; text-align: center; line-height: 1; pointer-events: none;
-  font-size: calc(var(--u) * 11); font-weight: 700; color: #ffd84a; letter-spacing: 0;
-  /* 윤곽선·그림자도 도트 단위(1도트)로 — 부드러운 번짐 없음 */
-  text-shadow: calc(var(--u) * -1) 0 #3b1b5e, var(--u) 0 #3b1b5e, 0 calc(var(--u) * -1) #3b1b5e, 0 var(--u) #3b1b5e,
-    calc(var(--u) * -1) calc(var(--u) * -1) #3b1b5e, var(--u) calc(var(--u) * -1) #3b1b5e, calc(var(--u) * -1) var(--u) #3b1b5e, var(--u) var(--u) #3b1b5e,
-    0 calc(var(--u) * 2) #3b1b5e, var(--u) calc(var(--u) * 2) #3b1b5e, calc(var(--u) * -1) calc(var(--u) * 2) #3b1b5e;
+  margin: 2px 0 0; font-size: 26px; line-height: 1.1; font-weight: 700; letter-spacing: 1px; color: #ffd23f;
+  -webkit-text-stroke: 6px #3b1b5e; paint-order: stroke fill; text-shadow: 0 3px 0 #3b1b5e;
+}
+.t-gona {
+  position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 17%); transform: translateX(-50%);
+  image-rendering: pixelated; pointer-events: none; filter: drop-shadow(0 5px 0 rgba(70, 50, 20, 0.28));
 }
 .t-tap {
-  position: absolute; left: 0; right: 0; margin: 0; text-align: center; line-height: 1; pointer-events: none;
-  bottom: calc(env(safe-area-inset-bottom) + var(--u) * 5);
-  font-size: calc(var(--u) * 5.5); font-weight: 700; color: #fff7dc;
-  text-shadow: calc(var(--u) * -0.5) 0 #3b1b5e, calc(var(--u) * 0.5) 0 #3b1b5e, 0 calc(var(--u) * -0.5) #3b1b5e, 0 calc(var(--u) * 0.5) #3b1b5e,
-    calc(var(--u) * -0.5) calc(var(--u) * -0.5) #3b1b5e, calc(var(--u) * 0.5) calc(var(--u) * -0.5) #3b1b5e, calc(var(--u) * -0.5) calc(var(--u) * 0.5) #3b1b5e, calc(var(--u) * 0.5) calc(var(--u) * 0.5) #3b1b5e,
-    0 var(--u) #3b1b5e;
+  position: absolute; left: 0; right: 0; margin: 0; text-align: center; bottom: calc(env(safe-area-inset-bottom) + 5%);
+  font-size: 15px; font-weight: 700; letter-spacing: 1px; color: #fff7dc; pointer-events: none;
+  -webkit-text-stroke: 5px #3b1b5e; paint-order: stroke fill; text-shadow: 0 3px 0 #3b1b5e;
   animation: blink 1s steps(1) infinite;
 }
 @keyframes blink { 0%, 100% { opacity: 1; } 55% { opacity: 0; } }
