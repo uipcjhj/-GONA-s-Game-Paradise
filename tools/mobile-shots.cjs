@@ -27,6 +27,7 @@ fs.mkdirSync(outDir, { recursive: true });
 
 async function capture(browser, url, tag, [w, h]) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+  await ctx.addInitScript(() => { try { localStorage.setItem('gona.openingSeen', '1'); } catch (e) {} }); // 재방문 상태(오프닝 생략)로 열기
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
