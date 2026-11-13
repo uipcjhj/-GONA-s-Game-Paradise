@@ -1,0 +1,34 @@
+<!doctype html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>아바타 선택 시안</title>
+<link rel="stylesheet" href="style.css"><style>
+.pv{display:grid;grid-template-columns:88px 1fr;gap:10px;align-items:center}
+.pvbox{background:repeating-conic-gradient(#cfeeff 0 25%,#b7e3fb 0 50%) 0 0/8px 8px;box-shadow:0 0 0 3px var(--gold),0 0 0 6px var(--ink);margin:6px;height:76px;display:grid;place-items:center}
+.pvbox img{width:68px;height:68px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.card{position:relative;background:#fff;box-shadow:var(--notch);padding:4px 0 3px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;font-weight:700;border:0}
+.card img{width:56px;height:56px;background:#cfeeff}
+.card.on{background:var(--gold);box-shadow:var(--notch),inset 0 -4px 0 #e8a92c}
+.card em{position:absolute;left:2px;top:1px;font-style:normal;font-size:10px;color:var(--red)}
+.card.cand{opacity:.55}.card.cand img{image-rendering:pixelated;padding:4px}
+.card u{position:absolute;right:1px;top:1px;font-size:7px;text-decoration:none;background:var(--ink);color:#fff;padding:1px 2px}
+.sec{font-size:10px;font-weight:700;color:var(--ink);display:flex;gap:6px;align-items:center}
+</style></head><body><div class="phone"><div class="bar-title"><h2>CHARACTER SELECT</h2></div>
+<div class="screen" style="padding-bottom:0"><div class="scroll">
+<div class="panel pv"><div class="pvbox"><img src="assets/av/mom.png" alt=""></div><div><b style="font-size:16px">엄마</b><div class="muted">고나의 가족 · 엔딩 캐릭터</div><div class="row" style="margin-top:6px"><span class="chip blue">가족</span><span class="chip ok">선택됨</span></div></div></div>
+<div class="sec">주인공 · 가족 (실제 게임 에셋)</div>
+<div class="cards">
+<button class="card"><img src="assets/av/gona.png" alt="">고나</button>
+<button class="card on"><em>▶</em><img src="assets/av/mom.png" alt="">엄마</button>
+<button class="card"><img src="assets/av/dad.png" alt="">아빠</button>
+<button class="card"><img src="assets/av/imo.png" alt="">이모</button>
+<button class="card"><img src="assets/av/halmeoni.png" alt="">할머니</button>
+<button class="card"><img src="assets/av/halabeoji.png" alt="">할아버지</button>
+<button class="card"><img src="assets/av/samchon.png" alt="">삼촌</button></div>
+<div class="sec">추가 후보 · 승인 대기 <span class="chip soon">운영 미노출</span></div>
+<div class="cards">
+<button class="card cand" disabled><u>보스</u><img src="assets/av/m-kiss.png" alt="">뽀뽀괴물</button>
+<button class="card cand" disabled><u>보스</u><img src="assets/av/m-sniff.png" alt="">킁카괴물</button>
+<button class="card cand" disabled><img src="assets/av/m-glasses.png" alt="">안경잽이</button>
+<button class="card cand" disabled><img src="assets/av/m-farter.png" alt="">방구할배</button></div>
+<div class="muted">후보 4종은 Food 게임 코드로 그린 도트(Food에서도 임시 표기)입니다. 승인 전에는 운영 화면에 나오지 않아요.</div>
+<div class="row"><button class="btn sub">◀ 이전</button><button class="btn big" style="flex:1">이걸로 결정!</button></div>
+</div></div></div></body></html>
