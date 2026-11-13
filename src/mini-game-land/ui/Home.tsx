@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, Caption, LinkButton, Logo, Mascot } from '../skin/components';
-import { audio, store } from '../services';
+import { audio, gp, store } from '../services';
 
 export type Screen = 'home' | 'free' | 'challenge' | 'records';
 
@@ -30,7 +30,7 @@ export default function Home({ go }: { go: (s: Screen) => void }) {
         </Button>
       </div>
       <div className="mgl-foot">
-        <LinkButton size="sm" href="../" data-testid="back-hub">
+        <LinkButton size="sm" href={gp.returnUrl() ?? '../'} data-testid="back-hub">
           ← 게임천국
         </LinkButton>
         <Button size="sm" data-testid="sound" aria-pressed={!muted} onClick={toggle}>

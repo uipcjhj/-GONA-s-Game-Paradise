@@ -113,7 +113,7 @@ async function register(page, w, h, nick = '고나짱', avatarName = '엄마') {
     await page.touchscreen.tap(hb.x + hb.width / 2, hb.y + hb.height / 2);
     await page.waitForTimeout(1300);
     ok(`[${tag}] Food 입장 링크 유지`, (await page.locator('.popup a.btn-go').getAttribute('href')) === 'https://uipcjhj.github.io/GoNa/');
-    const hb3 = await page.locator('.hit').nth(3).boundingBox();
+    const hb3 = await page.locator('.hit').nth(2).boundingBox();
     await page.touchscreen.tap(hb3.x + hb3.width / 2, hb3.y + hb3.height / 2);
     await page.waitForTimeout(1300);
     ok(`[${tag}] 미출시 게임 COMING SOON`, await page.locator('.popup .chip-soon', { hasText: 'COMING SOON' }).count());

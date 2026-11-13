@@ -84,7 +84,7 @@ export default function Settings({ onBack, onToast, onReset }: { onBack: () => v
             <span>움직임 줄이기</span>
             <button type="button" className={`p-toggle${player.settings.reduceMotion ? ' on' : ''}`} role="switch" aria-checked={player.settings.reduceMotion} aria-label="움직임 줄이기" data-testid="set-motion" onClick={() => updateSettings({ reduceMotion: !player.settings.reduceMotion })} />
           </div>
-          <p className="p-muted">진동은 지원하는 기기(주로 Android)에서만 동작해요.</p>
+          <p className="p-muted">게임 안의 진동은 각 게임 설정을 따라요. 게임천국이 직접 쓰는 진동은 아직 없어서 선택만 저장해 둬요.</p>
         </PixelPanel>
         <PixelPanel title="내 정보">
           <div className="p-row">

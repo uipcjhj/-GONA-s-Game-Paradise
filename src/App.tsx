@@ -41,6 +41,10 @@ export default function App() {
     window.clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(null), 1800);
   }, []);
+  // 설정: 움직임 줄이기
+  useEffect(() => {
+    document.documentElement.dataset.reduceMotion = player?.settings.reduceMotion ? '1' : '0';
+  }, [player?.settings.reduceMotion]);
   // 새 소식(업적·도감·칭호)은 토스트로 한 번에 알림
   useEffect(() => {
     if (!news.length) return;

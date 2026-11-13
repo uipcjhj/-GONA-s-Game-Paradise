@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CHALLENGE } from '../core/difficulty';
 import { FX } from '../core/fx';
 import type { RoundSummary } from '../core/engine';
@@ -17,7 +17,7 @@ import { recordChallenge } from '../core/storage';
 import { Badge, Button, Caption, Heading, HowTo, LivesBar, Panel } from '../skin/components';
 import ResultScreen from '../ui/ResultScreen';
 import Round from '../ui/Round';
-import { audio, store } from '../services';
+import { audio, gp, store } from '../services';
 
 
 type Stage =
@@ -33,8 +33,10 @@ const refs = () => GAMES.map((g) => ({ id: g.id, maxLevel: g.meta.maxLevel }));
 export default function Challenge({ exit }: { exit: () => void }) {
   const [stage, setStage] = useState<Stage>({ kind: 'start' });
   const [st, setSt] = useState<ChallengeState | null>(null);
+  const startedAt = useRef(0);
 
   const begin = () => {
+    startedAt.current = Date.now();
     const s0 = startChallenge((Math.random() * 0xffffffff) >>> 0);
     const { state, plan } = planRound(s0, refs());
     setSt(state);
@@ -63,6 +65,8 @@ export default function Challenge({ exit }: { exit: () => void }) {
   const finishRun = (state: ChallengeState, quit: boolean) => {
     const rec = recordChallenge(store.get(), { score: state.score, rounds: roundsPlayed(state) });
     store.set(rec.save);
+    // 게임천국 기록: 한 번의 챌린지(목숨이 다할 때까지) = 1판. 한 라운드도 못 했으면 기록하지 않음
+    if (roundsPlayed(state) > 0) gp.report({ subGameId: 'challenge', outcome: 'failed', score: state.score, stage: roundsPlayed(state), stageLabel: '라운드', durationMs: Math.min(Date.now() - startedAt.current, 3 * 3600_000), extra: { quit } });
     setSt(state);
     setStage({ kind: 'over', newBest: rec.newBestScore, quit });
   };

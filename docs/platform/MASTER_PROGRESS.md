@@ -28,14 +28,14 @@
 | 4 | 랭킹: 이 기기 순위(주간/역대) + 서버 인터페이스 | 로컬 완료 / **공유 랭킹은 서버 필요(차단)** | 50% |
 | 5 | 업적·칭호·일일/주간 미션·출석 | 구현·테스트 완료 | 100% |
 | 6 | 도감·상점·꾸미기(테두리/배경/칭호) | 구현·테스트 완료(임시 CSS 모양, 최종 에셋 보류) | 100% |
-| 7 | Mini Game Land 연동(병합·SDK) · Sky 등록 준비 · 전체 회귀 | 진행 예정 | 0% |
+| 7 | Mini Game Land 연동(병합·SDK) · Sky 등록 준비 · 전체 회귀 | Mini 실제 연동·E2E 완료 / Food SDK 적용은 승인 대기 / Sky 는 게임 없음 | 85% |
 
-테스트: `npm test`(단위 70) · `tools/platform-e2e.cjs`(Phase 1, 100) · `tools/platform-e2e2.cjs`(Phase 2~6, 78) — 393×636 · 390×844.
+테스트: `npm test`(단위 310) · `tools/platform-e2e.cjs`(Phase 1, 100) · `tools/platform-e2e2.cjs`(Phase 2~6, 78) · `tools/platform-e2e3.cjs`(실제 Mini Game Land 통합, 36) · Mini 회귀(sort 112×2·tower 94×2·toyroom 84×2·공통 78) — 393×636 · 390×844.
 
 ## 다음 작업
-1. Phase 7: Mini Game Land 병합(의도적 1회) + SDK(`src/platform/sdk`) + 섬 활성화 + E2E
-2. Food 패치 파일 준비(`docs/platform/food-patch/`) — 적용은 승인 대기
-3. 전체 회귀 · 문서 · 최종 보고
+1. 최종 보고(결과 화면·미니게임 통합 스크린샷 전달) → 사용자 판단 대기
+2. (승인 후) Food SDK 패치 적용, 온라인 랭킹 서버, 최종 디자인
+3. 수치(XP/코인/상한/이상치) 실제 플레이 데이터로 조정
 
 ## 차단 사항 (승인 필요)
 - 온라인 랭킹 서버(Cloudflare 등) 개설·연결
@@ -45,4 +45,6 @@
 ## 작업 기록
 - (시작) 브랜치 생성, 기존 문서·코드 확인
 - Phase 2~6 코어+UI: 스키마 v2/마이그레이션, 결과 검증, 기록·보상·업적·도감·미션·상점, 세션/inbox, 결과 화면, 이 기기 순위, 설정·가져오기
+- Phase 7: Mini Game Land 편입(의도적 병합, 충돌 2건), gp-sdk(+테스트 6), 섬 활성화, 실제 편가르기 통합 E2E, 회귀 전부 통과, Food 패치 파일 준비(미적용)
+- 버그 수정: SDK 탭 기억으로 단독 실행이 기록되던 문제, 초당 점수 한도에 정상 플레이가 걸리던 문제(scoreBurst)
 - 버그 수정: 뒤로가기 스택이 `history.back()` 비동기 이동 중 `pushState` 하면 앱 밖으로 한 번 더 이탈(backStack 대기열로 수정)

@@ -182,3 +182,6 @@
 .p-savefail { position: absolute; left: 8px; right: 8px; bottom: 76px; z-index: 35; display: flex; gap: 8px; align-items: center; background: #ffb3c6; border: 3px solid var(--ink); padding: 8px 10px; font-size: 11px; line-height: 1.4; }
 .p-savefail button { flex: none; min-height: 36px; padding: 0 10px; font: inherit; font-weight: 700; border: 2px solid var(--ink); background: #ffc21a; }
 .popup-rec { font-weight: 700; color: #3b1b5e !important; }
+
+/* 설정: 움직임 줄이기 (반복 애니메이션만 끔 — 고나 이동 등 조작 피드백은 유지) */
+[data-reduce-motion='1'] .p-hop, [data-reduce-motion='1'] .p-slots i.cur, [data-reduce-motion='1'] .glow, [data-reduce-motion='1'] .glow i, [data-reduce-motion='1'] .star { animation: none !important; }

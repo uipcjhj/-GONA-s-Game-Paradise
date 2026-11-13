@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { overflowTimeScale } from '../core/difficulty';
 import type { RoundSummary } from '../core/engine';
 import { GAMES } from '../core/registry';
@@ -10,7 +10,7 @@ import type { MiniGameModule } from '../core/types';
 import { Button, Caption, Heading, HowTo, Panel, Tag } from '../skin/components';
 import ResultScreen from '../ui/ResultScreen';
 import Round from '../ui/Round';
-import { store } from '../services';
+import { gp, store } from '../services';
 
 type Stage =
   | { kind: 'select' }
@@ -26,6 +26,10 @@ export default function FreePlay({ exit }: { exit: () => void }) {
   const [free, setFree] = useState<FreeState | null>(null);
   const [pickLevel, setPickLevel] = useState(1);
   const [runSeed, setRunSeed] = useState(newRunSeed);
+  const roundStart = useRef(0);
+  useEffect(() => {
+    if (stage.kind === 'play') roundStart.current = Date.now();
+  }, [stage]);
   const game = free ? GAMES.find((g) => g.id === free.gameId) : undefined;
 
   const begin = (g: MiniGameModule<any>, level: number) => { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -43,6 +47,7 @@ export default function FreePlay({ exit }: { exit: () => void }) {
     store.set(rec.save);
     setFree(next);
     if (s.reason === 'quit') return setStage({ kind: 'select' });
+    gp.report({ subGameId: free.gameId, outcome: s.outcome === 'clear' ? 'cleared' : 'failed', score: rs.total, stage: free.level, stageLabel: '레벨', durationMs: Math.max(s.elapsedMs, Math.min(Date.now() - roundStart.current, 2 * 3600_000)) /* 프레임이 느린 기기에서도 실제 경과 시간에 가깝게(일시정지 시간 포함 = 보수적) */ });
     setStage({ kind: 'result', summary: s, total: rs.total, bonus: rs.timeBonus, newScore: rec.newBestScore, newLevel: !!rec.newBestLevel, clearedLevel: free.level });
   };
 

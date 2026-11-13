@@ -106,6 +106,6 @@ export function validateEnvelope(text: string | null, ctx: ValidateCtx): Verdict
   if (ended > expires + 60 * 60_000) return bad('session-expired');
   if (r.durationMs > ended - rStart + 2000) return bad('time');
   if (r.score > rule.maxScore) return bad('score-range');
-  if (rule.maxScorePerSec && r.score > rule.maxScorePerSec * Math.max(5, r.durationMs / 1000)) return bad('score-rate');
+  if (rule.maxScorePerSec && r.score > rule.maxScorePerSec * Math.max(5, r.durationMs / 1000) + (rule.scoreBurst ?? 0)) return bad('score-rate');
   return { ok: true, result: { ...(r as unknown as GameResult), extra } };
 }

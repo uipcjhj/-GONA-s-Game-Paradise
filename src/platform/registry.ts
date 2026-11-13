@@ -6,6 +6,8 @@ export interface GameRule {
   /** 이보다 큰 점수는 '의심'으로 분류(기록 반영 안 함). 임시값 — 실제 데이터로 조정 필요 */
   maxScore: number;
   maxScorePerSec?: number;
+  /** 초당 점수 검사에 더해 주는 고정 허용치(클리어·시간 보너스처럼 한 번에 붙는 점수) */
+  scoreBurst?: number;
   /** 지금 받는 점수 규칙 버전(규칙이 바뀌면 +1) */
   scoreSchemaVersion: number;
   hasClear: boolean;
@@ -49,7 +51,7 @@ export const GAMES: GameDef[] = [
     gameId: 'minigame-paradise',
     name: '미니게임천국',
     short: 'Mini',
-    rule: { maxScore: 200_000, maxScorePerSec: 300, scoreSchemaVersion: 1, hasClear: true, stageLabel: '레벨', minRewardMs: 5_000, scoreXPUnit: 50, scoreComparable: false },
+    rule: { maxScore: 200_000, maxScorePerSec: 300, scoreBurst: 2500, scoreSchemaVersion: 1, hasClear: true, stageLabel: '레벨', minRewardMs: 5_000, scoreXPUnit: 50, scoreComparable: false },
     subGames: [
       { id: 'sort', name: '고나의 편가르기 대소동', rule: {} },
       { id: 'tower', name: '고나의 아슬아슬 탑', rule: {} },

@@ -34,8 +34,10 @@ export const ISLANDS: Island[] = [
     id: 'minigame-paradise',
     name: '미니게임천국',
     gameTitle: '미니게임천국',
-    tagline: '다양한 미니게임 모음 · 게임별 최고 점수 랭킹 예정',
-    status: 'soon',
+    tagline: '편가르기 · 아슬아슬 탑 · 장난감방 + 랜덤 챌린지',
+    status: 'open',
+    url: './mini-game-land/',
+    sdk: 'live',
     map: {
       hit: { x: 565, y: 800, w: 505, h: 480, clip: 'polygon(46% 0,100% 0,100% 100%,0 100%,0 40%,46% 29%)' },
       path: [PLAZA, { x: 620, y: 870 }, { x: 690, y: 935 }, { x: 740, y: 985 }, { x: 765, y: 1050 }, { x: 790, y: 1115 }],
