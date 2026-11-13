@@ -106,6 +106,8 @@ export function validateEnvelope(text: string | null, ctx: ValidateCtx): Verdict
   if (ended > expires + 60 * 60_000) return bad('session-expired');
   if (r.durationMs > ended - rStart + 2000) return bad('time');
   if (r.score > rule.maxScore) return bad('score-range');
-  if (rule.maxScorePerSec && r.score > rule.maxScorePerSec * Math.max(5, r.durationMs / 1000) + (rule.scoreBurst ?? 0)) return bad('score-rate');
+  // 이어하기·보스전 재도전은 이전 점수를 이어서 시작하므로(extra.carry) 이번 판에서 번 점수로 속도를 검사
+  const carry = typeof extra?.carry === 'number' && extra.carry >= 0 && extra.carry <= r.score ? extra.carry : 0;
+  if (rule.maxScorePerSec && r.score - carry > rule.maxScorePerSec * Math.max(5, r.durationMs / 1000) + (rule.scoreBurst ?? 0)) return bad('score-rate');
   return { ok: true, result: { ...(r as unknown as GameResult), extra } };
 }

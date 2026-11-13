@@ -1,25 +1,63 @@
 /**
- * [미적용 · 미검증] GONA's Food Adventure(uipcjhj/GoNa) 용 게임천국 연동 어댑터 제안.
- * - 이 저장소(게임천국)에서는 Food 코드를 수정하지 않는다(CLAUDE.md). Food 저장소 패치는 명시 승인 후 별도 브랜치에서 적용.
- * - 사용: Food 의 `src/platform/gp-sdk.ts` 로 복사(gp-sdk.ts) + 이 파일을 `src/platform/paradise.ts` 로 추가 + `main.ts` 에서 `initParadise()` 1줄 호출.
- * - 읽기만: bus 이벤트 구독(EV.start / EV.pause / EV.resume / EV.gameOver / EV.endingStart). GameScene·점수·저장 키는 건드리지 않는다.
- * - `?gp=` 가 없거나 세션이 없으면 아무 것도 구독하지 않는 완전한 no-op.
- * 아래 `bus`/`EV` import 경로와 GameOverInfo 필드는 docs/platform/PHASE2_FOOD_INTEGRATION.md §1 조사 기준이며, 패치 시 실제 코드에 맞춰 확인해야 한다.
+ * 게임천국 연동 어댑터 (docs: 게임천국 저장소 docs/platform/GAME_RESULT_CONTRACT.md).
+ *  - 주소에 ?gp=<세션> 이 있고 게임천국이 만든 세션이 실제로 있을 때만 켜진다. 그 밖(단독 실행)에서는 아무것도 구독하지 않는 no-op.
+ *  - 읽기만: bus 이벤트를 듣기만 하며 GameScene·점수·난이도·저장 키는 건드리지 않는다. 쓰는 것은 게임천국의 `gp.v1.inbox.<resultId>` 새 키뿐.
+ *  - 점수는 게임이 화면에 보여 준 값 그대로. 이어하기·보스전 재도전은 이전 점수를 이어서 시작하므로 시작 점수를 extra.carry 로 알린다.
  */
-import { bus, EV } from './events'; // ← Food 쪽 실제 경로에 맞출 것
+import { bus, EV } from '../events';
+import type { CombatHud, GameOverInfo } from '../events';
 import { createGP } from './gp-sdk';
 
 export function initParadise(): void {
   const gp = createGP({ gameVersion: '1.0.0' });
   if (!gp.init('food-island')) return; // 단독 실행: 완전한 no-op
-  bus.on(EV.start, () => gp.runStart());
+
+  let carry: number | null = null; // 판 시작 직후 HUD 점수 = 이어서 시작한 점수
+  bus.on(EV.combatHud, (h: CombatHud) => {
+    if (carry === null) carry = h.score;
+  });
+  bus.on(EV.start, () => {
+    carry = null;
+    hideBack();
+    gp.runStart();
+  });
   bus.on(EV.pause, () => gp.runPause());
   bus.on(EV.resume, () => gp.runResume());
-  bus.on(EV.gameOver, (i: { score: number; growthLevel: number; growthName: string; snacks: number; bossRetry?: boolean }) =>
-    gp.runEnd({ outcome: 'failed', score: i.score, stage: i.growthLevel, stageLabel: i.growthName, extra: { snacks: i.snacks } }),
-  );
-  bus.on(EV.endingStart, (i: { score: number; growthLevel: number; growthName: string; snacks: number }) =>
-    gp.runEnd({ outcome: 'cleared', score: i.score, stage: i.growthLevel, stageLabel: i.growthName, extra: { snacks: i.snacks } }),
-  ); // 엔딩 다시보기는 같은 이벤트를 다시 내지만 runEnd 가 run 당 1번만 동작
+  const end = (outcome: 'cleared' | 'failed', i: GameOverInfo | null) => {
+    if (!i) return;
+    const c = Math.min(carry ?? 0, i.score);
+    gp.runEnd({ outcome, score: i.score, stage: i.growthLevel, stageLabel: i.growthName, extra: { snacks: i.snacks, ...(c > 0 ? { carry: c } : {}) } });
+  };
+  bus.on(EV.gameOver, (i: GameOverInfo) => {
+    end('failed', i);
+    showBack();
+  });
+  // 엔딩 다시보기는 같은 이벤트를 다시 내지만 SDK 가 판당 1번만 기록
+  bus.on(EV.endingStart, (i: GameOverInfo | null) => end('cleared', i));
+  bus.on(EV.endingTheEnd, showBack);
+  bus.on(EV.ending, showBack);
+  bus.on(EV.restart, hideBack);
+
+  // 게임천국으로 돌아가기 버튼(게임천국에서 들어왔을 때만, 게임 오버/엔딩 끝에서만 보임)
+  let btn: HTMLButtonElement | null = null;
+  function showBack(): void {
+    const url = gp.returnUrl();
+    if (!url) return;
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = '🏝 게임천국으로';
+      btn.setAttribute('data-gp-back', '1');
+      btn.style.cssText = 'position:fixed;left:8px;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:1000;min-height:40px;padding:0 12px;font:700 12px Galmuri11,sans-serif;color:#3b1b5e;background:#fff4d6;border:3px solid #3b1b5e;';
+      btn.addEventListener('click', () => {
+        gp.retry();
+        window.location.href = url;
+      });
+      document.body.appendChild(btn);
+    }
+    btn.style.display = '';
+  }
+  function hideBack(): void {
+    if (btn) btn.style.display = 'none';
+  }
 }
-// 게임천국 복귀: gp.returnUrl() 이 null 이 아니면 '🏝 게임천국으로' 버튼을 게임 오버/엔딩 화면에 추가(선택, 별도 승인).

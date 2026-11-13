@@ -1,5 +1,27 @@
-# Food Adventure 연동 패치 (준비만 — 미적용)
-- `gp-sdk.ts`: 게임천국 SDK(= `src/platform/sdk/gp-sdk.ts` 사본, 의존성 없음). 이 저장소에서 단위 테스트됨(`gp-sdk.test.ts`).
-- `paradise.ts`: Food 의 `bus` 이벤트에 붙는 어댑터 제안(~25줄). **Food 코드로 검증하지 않았음.**
-- 적용 절차(승인 후): Food 저장소 별도 브랜치 → 두 파일 추가 + `main.ts` 1줄 → `dev` 사이트에서 봇(`playtest-bot`, `fullrun-bot`)으로 게임 오버·엔딩 확인 → 게임천국에서 `islands.ts` 의 Food `sdk: 'pending'` → `'live'`.
-- 게임천국은 이미 결과를 받을 준비가 끝나 있어 Food 를 패치하지 않아도 아무 문제가 없다(세션만 생기고 결과가 없음 → "기록 연동 준비 중" 표시).
+# Food Adventure 연동 패치 — 검증 완료 · Food 저장소 반영은 승인 대기
+
+## 상태
+- 패치는 `uipcjhj/GoNa` main `a907834` 기준으로 작성하고 **로컬 클론에 적용해 실제 빌드로 시험**했다.
+- Food 저장소 브랜치 푸시는 이 세션의 권한 정책에서 차단돼 **반영하지 않았다**(Food 원본 무수정). 아래 3개 파일로 그대로 적용 가능.
+
+## 파일
+| 파일 | Food 저장소 위치 | 내용 |
+|---|---|---|
+| `gp-sdk.ts` | `src/platform/gp-sdk.ts` | 게임천국 SDK 사본(의존성 없음, 게임천국에서 단위 테스트) |
+| `paradise.ts` | `src/platform/paradise.ts` | `bus` 이벤트 구독 어댑터(~60줄). 점수·난이도·성장·저장 키 변경 없음 |
+| `main.ts.diff` | `src/main.ts` | import 1줄 + `initParadise()` 1줄 |
+
+## 동작
+- `?gp=<세션>` + 게임천국이 만든 세션이 있을 때만 활성. 없으면 이벤트 구독도 하지 않음(단독 실행 그대로).
+- `EV.start`→판 시작, `EV.pause/resume`→일시정지 시간 제외, `EV.gameOver`→failed, `EV.endingStart`→cleared(엔딩 다시보기 중복 차단).
+- 이어하기·보스전 재도전은 Food 규칙대로 이전 점수를 이어서 시작 → 시작 점수를 `extra.carry` 로 알려 게임천국의 초당 점수 검사가 정상 플레이를 거부하지 않게 함.
+- 게임 오버·엔딩 끝에만 `🏝 게임천국으로` 버튼(게임천국에서 들어왔을 때만).
+
+## 검증 (`tools/platform-e2e4.cjs`, 393×636·390×844)
+실제 Food 정식/개발 빌드를 같은 출처에 올려 게임천국 → Food → 실제 플레이(자연 사망) → 다시하기 → 이어하기(carry) → 엔딩(finishGame) → 엔딩 다시보기 중복 차단 → 돌아가기 → 결과 화면·기록·XP·코인·업적·미션·랭킹 → 정식 빌드 결과 → 단독 실행 무기록 → 잘못된 세션 무동작.
+
+## 실제 점수 구조(조사)
+간식 10/20/30/50, 몬스터 40/60, 보스 보너스 300/600. 실측(봇): 10초 180점, 40초에 첫 보스. 정상 속도는 초당 수십 점 → 이상치 한도 600점/초·500만 점은 넉넉함(임시값).
+
+## 적용 절차(승인 후)
+Food 저장소 별도 브랜치 → 위 3개 파일 적용 → `npm run typecheck && npm run build` → (dev 배포 승인 시) 개발 사이트 확인 → 게임천국 `islands.ts` Food `sdk: 'pending'` → `'live'`.

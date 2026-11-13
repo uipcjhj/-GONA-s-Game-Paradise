@@ -1,0 +1,18 @@
+diff --git a/src/main.ts b/src/main.ts
+index fd1a7ee..467e765 100644
+--- a/src/main.ts
++++ b/src/main.ts
+@@ -20,6 +20,7 @@ import { sound } from './audio';
+ import { perf, setPerfOverlay } from './perf';
+ import { storage } from './storage';
+ import fontUrl from 'galmuri/dist/Galmuri11-Bold.woff2?url';
++import { initParadise } from './platform/paradise';
+ 
+ /** 화면 비율에 맞춰 논리 해상도를 계산 (가로: 높이 고정, 세로: 너비 고정) */
+ function computeSize(): { width: number; height: number } {
+@@ -319,4 +320,5 @@ async function boot(): Promise<void> {
+   });
+ }
+ 
++initParadise(); // 게임천국에서 들어왔을 때(?gp=세션)만 동작, 단독 실행은 no-op
+ void boot();

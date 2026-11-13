@@ -9,8 +9,9 @@ export type SkinLoader = () => Promise<{ default: Skin }>;
 export const SKIN_LOADERS: Record<string, SkinLoader> = {
   temp: () => import('./temp'),
   wireframe: () => import('./wireframe'),
+  pixel: () => import('./pixel'),
 };
-export const DEFAULT_SKIN = 'temp';
+export const DEFAULT_SKIN = 'pixel';
 
 /** 주소의 ?skin=id 로 점검용 선택. 없거나 모르는 값이면 기본 스킨 */
 export function resolveSkinId(search: string, known: readonly string[] = Object.keys(SKIN_LOADERS)): string {

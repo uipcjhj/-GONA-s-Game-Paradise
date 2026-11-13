@@ -16,10 +16,11 @@ const full = (id: string, extra: Partial<Skin> = {}): Skin => ({ id, name: id, u
 const loaderOf = (m: Record<string, Skin>): Record<string, SkinLoader> => Object.fromEntries(Object.entries(m).map(([k, v]) => [k, async () => ({ default: v })]));
 
 describe('스킨 선택', () => {
-  it('?skin= 값이 알려진 스킨이면 사용, 아니면 기본(temp)', () => {
-    expect(resolveSkinId('')).toBe('temp');
+  it('?skin= 값이 알려진 스킨이면 사용, 아니면 기본(pixel)', () => {
+    expect(resolveSkinId('')).toBe('pixel');
+    expect(resolveSkinId('?skin=temp')).toBe('temp');
     expect(resolveSkinId('?skin=wireframe')).toBe('wireframe');
-    expect(resolveSkinId('?skin=nope')).toBe('temp');
+    expect(resolveSkinId('?skin=nope')).toBe('pixel');
     expect(resolveSkinId('?skin=x', ['x'])).toBe('x');
   });
 });
