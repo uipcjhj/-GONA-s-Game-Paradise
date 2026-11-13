@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadAssets, isMuted, setMuted, type Assets } from './assets';
-import { SkyEngine, FAMILY_INFO, type EndInfo, type FamilyId } from './engine';
+import { SkyEngine, type EndInfo, type FamilyId } from './engine';
+import { CHARACTERS } from './data/characters';
 import './sky.css';
 
 const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
-const FAMILY: FamilyId[] = ['mom', 'dad', 'imo', 'halmeoni', 'halabeoji'];
+const FAMILY: FamilyId[] = ['mom', 'dad', 'imo', 'halmeoni', 'halabeoji', 'samchon'];
 const BEST_KEY = 'gona.sky.best';
 
 function bestScore(): number {
@@ -46,13 +47,16 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
   }, []);
 
   // 캔버스 크기: 9:16 을 화면에 최대한 크게 (폰은 가로폭 · 큰 화면은 세로 높이 기준)
-  const [box, setBox] = useState({ w: 360, h: 640 });
+  // 세로 여백이 충분하면(예: 390×844) 조작 버튼을 전투 화면 밖 하단 바로 → 화면을 가리지 않음
+  const CTRL = 66;
+  const [box, setBox] = useState({ w: 360, h: 640, bar: false });
   useEffect(() => {
     const on = () => {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      const w = Math.floor(Math.min(vw, (vh * 9) / 16, 540));
-      setBox({ w, h: Math.floor((w * 16) / 9) });
+      const bar = vh - Math.min(vw, 540) * (16 / 9) >= CTRL;
+      const w = Math.floor(Math.min(vw, ((bar ? vh - CTRL : vh) * 9) / 16, 540));
+      setBox({ w, h: Math.floor((w * 16) / 9), bar });
     };
     on();
     window.addEventListener('resize', on);
@@ -132,36 +136,53 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
   if (phase === 'loading') return <div className="sky"><div className="sky-loading">LOADING...</div></div>;
 
   if (phase === 'select') {
+    const c = CHARACTERS[fam];
+    const idx = FAMILY.indexOf(fam);
+    const step = (d: number) => setFam(FAMILY[(idx + d + FAMILY.length) % FAMILY.length]);
     return (
-      <div className="sky sky-select">
-        <div className="sky-clouds" aria-hidden />
-        <header className="sky-head">
-          <h1>GONA's<br />SKY ADVENTURE</h1>
-          <span className="sky-tag">DEV BUILD · 1차 개발판</span>
+      <div className="sky sel">
+        <div className="sel-pattern" aria-hidden />
+        <header className="sel-head">
+          <span className="sel-stage">STAGE 1 · 황혼의 부유왕국</span>
+          <h1>SELECT WINGMATE</h1>
+          <span className="sel-sub">고나와 함께 날아갈 가족을 고르세요</span>
         </header>
-        <div className="sky-hero" aria-hidden>
-          <div className="sky-wing sky-wing-l" />
-          <div className="sky-wing sky-wing-r" />
-          <div className="sky-body" />
+        <div className="sel-main">
+          <button type="button" className="sel-arrow" onClick={() => step(-1)} aria-label="이전">◀</button>
+          <div className="sel-art" key={fam}>
+            <img className="sel-illust" src={`${BASE}v2/chars/${fam}/illust.png`} alt={c.name} />
+            <div className="sel-plate">
+              <b>{c.name}</b>
+              <span>{c.job}</span>
+            </div>
+          </div>
+          <button type="button" className="sel-arrow" onClick={() => step(1)} aria-label="다음">▶</button>
         </div>
-        <p className="sky-pick">함께 날아갈 가족을 골라요!</p>
-        <ul className="sky-cards">
+        <div className="sel-info">
+          <div className="sel-preview" aria-hidden>
+            <div className="sel-spr sel-spr-gona" />
+            <div className="sel-spr sel-spr-fam" style={{ backgroundImage: `url(${BASE}v2/chars/${fam}/fly.png)` }} />
+          </div>
+          <dl>
+            <dt>일반</dt><dd>{c.attack}</dd>
+            <dt>차지</dt><dd>{c.charge}</dd>
+            <dt>필살기</dt><dd>{c.special}</dd>
+          </dl>
+        </div>
+        <p className="sel-line">“{c.sortieLine}”</p>
+        <ul className="sel-roster">
           {FAMILY.map((f) => (
             <li key={f}>
-              <button type="button" className={`sky-card ${fam === f ? 'on' : ''}`} onClick={() => setFam(f)} aria-pressed={fam === f}>
-                <img src={`${BASE}family-${f}.png`} alt="" />
-                <b>{FAMILY_INFO[f].name}</b>
-                <span>{FAMILY_INFO[f].skill}</span>
+              <button type="button" className={f === fam ? 'on' : ''} onClick={() => setFam(f)} aria-label={CHARACTERS[f].name} style={{ backgroundImage: `url(${BASE}v2/chars/${f}/illust.png)` }}>
+                {f === fam && <i>1P</i>}
               </button>
             </li>
           ))}
         </ul>
-        <p className="sky-desc">{FAMILY_INFO[fam].name}: {FAMILY_INFO[fam].desc}</p>
-        <div className="sky-row">
-          <button type="button" className="sky-btn sky-btn-go" onClick={() => start(fam)}>출발!</button>
+        <div className="sel-btns">
+          <button type="button" className="sky-btn sky-btn-go" onClick={() => start(fam)}>출격!</button>
           <button type="button" className="sky-btn" onClick={onExit}>월드맵</button>
         </div>
-        <p className="sky-help">손가락으로 끌어 이동 · 자동 공격<br />차지 버튼 꾹 → 떼면 발사 · 폭탄은 3개</p>
         {best > 0 && <p className="sky-best">BEST {String(best).padStart(8, '0')}</p>}
       </div>
     );
@@ -169,14 +190,14 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
 
   return (
     <div className="sky sky-play" ref={boxRef}>
-      <div className="sky-stage" style={{ width: box.w, height: box.h }}>
+      <div className="sky-stage" style={{ width: box.w, height: box.h, marginBottom: box.bar ? CTRL : 0 }}>
         <canvas ref={canvasRef} className="sky-canvas" style={{ width: box.w, height: box.h }} />
         {phase === 'play' && (
           <>
             <button type="button" className="sky-pause" onPointerDown={(e) => { e.stopPropagation(); togglePause(true); }} aria-label="일시정지">II</button>
             <button
               type="button"
-              className="sky-act sky-charge"
+              className={`sky-act sky-charge${box.bar ? ' in-bar' : ''}`}
               onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); engine.current?.holdCharge(true); }}
               onPointerUp={() => engine.current?.holdCharge(false)}
               onPointerCancel={() => engine.current?.holdCharge(false)}
@@ -185,7 +206,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
             >
               차지
             </button>
-            <button type="button" className="sky-act sky-bomb" onPointerDown={() => engine.current?.useBomb()} onContextMenu={(e) => e.preventDefault()}>
+            <button type="button" className={`sky-act sky-bomb${box.bar ? ' in-bar' : ''}`} onPointerDown={() => engine.current?.useBomb()} onContextMenu={(e) => e.preventDefault()}>
               폭탄
             </button>
           </>

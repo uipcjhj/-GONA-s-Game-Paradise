@@ -52,7 +52,7 @@
 .sky-help { margin: 0; font-size: 10px; line-height: 1.5; text-align: center; color: #fff7dc; text-shadow: 0 1px #3b2a3f; position: relative; }
 .sky-best { margin: 0; font-size: 11px; font-weight: 700; color: #ffd84a; text-shadow: 0 2px #3b2a3f; position: relative; }
 
-.sky-play { justify-content: center; background: #6fb9e8; }
+.sky-play { justify-content: center; background: #0c0618; }
 .sky-stage { position: relative; flex: none; }
 .sky-canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; image-rendering: pixelated; touch-action: none; background: #6fb9e8; }
 .sky-act {
@@ -75,3 +75,47 @@
 .sky-panel dl { margin: 0 0 4px; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 13px; text-align: left; }
 .sky-panel dt { font-weight: 700; } .sky-panel dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .sky-wing, .sky-body { animation: none; } }
+
+/* ───── 조작 바(화면 밖) ───── */
+.sky-act.in-bar { bottom: -60px; height: 50px; width: 46%; font-size: 16px; }
+.sky-charge.in-bar { left: 2%; }
+.sky-bomb.in-bar { right: 2%; }
+.sky-act:not(.in-bar) { width: 64px; height: 42px; font-size: 13px; opacity: 0.82; bottom: 8px; }
+
+/* ───── 캐릭터 선택 (아케이드) ───── */
+.sel { padding: calc(env(safe-area-inset-top) + 6px) 10px calc(env(safe-area-inset-bottom) + 8px); gap: 6px; justify-content: flex-start; overflow-y: auto; touch-action: pan-y;
+  background: #140a2c; color: #fff4d6; }
+.sel-pattern { position: absolute; inset: 0; pointer-events: none; opacity: 0.5;
+  background: repeating-linear-gradient(-30deg, #1d0f3c 0 18px, #170b32 18px 36px); }
+.sel > *:not(.sel-pattern) { position: relative; }
+.sel-head { text-align: center; line-height: 1.1; }
+.sel-head h1 { margin: 2px 0; font-size: 24px; letter-spacing: 1px; color: #ffe9a8;
+  text-shadow: -2px 0 #3b1060, 2px 0 #3b1060, 0 -2px #3b1060, 0 2px #3b1060, 0 4px #0c0418; }
+.sel-stage { font-size: 10px; color: #ff9ec0; }
+.sel-sub { font-size: 11px; color: #cfc4ff; }
+.sel-main { display: flex; align-items: center; gap: 4px; width: 100%; max-width: 420px; }
+.sel-arrow { flex: none; width: 34px; height: 64px; font-family: inherit; font-size: 16px; color: #ffe9a8; background: #20124a; border: 3px solid #e8b53c; box-shadow: inset 0 -4px 0 #120a26; cursor: pointer; }
+.sel-art { flex: 1; position: relative; height: min(46vh, 380px); border: 3px solid #e8b53c; box-shadow: inset 0 0 0 3px #120a26;
+  background: radial-gradient(circle at 50% 40%, #6a2e88 0, #2c1460 55%, #140a2c 100%); overflow: hidden; animation: selin 0.32s steps(4) both; }
+.sel-art::before { content: ''; position: absolute; inset: 0; background: repeating-conic-gradient(from 0deg at 50% 45%, rgba(255, 220, 140, 0.13) 0 6deg, transparent 6deg 18deg); }
+.sel-illust { position: absolute; left: 50%; bottom: 0; height: 96%; transform: translateX(-50%); animation: selslide 0.32s ease-out both; }
+.sel-plate { position: absolute; left: 6px; bottom: 6px; display: flex; flex-direction: column; padding: 4px 8px 5px; background: #120a26; border: 2px solid #e8b53c; }
+.sel-plate b { font-size: 18px; color: #fff; } .sel-plate span { font-size: 11px; color: #ff9ec0; }
+@keyframes selin { from { filter: brightness(2.2); } to { filter: none; } }
+@keyframes selslide { from { transform: translateX(-20%); opacity: 0; } to { transform: translateX(-50%); opacity: 1; } }
+.sel-info { display: flex; gap: 8px; align-items: center; width: 100%; max-width: 420px; padding: 6px 8px; background: #120a26; border: 2px solid #e8b53c; }
+.sel-preview { flex: none; display: flex; align-items: flex-end; gap: 2px; width: 104px; height: 64px; padding: 2px; border: 2px solid #3a2a6a;
+  background: url(/assets/sky/v2/stage1/bg-backdrop.png) center / cover; image-rendering: pixelated; }
+.sel-spr { image-rendering: pixelated; background-repeat: no-repeat; }
+.sel-spr-gona { width: 48px; height: 48px; background-image: url(/assets/sky/v2/chars/gona/sprite.png); background-size: 192px 480px; animation: selgona 0.4s steps(4) infinite; }
+.sel-spr-fam { width: 44px; height: 56px; background-size: 176px 56px; animation: selfam 0.34s steps(2) infinite; }
+@keyframes selgona { to { background-position: -192px 0; } }
+@keyframes selfam { to { background-position: -88px 0; } }
+.sel-info dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-size: 11px; }
+.sel-info dt { color: #e8b53c; font-weight: 700; } .sel-info dd { margin: 0; color: #fff4d6; }
+.sel-line { margin: 0; font-size: 12px; color: #cfc4ff; text-align: center; }
+.sel-roster { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; width: 100%; max-width: 420px; }
+.sel-roster button { position: relative; width: 100%; aspect-ratio: 1; padding: 0; background: #20124a no-repeat center 8% / 170% auto; border: 2px solid #4a3a8a; cursor: pointer; }
+.sel-roster button.on { border-color: #ffe9a8; box-shadow: 0 0 0 2px #e8b53c; }
+.sel-roster i { position: absolute; left: 50%; top: -9px; transform: translateX(-50%); font-style: normal; font-size: 9px; font-weight: 700; color: #120a26; background: #ffe9a8; padding: 0 3px; }
+.sel-btns { display: flex; gap: 8px; }

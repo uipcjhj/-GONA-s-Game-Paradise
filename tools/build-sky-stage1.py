@@ -134,6 +134,30 @@ def enemies():
         fr = [palettize(shrink(q, sc), 24, outline=False) for q in qs]
         save(frames_to_strip(fr, 80, 80), os.path.join(OUT, 'fx-explosion.png'), 'fx-explosion')
 
+# ── 선택 화면 원화: 3인 1장 → 세로 빈 열 기준으로 1인씩 분리 (셀 애니풍 그대로, 높이 900으로만 축소) ──
+def split3(im):
+    a = np.array(im)[..., 3] > 32; col = a.sum(0); w = im.width
+    cuts = []
+    for c in (w // 3, 2 * w // 3):
+        lo, hi = c - 260, c + 260; cuts.append(lo + int(np.argmin(col[lo:hi])))
+    xs = [0] + cuts + [w]
+    return [trim(im.crop((xs[i], 0, xs[i + 1], im.height))) for i in range(3)]
+
+def illusts():
+    for fn, ids in (('illus_A_raw.png', ['mom', 'dad', 'imo']), ('illus_B_raw.png', ['halmeoni', 'halabeoji', 'samchon'])):
+        if not os.path.exists(os.path.join(SRC, fn)): continue
+        for part, cid in zip(split3(load(fn)), ids):
+            k = 900 / part.height
+            out = part.resize((round(part.width * k), 900), Image.LANCZOS) if k < 1 else part
+            save(out, os.path.join(CH, cid, 'illust.png'), f'illust-{cid}')
+    # 고나: 승인된 원화·컷인을 게임용 폴더로 (원본은 art-src 에 그대로)
+    g = os.path.join(ROOT, 'art-src/sky/illust/gona')
+    if os.path.exists(os.path.join(g, 'A_illust_clean.png')):
+        im = trim(Image.open(os.path.join(g, 'A_illust_clean.png')).convert('RGBA')); k = 900 / im.height
+        save(im.resize((round(im.width * k), 900), Image.LANCZOS), os.path.join(CH, 'gona', 'illust.png'), 'illust-gona')
+    if os.path.exists(os.path.join(g, 'C_cutin_2x1_crop.png')):
+        save(Image.open(os.path.join(g, 'C_cutin_2x1_crop.png')).convert('RGBA').resize((720, 360), Image.LANCZOS), os.path.join(CH, 'gona', 'cutin.png'), 'cutin-gona')
+
 if __name__ == '__main__':
-    backdrop(); props(); family(); enemies()
+    backdrop(); props(); family(); enemies(); illusts()
     print(json.dumps(report, ensure_ascii=False, indent=1))

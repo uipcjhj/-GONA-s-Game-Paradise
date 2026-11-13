@@ -19,7 +19,7 @@ fs.mkdirSync(out, { recursive: true });
   };
   for (let f = 1; f <= 5; f++) {
     await page.goto(`${base}?skytest&r=${Math.random()}#sky`);
-    await page.waitForSelector('.sky-card');
+    await page.waitForSelector('.sel-art');
     await page.click(`.sky-card >> nth=${f - 1}`);
     await page.click('.sky-btn-go');
     await page.waitForSelector('.sky-canvas');
@@ -34,7 +34,7 @@ fs.mkdirSync(out, { recursive: true });
   }
   // 차지샷 + 폭탄
   await page.goto(`${base}?skytest&r=${Math.random()}#sky`);
-  await page.waitForSelector('.sky-card');
+  await page.waitForSelector('.sel-art');
   await page.click('.sky-btn-go');
   await page.waitForSelector('.sky-canvas');
   const box = await (await page.$('.sky-canvas')).boundingBox();

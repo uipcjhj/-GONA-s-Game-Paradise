@@ -36,6 +36,8 @@ export interface Assets {
   dizzy: HTMLCanvasElement;
   /** 신규 고나 전투 스프라이트 시트 (96×96 셀, 4열×10행). 없으면 null → 기존 그래픽 */
   gonaSheet: HTMLImageElement | null;
+  /** 스테이지 1 신규 에셋 (public/assets/sky/v2/…) — 없으면 null → 기존 그래픽 */
+  v2: Record<V2Name, HTMLImageElement | null>;
   /** 흰색으로 번쩍이는 피격용 사본 (캔버스 → 흰 실루엣) */
   flash: Map<HTMLCanvasElement | HTMLImageElement, HTMLCanvasElement>;
 }
@@ -58,11 +60,26 @@ function loadOptional(url: string): Promise<HTMLImageElement | null> {
   });
 }
 
+export const V2_NAMES = [
+  'stage1/bg-backdrop', 'stage1/island-castle', 'stage1/island-ruins', 'stage1/island-small', 'stage1/island-tower',
+  'stage1/clocktower', 'stage1/airship', 'stage1/cloud-big', 'stage1/cloud-small',
+  'stage1/enemy-drone', 'stage1/enemy-fighter', 'stage1/enemy-orb', 'stage1/enemy-wyvern', 'stage1/enemy-gunship',
+  'stage1/boss', 'stage1/fx-explosion',
+  'chars/mom/fly', 'chars/dad/fly', 'chars/imo/fly', 'chars/halmeoni/fly', 'chars/halabeoji/fly', 'chars/samchon/fly', 'chars/gona/cutin',
+] as const;
+export type V2Name = (typeof V2_NAMES)[number];
+
 let cache: Promise<Assets> | null = null;
 
 export function loadAssets(): Promise<Assets> {
   cache ??= (async () => {
-    const [imgs, gonaSheet] = await Promise.all([Promise.all(IMG_NAMES.map(load)), loadOptional(`${BASE}v2/chars/gona/sprite.png`)]);
+    const [imgs, gonaSheet, v2list] = await Promise.all([
+      Promise.all(IMG_NAMES.map(load)),
+      loadOptional(`${BASE}v2/chars/gona/sprite.png`),
+      Promise.all(V2_NAMES.map((n) => loadOptional(`${BASE}v2/${n}.png`))),
+    ]);
+    const v2 = {} as Record<V2Name, HTMLImageElement | null>;
+    V2_NAMES.forEach((n, i) => (v2[n] = v2list[i]));
     const img = {} as Record<ImgName, HTMLImageElement>;
     IMG_NAMES.forEach((n, i) => (img[n] = imgs[i]));
     return {
@@ -80,6 +97,7 @@ export function loadAssets(): Promise<Assets> {
       dizzy: dizzyStar(),
       flash: new Map(),
       gonaSheet,
+      v2,
     };
   })();
   return cache;

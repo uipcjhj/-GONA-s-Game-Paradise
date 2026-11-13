@@ -22,7 +22,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const cdp = await ctx.newCDPSession(page);
     const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map((p) => ({ x: p.x, y: p.y, id: p.id })) });
     await page.goto(`${base}?skytest&r=${Math.random()}#sky`);
-    await page.waitForSelector('.sky-card');
+    await page.waitForSelector('.sel-art');
     await page.tap('.sky-btn-go');
     await page.waitForSelector('.sky-canvas');
     const box = await (await page.$('.sky-canvas')).boundingBox();
@@ -100,7 +100,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await shot('13-win');
     // 격파: 새 판
     await page.goto(`${base}?skytest&r=${Math.random()}#sky`);
-    await page.waitForSelector('.sky-card'); await page.tap('.sky-btn-go'); await page.waitForSelector('.sky-canvas');
+    await page.waitForSelector('.sel-art'); await page.tap('.sky-btn-go'); await page.waitForSelector('.sky-canvas');
     await sleep(1500);
     await page.evaluate(() => { window.__sky.cheat('hp1'); window.__sky.cheat('hurt'); });
     await sleep(450);

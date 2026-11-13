@@ -15,7 +15,7 @@ const sizes = [[393, 636], [390, 844]];
     page.on('console', (m) => m.type() === 'error' && errors.push(`${w}x${h} ${m.text()}`));
     page.on('pageerror', (e) => errors.push(`${w}x${h} PAGEERR ${e.message}`));
     await page.goto(`${base}?skytest#sky`);
-    await page.waitForSelector('.sky-card');
+    await page.waitForSelector('.sel-art');
     await page.waitForTimeout(600);
     await page.screenshot({ path: `${out}/sky-select-${w}x${h}.png` });
     await page.click('.sky-card:nth-child(1)', { force: true }).catch(() => {});

@@ -2,12 +2,13 @@
  * GONA's Sky Adventure — 건버드 스타일 세로 스크롤 슈팅 엔진 (독립 모듈 · 기존 게임천국 코드와 무관)
  * 논리 해상도 180×320 (9:16) 도트 → 정수 배율로 캔버스에 그림 (image-rendering: pixelated)
  */
-import { type Assets, type Sheet, type ImgName, whiteOf, sfx, startBgm, stopBgm } from './assets';
+import { type Assets, type Sheet, type ImgName, type V2Name, whiteOf, sfx, startBgm, stopBgm } from './assets';
+import { bulletLooks, type BulletLook } from './bullets';
 import { CHARACTERS } from './data/characters';
 
 export const W = 180;
 export const H = 320;
-export type FamilyId = 'mom' | 'dad' | 'imo' | 'halmeoni' | 'halabeoji';
+export type FamilyId = 'mom' | 'dad' | 'imo' | 'halmeoni' | 'halabeoji' | 'samchon';
 
 export interface EndInfo {
   won: boolean;
@@ -29,13 +30,13 @@ const TAU = Math.PI * 2;
 
 interface PBullet {
   x: number; y: number; vx: number; vy: number; r: number; dmg: number;
-  kind: 'gona' | 'charge' | 'heart' | 'imo';
+  kind: 'gona' | 'charge' | 'heart' | 'imo' | 'elec' | 'potion' | 'lance';
   pierce: boolean; hit: Set<Enemy>; life: number; scale: number;
 }
 interface EBullet {
-  x: number; y: number; vx: number; vy: number; r: number; kind: 'flask' | 'smell' | 'heart' | 'wave'; age: number; spin: number;
+  x: number; y: number; vx: number; vy: number; r: number; kind: 'flask' | 'smell' | 'heart' | 'wave' | 'needle' | 'ring' | 'fire'; age: number; spin: number;
 }
-type EKind = 'glasses' | 'uncle' | 'boss';
+type EKind = 'glasses' | 'uncle' | 'boss' | 'orb';
 interface Enemy {
   kind: EKind; pat: string; x: number; y: number; x0: number; vx: number; vy: number;
   hp: number; max: number; age: number; flash: number; fire: number; dir: number; hr: number; score: number; dead: boolean; ph: number; burst: number;
@@ -43,6 +44,8 @@ interface Enemy {
 interface Item { x: number; y: number; kind: 'cookie' | 'strawberry' | 'banana' | 'star'; age: number }
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; col: string; size: number; g: number }
 interface Pop { x: number; y: number; age: number; big: boolean }
+interface Boom { x: number; y: number; age: number; delay: number; scale: number }
+interface Prop { name: V2Name; x: number; y: number; v: number; k: number; a: number; vx: number; layer: number }
 interface Float { x: number; y: number; text: string; age: number; col: string }
 interface Beam { follow: boolean; x: number; t: number; max: number; tick: number }
 
@@ -53,8 +56,17 @@ interface BossState {
 
 /** 선택 화면 표시용 정보 — 데이터는 src/sky/data/characters.ts 에서 관리 (대사·이름 수정은 그 파일만) */
 export const FAMILY_INFO: Record<FamilyId, { name: string; skill: string; desc: string }> = {
-  mom: CHARACTERS.mom, dad: CHARACTERS.dad, imo: CHARACTERS.imo, halmeoni: CHARACTERS.halmeoni, halabeoji: CHARACTERS.halabeoji,
+  mom: CHARACTERS.mom, dad: CHARACTERS.dad, imo: CHARACTERS.imo, halmeoni: CHARACTERS.halmeoni, halabeoji: CHARACTERS.halabeoji, samchon: CHARACTERS.samchon,
 };
+
+/** 스테이지 1 배경 소품 대본: [시각(초, 60초마다 반복), 에셋, 레이어(0 원경 · 1 중경 · 2 근경 구름), 가로 위치(화면 폭 비율), 가로 이동] */
+const STAGE1_PROPS: [number, V2Name, number, number, number][] = [
+  [0, 'stage1/island-castle', 1, 0.08, 0], [2, 'stage1/cloud-small', 0, 0.78, 0], [5, 'stage1/island-small', 0, 0.88, 0], [8, 'stage1/cloud-big', 2, 0.15, 0],
+  [11, 'stage1/island-ruins', 1, 0.95, 0], [16, 'stage1/clocktower', 1, 0.06, 0], [19, 'stage1/cloud-small', 0, 0.25, 0], [23, 'stage1/airship', 1, 1.05, -7],
+  [28, 'stage1/island-tower', 1, -0.02, 0], [31, 'stage1/cloud-big', 2, 0.88, 0], [35, 'stage1/island-small', 0, 0.15, 0], [39, 'stage1/island-castle', 1, 1.0, 0],
+  [44, 'stage1/cloud-big', 2, 0.3, 0], [48, 'stage1/clocktower', 1, 0.98, 0], [52, 'stage1/cloud-small', 0, 0.6, 0], [56, 'stage1/island-ruins', 1, 0.02, 0],
+];
+const LAYER = [{ k: 0.32, v: 14, a: 0.75 }, { k: 0.5, v: 30, a: 1 }, { k: 0.6, v: 70, a: 0.55 }];
 
 const MAX_HP = 5;
 const BOSS_WARN_T = 54;
@@ -111,6 +123,11 @@ export class SkyEngine {
   private cN = 0;
   private cKick = 0;
 
+  private booms: Boom[] = [];
+  private props: Prop[] = [];
+  private propIdx = 0;
+  private propLoop = 0;
+  private chargeFlash = 0;
   private pb: PBullet[] = [];
   private eb: EBullet[] = [];
   private en: Enemy[] = [];
@@ -154,7 +171,7 @@ export class SkyEngine {
     canvas.addEventListener('pointercancel', this.onUp);
     window.addEventListener('keydown', this.onKey);
     window.addEventListener('keyup', this.onKeyUp);
-    this.banner = { text: 'STAGE 1', sub: '구름 위 장난꾸러기들', t: 2.6, col: '#fff7dc' };
+    this.banner = { text: 'STAGE 1', sub: '황혼의 부유왕국', t: 2.6, col: '#ffe9a8' };
     sfx('start');
     startBgm();
     this.last = performance.now();
@@ -274,25 +291,34 @@ export class SkyEngine {
     const row = (t: number, n: number, pat: string, kind: EKind = 'glasses', gap = 0.35, x0 = 30, x1 = 150, dir = 1): void => {
       for (let i = 0; i < n; i++) at(t + i * gap, () => this.spawn(kind, n === 1 ? (x0 + x1) / 2 : x0 + ((x1 - x0) * i) / (n - 1), -14, pat, dir, i));
     };
-    row(1.5, 5, 'sine', 'glasses', 0.3);
-    row(6, 4, 'strafe', 'glasses', 0.6, 0, 0, 1);
-    row(10, 4, 'strafe', 'glasses', 0.6, 0, 0, -1);
-    at(14, () => this.spawn('uncle', 90, -20, 'uncle', 1, 0));
-    for (let i = 0; i < 6; i++) at(18 + i * 0.5, () => this.spawn('glasses', i % 2 ? 150 : 30, -14, 'dive', 1, i));
-    at(24, () => this.spawn('uncle', 48, -20, 'uncle', 1, 0));
-    at(24.8, () => this.spawn('uncle', 132, -20, 'uncle', -1, 1));
-    row(29, 7, 'sine', 'glasses', 0.28, 20, 160);
-    row(33, 6, 'swarm', 'glasses', 0.3, 20, 160);
-    at(38, () => this.spawn('uncle', 90, -20, 'uncle', 1, 0));
-    for (let i = 0; i < 5; i++) at(39 + i * 0.5, () => this.spawn('glasses', 20 + i * 35, -14, 'dive', 1, i));
-    row(44, 5, 'strafe', 'glasses', 0.5, 0, 0, 1);
-    row(44.2, 5, 'strafe', 'glasses', 0.5, 0, 0, -1);
-    row(49, 9, 'swarm', 'glasses', 0.22, 15, 165);
+    // 스테이지 1 '황혼의 부유왕국' 편대 대본 (약 55초 → 경고 → 보스)
+    row(1.2, 5, 'sine', 'glasses', 0.28, 30, 150);                                   // 안경 드론 V자 진입
+    row(4.5, 4, 'strafe', 'glasses', 0.45, 0, 0, 1);                                 // 프로펠러 전투기 좌→우 횡단
+    row(7.5, 4, 'strafe', 'glasses', 0.45, 0, 0, -1);                                // 우→좌
+    at(10, () => this.spawn('orb', 40, -16, 'orb', 1, 0));                           // 크리스탈 포탑 2기
+    at(10.6, () => this.spawn('orb', 140, -16, 'orb', -1, 1));
+    at(14, () => this.spawn('uncle', 90, -30, 'uncle', 1, 0));                       // 중형: 증기 보일러 건십
+    for (let i = 0; i < 6; i++) at(17.5 + i * 0.45, () => this.spawn('glasses', i % 2 ? 150 : 30, -14, 'dive', 1, i));   // 기계 와이번 급강하
+    row(21, 8, 'swarm', 'glasses', 0.2, 20, 160);                                    // 드론 떼
+    at(24, () => this.spawn('uncle', 48, -30, 'uncle', 1, 0));
+    at(24.8, () => this.spawn('uncle', 132, -30, 'uncle', -1, 1));
+    row(28, 7, 'sine', 'glasses', 0.26, 20, 160);
+    at(30, () => this.spawn('orb', 90, -16, 'orb', 1, 2));
+    row(33, 4, 'strafe', 'glasses', 0.4, 0, 0, 1);
+    row(33.2, 4, 'strafe', 'glasses', 0.4, 0, 0, -1);
+    for (let i = 0; i < 5; i++) at(37 + i * 0.45, () => this.spawn('glasses', 20 + i * 35, -14, 'dive', 1, i));
+    at(39.5, () => this.spawn('uncle', 90, -30, 'uncle', 1, 0));
+    at(43, () => this.spawn('orb', 30, -16, 'orb', 1, 3));
+    at(43.4, () => this.spawn('orb', 150, -16, 'orb', -1, 4));
+    row(45, 9, 'swarm', 'glasses', 0.2, 15, 165);
+    row(49, 5, 'strafe', 'glasses', 0.4, 0, 0, 1);
+    row(49.2, 5, 'strafe', 'glasses', 0.4, 0, 0, -1);
     this.timeline.sort((p, q) => p.t - q.t);
   }
 
   private spawn(kind: EKind, x: number, y: number, pat: string, dir: number, idx: number): void {
     const glasses = kind === 'glasses';
+    const orb = kind === 'orb';
     let sx = x;
     let sy = y;
     if (pat === 'strafe') {
@@ -300,8 +326,8 @@ export class SkyEngine {
       sy = 34 + idx * 16;
     }
     this.en.push({
-      kind, pat, x: sx, y: sy, x0: x, vx: 0, vy: 0, hp: glasses ? 3 : 18, max: glasses ? 3 : 18, age: 0, flash: 0, fire: rand(0.8, 2.2), dir,
-      hr: glasses ? 8 : 10, score: glasses ? 100 : 500, dead: false, ph: idx * 0.7, burst: 0,
+      kind, pat, x: sx, y: sy, x0: x, vx: 0, vy: 0, hp: glasses ? 3 : orb ? 10 : 24, max: glasses ? 3 : orb ? 10 : 24, age: 0, flash: 0, fire: orb ? 1.2 : rand(0.8, 2.2), dir,
+      hr: glasses ? 9 : orb ? 11 : 17, score: glasses ? 100 : orb ? 300 : 800, dead: false, ph: idx * 0.7, burst: 0,
     });
   }
 
@@ -318,6 +344,7 @@ export class SkyEngine {
   private update(dt: number): void {
     this.t += dt;
     this.scroll = (this.scroll + dt * 38) % H;
+    if (this.a.v2['stage1/bg-backdrop']) this.updateProps(dt);
     this.shake = Math.max(0, this.shake - dt * 1.6);
     this.flashWhite = Math.max(0, this.flashWhite - dt * 1.8);
     if (this.banner && (this.banner.t -= dt) <= 0) this.banner = null;
@@ -345,7 +372,7 @@ export class SkyEngine {
     if (!this.warned && this.t >= BOSS_WARN_T) {
       this.warned = true;
       sfx('warn');
-      this.banner = { text: 'WARNING!', sub: '뽀뽀괴물이 다가온다!', t: 3.2, col: '#ff7a8a' };
+      this.banner = null;
     }
     if (!this.bossSpawned && this.t >= BOSS_T) this.spawnBoss();
 
@@ -423,6 +450,7 @@ export class SkyEngine {
     this.pb.push({ x: this.px, y: this.py - 20, vx: 0, vy: -230, r: 6 + f * 8, dmg: 10 + f * 26, kind: 'charge', pierce: true, hit: new Set(), life: 1.8, scale: 1 + f * 1.4 });
     this.atkT = 0.3;
     this.shootAnimT = 0.34;
+    this.chargeFlash = 0.25;
     this.shake = Math.max(this.shake, 0.2 + f * 0.2);
     sfx('throw', 0.8);
     for (let i = 0; i < 10; i++) this.parts.push({ x: this.px, y: this.py - 18, vx: rand(-60, 60), vy: rand(-80, -20), life: 0.4, max: 0.4, col: '#fff8d0', size: 2, g: 0 });
@@ -471,7 +499,7 @@ export class SkyEngine {
   // ───────────── 동료 ─────────────
   private updateCompanion(dt: number): void {
     const side = this.px > W - 56 ? -1 : 1;
-    const tx = this.px + side * 38;
+    const tx = this.px + side * 32;
     const ty = this.py + 10 + Math.sin(this.t * 3) * 2;
     this.cx += (tx - this.cx) * Math.min(1, dt * 7);
     this.cy += (ty - this.cy) * Math.min(1, dt * 7);
@@ -481,6 +509,12 @@ export class SkyEngine {
     const f = this.fam;
     if (f === 'halabeoji') {
       if (this.shield > 0) this.shield -= dt;
+      this.cN += dt;
+      if (this.cN > 1.1) {
+        // 수호 기사의 은빛 창 — 곧게 위로 관통
+        this.cN = 0;
+        this.pb.push({ x: this.cx + 4, y: this.cy - 16, vx: 0, vy: -240, r: 3, dmg: 2.6, kind: 'lance', pierce: true, hit: new Set(), life: 1.4, scale: 1 });
+      }
       if (this.shield <= 0 && this.cCd <= 0) {
         this.shield = 6;
         this.cCd = 99;
@@ -514,22 +548,36 @@ export class SkyEngine {
         this.pb.push({ x: this.cx, y: this.cy - 14, vx: Math.cos(a) * 130, vy: Math.sin(a) * 130, r: 3.5, dmg: 1.7, kind: 'imo', pierce: false, hit: new Set(), life: 2.4, scale: 1 });
       }
       this.cCd = 0.5;
+    } else if (f === 'samchon') {
+      // 괴짜 발명가: 지그재그로 적을 쫓는 전기탄 2발
+      for (const sd of [-1, 1]) {
+        const a = -Math.PI / 2 + sd * 0.35;
+        this.pb.push({ x: this.cx + sd * 6, y: this.cy - 12, vx: Math.cos(a) * 170, vy: Math.sin(a) * 170, r: 3, dmg: 1.5, kind: 'elec', pierce: false, hit: new Set(), life: 1.8, scale: 1 });
+      }
+      this.cCd = 0.62;
     } else if (f === 'halmeoni') {
+      this.cN++;
+      // 폭발 물약: 위로 던져 맞으면 크게 터짐
+      this.pb.push({ x: this.cx, y: this.cy - 14, vx: rand(-12, 12), vy: -150, r: 4, dmg: 3.2, kind: 'potion', pierce: false, hit: new Set(), life: 1.6, scale: 1 });
+      if (this.cN % 7 !== 0) {
+        this.cCd = 1.1;
+        return;
+      }
       if (this.hp < MAX_HP) {
         this.hp++;
         this.onHud({ hp: this.hp, paused: this.paused });
         sfx('pickup10');
         this.floatText(this.px, this.py - 26, 'HP +1', '#ff9ec0');
         for (let i = 0; i < 14; i++) this.parts.push({ x: this.px + rand(-12, 12), y: this.py + rand(-10, 14), vx: rand(-10, 10), vy: rand(-50, -20), life: 0.9, max: 0.9, col: '#ff9ec0', size: 2, g: 0 });
-        this.cCd = 8.5;
-      } else this.cCd = 1.5; // 가득 차 있으면 곧 다시 확인
+        this.cCd = 1.1;
+      } else this.cCd = 1.1; // 가득 차 있으면 다음 물약 주기에 다시 확인
     }
   }
 
   // ───────────── 적 ─────────────
   private spawnBoss(): void {
     this.bossSpawned = true;
-    const e: Enemy = { kind: 'boss', pat: 'boss', x: W / 2, y: -40, x0: W / 2, vx: 0, vy: 0, hp: 420, max: 420, age: 0, flash: 0, fire: 0, dir: 1, hr: 20, score: 5000, dead: false, ph: 0, burst: 0 };
+    const e: Enemy = { kind: 'boss', pat: 'boss', x: W / 2, y: -40, x0: W / 2, vx: 0, vy: 0, hp: 460, max: 460, age: 0, flash: 0, fire: 0, dir: 1, hr: 30, score: 5000, dead: false, ph: 0, burst: 0 };
     this.en.push(e);
     this.boss = e;
     this.bs = { mode: 'enter', atk: '', at: 0, rest: 1, last: '', phase: 1, n: 0, tx: W / 2, sub: 0, minion: 5, dyingT: 0 };
@@ -572,6 +620,13 @@ export class SkyEngine {
           }
           break;
         }
+        case 'orb': {
+          // 내려와 멈춘 뒤 원형탄 → 7초 뒤 위로 퇴장
+          if (e.age < 7) e.y += (64 + e.dir * 6 - e.y) * Math.min(1, dt * 1.5);
+          else e.y -= 50 * dt;
+          e.x = e.x0 + Math.sin(e.age * 1.2 + e.ph) * 8;
+          break;
+        }
         case 'uncle': {
           if (e.y < 62) e.y += 26 * dt;
           else {
@@ -588,18 +643,44 @@ export class SkyEngine {
       if (e.y > 6 && e.y < H - 90 && this.bombT <= 0) {
         e.fire -= dt;
         if (e.fire <= 0) {
-          if (e.kind === 'glasses' && e.pat !== 'dive' && e.pat !== 'swarm') {
-            const a = Math.atan2(this.py - e.y, this.px - e.x);
-            for (let i = -1; i <= 1; i++) this.eb.push({ x: e.x, y: e.y + 6, vx: Math.cos(a + i * 0.22) * 64, vy: Math.sin(a + i * 0.22) * 64, r: 3.5, kind: 'flask', age: 0, spin: 0 });
+          const aim = Math.atan2(this.py - e.y, this.px - e.x);
+          if (e.kind === 'glasses' && e.pat === 'sine') {
+            // 안경 드론: 조준 3방향 보라 구슬
+            for (let i = -1; i <= 1; i++) this.eb.push({ x: e.x, y: e.y + 6, vx: Math.cos(aim + i * 0.22) * 64, vy: Math.sin(aim + i * 0.22) * 64, r: 3.5, kind: 'flask', age: 0, spin: 0 });
             e.fire = rand(2.0, 3.0);
-          } else if (e.kind === 'uncle') {
-            e.burst++;
-            const n = 10;
-            for (let i = 0; i < n; i++) {
-              const a = (i / n) * TAU + e.burst * 0.31;
-              this.eb.push({ x: e.x, y: e.y + 4, vx: Math.cos(a) * 42, vy: Math.sin(a) * 42 + 8, r: 4, kind: 'smell', age: 0, spin: 0 });
+          } else if (e.kind === 'glasses' && e.pat === 'strafe') {
+            // 프로펠러 전투기: 빠른 주황 바늘탄 2연사
+            for (let k = 0; k < 2; k++) this.eb.push({ x: e.x - k * e.dir * 4, y: e.y + 4, vx: Math.cos(aim) * 96, vy: Math.sin(aim) * 96, r: 2.6, kind: 'needle', age: -k * 0.08, spin: 0 });
+            e.fire = rand(1.4, 2.0);
+          } else if (e.kind === 'glasses' && e.pat === 'dive') {
+            // 기계 와이번: 급강하 직전 화염구 1발
+            if (e.burst === 0 && e.age > 0.6) {
+              e.burst = 1;
+              this.eb.push({ x: e.x, y: e.y + 6, vx: Math.cos(aim) * 70, vy: Math.sin(aim) * 70, r: 4, kind: 'fire', age: 0, spin: 0 });
             }
-            e.fire = 2.4;
+            e.fire = 0.2;
+          } else if (e.kind === 'orb') {
+            // 크리스탈 포탑: 회전하는 시안 원형탄
+            e.burst++;
+            const n = 12;
+            for (let i = 0; i < n; i++) {
+              const a = (i / n) * TAU + e.burst * 0.26;
+              this.eb.push({ x: e.x, y: e.y + 2, vx: Math.cos(a) * 46, vy: Math.sin(a) * 46, r: 3.5, kind: 'ring', age: 0, spin: 0 });
+            }
+            e.fire = e.age < 7 ? 1.6 : 99;
+          } else if (e.kind === 'uncle') {
+            // 증기 건십: 초록 대형 원형탄 + 측면 포탑 조준 바늘탄
+            e.burst++;
+            if (e.burst % 2) {
+              const n = 10;
+              for (let i = 0; i < n; i++) {
+                const a = (i / n) * TAU + e.burst * 0.31;
+                this.eb.push({ x: e.x, y: e.y + 4, vx: Math.cos(a) * 40, vy: Math.sin(a) * 40 + 8, r: 4.5, kind: 'smell', age: 0, spin: 0 });
+              }
+            } else {
+              for (const sd of [-1, 1]) for (let i = -1; i <= 1; i++) this.eb.push({ x: e.x + sd * 18, y: e.y + 6, vx: Math.cos(aim + i * 0.16) * 82, vy: Math.sin(aim + i * 0.16) * 82, r: 2.6, kind: 'needle', age: 0, spin: 0 });
+            }
+            e.fire = 1.5;
           } else e.fire = 9;
         }
       }
@@ -618,7 +699,8 @@ export class SkyEngine {
     if (b.mode === 'dying') {
       b.dyingT += dt;
       e.x += Math.sin(b.dyingT * 50) * 0.6;
-      if (Math.random() < 0.35) this.pop(e.x + rand(-20, 20), e.y + rand(-20, 20), true);
+      if (Math.random() < 0.35) this.addBoom(e.x + rand(-40, 40), e.y + rand(-40, 40), rand(0.6, 1.1), 0);
+      if (Math.random() < 0.2) this.debris(e.x + rand(-30, 30), e.y + rand(-30, 30), 4, ['#c02040', '#d8a040', '#5a5a66']);
       if (b.dyingT > 2.4) {
         e.dead = true;
         this.boss = null;
@@ -628,6 +710,8 @@ export class SkyEngine {
           this.parts.push({ x: e.x, y: e.y, vx: Math.cos(a) * rand(60, 200), vy: Math.sin(a) * rand(60, 200), life: 1.2, max: 1.2, col: i % 3 ? '#ff9ec0' : '#fff8d0', size: 3, g: 0 });
         }
         this.flashWhite = 1;
+        for (let i = 0; i < 7; i++) this.addBoom(e.x + rand(-45, 45), e.y + rand(-45, 45), rand(1.0, 1.5), i * 0.07);
+        this.debris(e.x, e.y, 40, ['#c02040', '#d8a040', '#5a5a66', '#ff9ec0']);
         sfx('bossDown');
         for (let i = 0; i < 8; i++) this.items.push({ x: e.x + rand(-30, 30), y: e.y + rand(-20, 10), kind: i % 3 === 0 ? 'strawberry' : 'cookie', age: 0 });
         this.finish(true);
@@ -649,8 +733,8 @@ export class SkyEngine {
     }
     const fast = b.phase === 3 ? 1.25 : 1;
     if (b.mode === 'enter') {
-      e.y += (74 - e.y) * Math.min(1, dt * 1.6) + 10 * dt;
-      if (e.y > 70) {
+      e.y += (88 - e.y) * Math.min(1, dt * 1.6) + 10 * dt;
+      if (e.y > 84) {
         b.mode = 'idle';
         b.rest = 1;
         this.bossSay('뽀뽀괴물 등장!', '#ff9ec0');
@@ -659,7 +743,7 @@ export class SkyEngine {
     }
     if (b.mode === 'idle') {
       e.x = W / 2 + Math.sin(e.age * 0.9) * 50;
-      e.y += (74 + Math.sin(e.age * 1.7) * 5 - e.y) * Math.min(1, dt * 4);
+      e.y += (88 + Math.sin(e.age * 1.7) * 5 - e.y) * Math.min(1, dt * 4);
       b.rest -= dt;
       if (b.minion > 0) b.minion -= dt;
       if (b.phase >= 2 && b.minion <= 0) {
@@ -735,9 +819,9 @@ export class SkyEngine {
               this.eb.push({ x: e.x, y: e.y, vx: Math.cos(a) * 58, vy: Math.sin(a) * 58 - 14, r: 3.5, kind: 'heart', age: 0, spin: 0 });
             }
           }
-          e.y += (74 - e.y) * Math.min(1, dt * 2.4);
+          e.y += (88 - e.y) * Math.min(1, dt * 2.4);
         } else {
-          e.y = 74;
+          e.y = 88;
           done(0.8);
         }
         break;
@@ -788,7 +872,8 @@ export class SkyEngine {
 
   private updateBullets(dt: number): void {
     for (const b of this.pb) {
-      if (b.kind === 'imo') {
+      if (b.kind === 'elec') b.x += Math.sin(b.life * 40) * 1.2; // 지그재그 전기
+      if (b.kind === 'imo' || b.kind === 'elec') {
         const tgt = this.nearestEnemy(b.x, b.y);
         if (tgt) {
           const sp = Math.hypot(b.vx, b.vy);
@@ -871,6 +956,9 @@ export class SkyEngine {
       p.life -= dt;
     }
     this.parts = this.parts.filter((p) => p.life > 0);
+    for (const b of this.booms) b.age += dt;
+    this.booms = this.booms.filter((b) => b.age < b.delay + 0.5);
+    if (this.chargeFlash > 0) this.chargeFlash -= dt;
     for (const p of this.pops) p.age += dt;
     this.pops = this.pops.filter((p) => p.age < 0.28);
     for (const f of this.floats) {
@@ -882,6 +970,20 @@ export class SkyEngine {
 
   private pop(x: number, y: number, big: boolean): void {
     this.pops.push({ x, y, age: 0, big });
+  }
+  /** 다단계 폭발 (fx-explosion 4프레임: 섬광 → 불덩이 → 파편·연기 → 잔연기) */
+  private addBoom(x: number, y: number, scale: number, delay: number): void {
+    if (!this.a.v2['stage1/fx-explosion']) {
+      this.pop(x, y, scale > 0.7);
+      return;
+    }
+    this.booms.push({ x, y, age: 0, delay, scale });
+  }
+  private debris(x: number, y: number, n: number, col: string[]): void {
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, TAU); const sp = rand(40, 130);
+      this.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30, life: rand(0.6, 1.1), max: 1.1, col: col[i % col.length], size: Math.random() < 0.4 ? 3 : 2, g: 180 });
+    }
   }
   private floatText(x: number, y: number, text: string, col: string): void {
     this.floats.push({ x, y, text, age: 0, col });
@@ -928,7 +1030,22 @@ export class SkyEngine {
     this.comboT = 2.2;
     this.maxCombo = Math.max(this.maxCombo, this.combo);
     this.addScore(e.score, e.x, e.y - 8);
-    this.pop(e.x, e.y, e.kind === 'uncle');
+    if (e.kind === 'uncle') {
+      // 중형: 연쇄 폭발 + 파편 + 화면 흔들림
+      for (let i = 0; i < 5; i++) this.addBoom(e.x + rand(-18, 18), e.y + rand(-14, 14), rand(0.5, 0.8), i * 0.09);
+      this.addBoom(e.x, e.y, 1.0, 0.45);
+      this.debris(e.x, e.y, 18, ['#8a6a3a', '#5a5a66', '#d8a040', '#3a2a2a']);
+      this.shake = Math.max(this.shake, 0.35);
+      sfx('bossHit', 0.6);
+    } else if (e.kind === 'orb') {
+      this.addBoom(e.x, e.y, 0.7, 0);
+      this.addBoom(e.x + rand(-6, 6), e.y + rand(-6, 6), 0.5, 0.12);
+      this.debris(e.x, e.y, 10, ['#c080ff', '#d8a040', '#5a3a8a']);
+    } else {
+      this.addBoom(e.x, e.y, 0.55, 0);
+      this.debris(e.x, e.y, 5, ['#d8a040', '#5a5a66']);
+    }
+    this.pop(e.x, e.y, false);
     sfx('puff', 0.4);
     for (let i = 0; i < 8; i++) this.parts.push({ x: e.x, y: e.y, vx: rand(-80, 80), vy: rand(-80, 80), life: 0.5, max: 0.5, col: e.kind === 'uncle' ? '#f6f2e6' : '#b48af0', size: 2, g: 0 });
     // 드롭
@@ -952,6 +1069,11 @@ export class SkyEngine {
         const rr = b.r * (b.kind === 'charge' ? 1 : 1) + e.hr;
         if ((b.x - e.x) ** 2 + (b.y - e.y) ** 2 < rr * rr) {
           this.damage(e, b.dmg, false);
+          if (b.kind === 'potion') {
+            for (const o of this.en) if (o !== e && (o.x - b.x) ** 2 + (o.y - b.y) ** 2 < 26 * 26) this.damage(o, 2, false);
+            this.addBoom(b.x, b.y, 0.35, 0);
+            for (let i = 0; i < 10; i++) this.parts.push({ x: b.x, y: b.y, vx: rand(-70, 70), vy: rand(-70, 70), life: 0.45, max: 0.45, col: i % 2 ? '#a6f040' : '#ff9ec0', size: 2, g: 0 });
+          }
           if (b.pierce) b.hit.add(e);
           else {
             b.life = 0;
@@ -1021,22 +1143,28 @@ export class SkyEngine {
     g.save();
     g.translate(ox, oy);
 
-    // 하늘
-    const sy = Math.floor(this.scroll);
-    g.drawImage(this.a.img['sky-tile'], 0, sy - H);
-    g.drawImage(this.a.img['sky-tile'], 0, sy);
-    for (const c of this.clouds) {
-      const im = this.a.img[`cloud-${c.i}` as ImgName];
-      g.globalAlpha = 0.9;
-      g.drawImage(im, Math.floor(c.x), Math.floor(c.y));
-      g.globalAlpha = 1;
+    // 하늘 (스테이지 1 패럴랙스 — 에셋이 없으면 기존 하늘)
+    if (this.a.v2['stage1/bg-backdrop']) this.drawStage1();
+    else {
+      const sy = Math.floor(this.scroll);
+      g.drawImage(this.a.img['sky-tile'], 0, sy - H);
+      g.drawImage(this.a.img['sky-tile'], 0, sy);
+      for (const c of this.clouds) {
+        const im = this.a.img[`cloud-${c.i}` as ImgName];
+        g.globalAlpha = 0.9;
+        g.drawImage(im, Math.floor(c.x), Math.floor(c.y));
+        g.globalAlpha = 1;
+      }
     }
 
     // 아이템
     for (const it of this.items) {
-      const im = it.kind === 'star' ? this.a.img['fx-star'] : this.a.img[it.kind];
       const bob = Math.round(Math.sin(it.age * 6) * 1);
-      g.drawImage(im, Math.floor(it.x - im.width / 2), Math.floor(it.y - im.height / 2) + bob);
+      if (this.a.v2['stage1/bg-backdrop']) this.drawItem(it.kind, it.x, it.y + bob, it.age);
+      else {
+        const im = it.kind === 'star' ? this.a.img['fx-star'] : this.a.img[it.kind];
+        g.drawImage(im, Math.floor(it.x - im.width / 2), Math.floor(it.y - im.height / 2) + bob);
+      }
     }
 
     // 적
@@ -1093,13 +1221,38 @@ export class SkyEngine {
       g.fillRect(Math.floor(p.x), Math.floor(p.y), p.size, p.size);
     }
     g.globalAlpha = 1;
-    for (const p of this.pops) {
-      const f = p.age < 0.14 ? 0 : 1;
-      const s = p.big ? 2 : 1;
-      g.drawImage(this.a.pop.canvas, f * 14, 0, 14, 14, Math.floor(p.x - 7 * s), Math.floor(p.y - 7 * s), 14 * s, 14 * s);
+    const boomImg = this.a.v2['stage1/fx-explosion'];
+    if (boomImg) {
+      for (const b of this.booms) {
+        const t = b.age - b.delay;
+        if (t < 0) continue;
+        const f = Math.min(3, Math.floor(t / 0.12));
+        const sz = 80 * b.scale * 0.5;
+        g.drawImage(boomImg, f * 80, 0, 80, 80, b.x - sz / 2, b.y - sz / 2, sz, sz);
+      }
+    } else {
+      for (const p of this.pops) {
+        const f = p.age < 0.14 ? 0 : 1;
+        const s = p.big ? 2 : 1;
+        g.drawImage(this.a.pop.canvas, f * 14, 0, 14, 14, Math.floor(p.x - 7 * s), Math.floor(p.y - 7 * s), 14 * s, 14 * s);
+      }
+    }
+    if (this.chargeFlash > 0) {
+      // 차지샷 발사 섬광: 총구 원형 플래시 + 위로 뻗는 광선 줄기
+      const k = this.chargeFlash / 0.25;
+      g.globalAlpha = k;
+      g.fillStyle = '#fff8d0';
+      g.beginPath(); g.arc(this.px, this.py - 20, 6 + (1 - k) * 18, 0, TAU); g.fill();
+      g.fillStyle = '#ffffff';
+      g.fillRect(this.px - 3, 0, 6, this.py - 20);
+      g.fillStyle = '#ffe34a';
+      g.fillRect(this.px - 6, 0, 2, this.py - 24); g.fillRect(this.px + 4, 0, 2, this.py - 24);
+      g.globalAlpha = 1;
     }
     g.restore();
 
+    this.drawWarning();
+    this.drawBombCutin();
     this.drawHud();
     if (this.flashWhite > 0) {
       g.globalAlpha = Math.min(0.85, this.flashWhite);
@@ -1114,6 +1267,124 @@ export class SkyEngine {
       g.globalAlpha = 1;
     }
     this.drawBanner();
+  }
+
+  // ───────────── 스테이지 1 배경 ─────────────
+  private spawnProp(entry: [number, V2Name, number, number, number], y?: number): void {
+    const [, name, layer, fx, vx] = entry;
+    const im = this.a.v2[name];
+    if (!im) return;
+    const L = LAYER[layer];
+    const h = im.height * L.k;
+    this.props.push({ name, x: fx * W, y: y ?? -h / 2 - 4, v: L.v, k: L.k, a: L.a, vx, layer });
+  }
+  private updateProps(dt: number): void {
+    // 대본: 60초마다 반복. 시작 화면이 비지 않도록 처음에 미리 배치
+    if (this.propIdx === 0 && this.propLoop === 0 && this.props.length === 0) {
+      this.spawnProp(STAGE1_PROPS[0], 70);
+      this.spawnProp(STAGE1_PROPS[1], 20);
+      this.spawnProp([0, 'stage1/island-small', 0, 0.82, 0], 190);
+      this.spawnProp([0, 'stage1/cloud-big', 2, 0.9, 0], 250);
+    }
+    const tt = this.t - this.propLoop * 60;
+    while (this.propIdx < STAGE1_PROPS.length && STAGE1_PROPS[this.propIdx][0] <= tt) this.spawnProp(STAGE1_PROPS[this.propIdx++]);
+    if (tt >= 60) { this.propLoop++; this.propIdx = 0; }
+    for (const p of this.props) { p.y += p.v * dt; p.x += p.vx * dt; }
+    this.props = this.props.filter((p) => p.y < H + 120);
+  }
+  private drawStage1(): void {
+    const g = this.g;
+    const bd = this.a.v2['stage1/bg-backdrop']!;
+    // 원경 하늘: 아주 느리게 (360×640 → 180×320)
+    const off = (this.t * 9) % H;
+    g.drawImage(bd, 0, off - H, W, H);
+    g.drawImage(bd, 0, off, W, H);
+    // 원경 → 중경 → 근경 구름 순서
+    for (const layer of [0, 1, 2]) {
+      for (const p of this.props) {
+        if (p.layer !== layer) continue;
+        const im = this.a.v2[p.name]!;
+        const w = im.width * p.k, h = im.height * p.k;
+        g.globalAlpha = p.a;
+        g.drawImage(im, p.x - w / 2, p.y - h / 2, w, h);
+      }
+      g.globalAlpha = 1;
+      if (layer === 0) {
+        // 원경 위로 보랏빛 대기(깊이감)
+        g.fillStyle = 'rgba(40, 20, 70, 0.28)';
+        g.fillRect(0, 0, W, H);
+      }
+    }
+    // 탄막 가독성: 배경 전체를 살짝 어둡게 (적 탄은 밝은 코어로 대비)
+    g.fillStyle = 'rgba(16, 8, 34, 0.22)';
+    g.fillRect(0, 0, W, H);
+  }
+
+  private drawWarning(): void {
+    if (this.over || this.t < BOSS_WARN_T || this.t > BOSS_T + 0.6) return;
+    const g = this.g;
+    const k = Math.sin((this.t - BOSS_WARN_T) * 9) * 0.5 + 0.5;
+    g.fillStyle = `rgba(200, 20, 50, ${0.12 + k * 0.12})`;
+    g.fillRect(0, 0, W, H);
+    for (const y of [70, 236]) {
+      g.fillStyle = '#1a0610';
+      g.fillRect(0, y, W, 16);
+      g.fillStyle = '#e02040';
+      for (let x = -16 + ((this.t * 60) % 16); x < W; x += 16) { g.beginPath(); g.moveTo(x, y + 16); g.lineTo(x + 8, y); g.lineTo(x + 14, y); g.lineTo(x + 6, y + 16); g.fill(); }
+    }
+    this.text('WARNING', W / 2, 150, k > 0.5 ? '#ff4060' : '#ffe0e8', 'center', 22);
+    this.text('거대 비행요새 접근 중', W / 2, 176, '#ffe0e8', 'center', 11);
+  }
+
+  private drawBombCutin(): void {
+    const ci = this.a.v2['chars/gona/cutin'];
+    if (!ci || this.bombT <= 0.75) return;
+    const g = this.g;
+    const t = 1.7 - this.bombT; // 0 → 0.95
+    g.fillStyle = 'rgba(10, 4, 24, 0.55)';
+    g.fillRect(0, 0, W, H);
+    const h = W / 2;
+    const x = t < 0.2 ? W - (t / 0.2) * W : t > 0.75 ? -((t - 0.75) / 0.2) * W : 0;
+    const y = 96;
+    g.fillStyle = '#ffe34a'; g.fillRect(0, y - 3, W, 2); g.fillRect(0, y + h + 1, W, 2);
+    g.drawImage(ci, x, y, W, h);
+    this.text('고나의 대폭발!', W / 2 + x, y + h + 8, '#ffe34a', 'center', 16);
+  }
+
+  /** 아케이드 아이템: P(파워 보석) · 점수 메달 · 체력 하트 · 폭탄 */
+  private drawItem(kind: Item['kind'], x: number, y: number, age: number): void {
+    const g = this.g;
+    const blink = Math.floor(age * 8) % 2;
+    if (kind === 'star') {
+      g.fillStyle = '#1a1226'; g.beginPath(); g.moveTo(x, y - 7); g.lineTo(x + 7, y); g.lineTo(x, y + 7); g.lineTo(x - 7, y); g.fill();
+      g.fillStyle = blink ? '#58e0ff' : '#2a8af0'; g.beginPath(); g.moveTo(x, y - 6); g.lineTo(x + 6, y); g.lineTo(x, y + 6); g.lineTo(x - 6, y); g.fill();
+      this.text('P', x, y - 5, '#ffffff', 'center', 11);
+    } else if (kind === 'cookie') {
+      g.fillStyle = '#1a1226'; g.beginPath(); g.arc(x, y, 6, 0, TAU); g.fill();
+      g.fillStyle = blink ? '#ffe34a' : '#e8a92c'; g.beginPath(); g.arc(x, y, 5, 0, TAU); g.fill();
+      g.fillStyle = '#fff6c0'; g.fillRect(x - 2, y - 3, 2, 2);
+      g.fillStyle = '#a8731a'; g.fillRect(x - 1, y - 2, 2, 5);
+    } else {
+      const im = this.a.img[kind === 'strawberry' ? 'icon-heart' : 'icon-bomb'];
+      g.drawImage(im, x - im.width / 2, y - im.height / 2);
+      if (blink) { g.globalAlpha = 0.4; g.drawImage(whiteOf(this.a, im), x - im.width / 2, y - im.height / 2); g.globalAlpha = 1; }
+    }
+  }
+
+  /** v2 스프라이트(2배 격자)를 0.5배로 — 회전·피격 번쩍 포함 */
+  private drawV2(im: HTMLImageElement, cx: number, cy: number, white: boolean, rot = 0, sx = 0, sw = im.width, alpha = 1): void {
+    const g = this.g;
+    const w = sw * 0.5, h = im.height * 0.5;
+    g.save();
+    g.translate(cx, cy);
+    if (rot) g.rotate(rot);
+    g.globalAlpha = alpha;
+    g.drawImage(im, sx, 0, sw, im.height, -w / 2, -h / 2, w, h);
+    if (white && (w < 60 || Math.floor(this.t * 30) % 3 === 0)) {
+      g.globalAlpha = w < 60 ? 0.55 : 0.3; // 큰 적(보스·건십)은 약하게, 깜박이듯
+      g.drawImage(whiteOf(this.a, im), sx, 0, sw, im.height, -w / 2, -h / 2, w, h);
+    }
+    g.restore();
   }
 
   private drawSheet(sh: Sheet, frame: number, cx: number, cy: number, white = false, flip = false): void {
@@ -1139,6 +1410,41 @@ export class SkyEngine {
 
   private drawEnemy(e: Enemy): void {
     const white = e.flash > 0;
+    const v = this.a.v2;
+    if (e.kind === 'glasses' || e.kind === 'orb') {
+      const name: V2Name = e.kind === 'orb' ? 'stage1/enemy-orb' : e.pat === 'strafe' ? 'stage1/enemy-fighter' : e.pat === 'dive' ? 'stage1/enemy-wyvern' : 'stage1/enemy-drone';
+      const im = v[name];
+      if (im) {
+        let rot = 0;
+        if (e.pat === 'strafe') rot = -e.dir * Math.PI / 2;                                   // 진행 방향으로 기수
+        else if (e.pat === 'dive' && e.vy !== 0) rot = Math.atan2(e.vy, e.vx) - Math.PI / 2;
+        const bob = e.pat === 'sine' || e.pat === 'swarm' ? Math.sin(e.age * 8) * 1.2 : 0;
+        this.drawV2(im, e.x, e.y + bob, white, rot);
+        if (e.kind === 'orb') {
+          const g = this.g; // 발사 직전 크리스탈 발광
+          if (e.fire < 0.35 && e.age < 7) { g.globalAlpha = 0.6; g.fillStyle = '#d8b8ff'; g.beginPath(); g.arc(e.x, e.y, 5 + (0.35 - e.fire) * 14, 0, TAU); g.fill(); g.globalAlpha = 1; }
+        }
+        return;
+      }
+    }
+    if (e.kind === 'uncle' && v['stage1/enemy-gunship']) {
+      this.drawV2(v['stage1/enemy-gunship']!, e.x, e.y, white);
+      this.hpBar(e.x - 14, e.y + 30, 28, e.hp / e.max);
+      return;
+    }
+    if (e.kind === 'boss' && v['stage1/boss']) {
+      const b = this.bs!;
+      const im = v['stage1/boss']!;
+      const fw = im.width / 2;
+      const shakeX = b.mode === 'dying' ? Math.sin(e.age * 60) * 1.5 : 0;
+      this.drawV2(im, e.x + shakeX, e.y, white, 0, b.phase >= 2 || b.mode === 'dying' ? fw : 0, fw);
+      if (b.mode === 'atk' && b.atk === 'dash' && b.at < 0.9) {
+        const g = this.g;
+        g.fillStyle = Math.floor(b.at * 10) % 2 ? '#ff4f86' : '#fff';
+        g.fillRect(Math.floor(b.tx - 1), Math.floor(e.y + 50), 3, H - Math.floor(e.y) - 90);
+      }
+      return;
+    }
     if (e.kind === 'glasses') {
       const f = e.fire < 0.4 && e.pat !== 'dive' ? 2 : Math.floor(e.age * 6) % 2;
       this.drawSheet(this.a.glasses, f, e.x, e.y + Math.round(Math.sin(e.age * 8)), white);
@@ -1184,6 +1490,22 @@ export class SkyEngine {
 
   private drawEBullet(b: EBullet): void {
     const g = this.g;
+    if (b.age < 0) return;
+    if (this.a.v2['stage1/bg-backdrop']) {
+      const L = bulletLooks();
+      const look: BulletLook = b.kind === 'flask' ? 'orbPurple' : b.kind === 'smell' ? 'orbGreen' : b.kind === 'heart' ? 'heart' : b.kind === 'wave' ? 'orbViolet' : b.kind === 'needle' ? 'needle' : b.kind === 'ring' ? 'orbCyan' : 'fireball';
+      const c = L[look];
+      const k = (b.r * 2 + 2.5) / Math.max(c.width, c.height) * (look === 'needle' ? 1.6 : 1);
+      const w = c.width * k, h = c.height * k;
+      const pulse = Math.floor(b.age * 12) % 2;
+      g.save();
+      g.translate(b.x, b.y);
+      if (look === 'needle' || look === 'fireball') g.rotate(Math.atan2(b.vy, b.vx) - Math.PI / 2);
+      g.drawImage(c, -w / 2, -h / 2, w, h);
+      if (pulse) { g.globalAlpha = 0.35; g.fillStyle = '#ffffff'; g.fillRect(-w / 4, -h / 4, w / 2, h / 2); }
+      g.restore();
+      return;
+    }
     if (b.kind === 'flask') {
       const fr = Math.floor(b.age * 8) % 3;
       g.drawImage(this.a.flask.canvas, fr * 12, 0, 12, 16, Math.floor(b.x - 6), Math.floor(b.y - 8), 12, 16);
@@ -1195,6 +1517,35 @@ export class SkyEngine {
 
   private drawPBullet(b: PBullet): void {
     const g = this.g;
+    if (b.kind === 'elec') {
+      g.strokeStyle = '#fff6a0'; g.lineWidth = 1.2; g.beginPath();
+      g.moveTo(b.x, b.y - 5); g.lineTo(b.x + 2, b.y - 1); g.lineTo(b.x - 2, b.y + 1); g.lineTo(b.x, b.y + 5); g.stroke();
+      g.fillStyle = '#ffe34a'; g.fillRect(b.x - 1, b.y - 1, 2, 2);
+      return;
+    }
+    if (b.kind === 'potion') {
+      g.fillStyle = '#1a0a1e'; g.beginPath(); g.arc(b.x, b.y, 4, 0, TAU); g.fill();
+      g.fillStyle = '#6ad040'; g.beginPath(); g.arc(b.x, b.y, 3, 0, TAU); g.fill();
+      g.fillStyle = '#e8ffd0'; g.fillRect(b.x - 1.5, b.y - 1.5, 1.5, 1.5);
+      g.fillStyle = '#8a5a2a'; g.fillRect(b.x - 1, b.y - 6, 2, 2);
+      return;
+    }
+    if (b.kind === 'lance') {
+      g.fillStyle = '#1a1226'; g.fillRect(b.x - 1.5, b.y - 9, 3, 16);
+      g.fillStyle = '#d8e8ff'; g.fillRect(b.x - 0.5, b.y - 9, 1, 14);
+      g.fillStyle = '#ffd860'; g.fillRect(b.x - 1.5, b.y + 4, 3, 2);
+      return;
+    }
+    if (b.kind === 'gona' && this.a.v2['stage1/bg-backdrop']) {
+      const tilt = Math.atan2(b.vy, b.vx) + Math.PI / 2;
+      g.save(); g.translate(b.x, b.y); g.rotate(tilt);
+      g.globalAlpha = 0.45; g.fillStyle = '#3aa8ff'; g.fillRect(-3, -7, 6, 14);
+      g.globalAlpha = 1; g.fillStyle = '#9ef0ff'; g.fillRect(-1.5, -6, 3, 12);
+      g.fillStyle = '#ffffff'; g.fillRect(-0.5, -6, 1, 10);
+      g.fillStyle = '#ffe34a'; g.fillRect(-1.5, -7, 3, 2);
+      g.restore();
+      return;
+    }
     const key: ImgName = b.kind === 'gona' ? 'shot-gona' : b.kind === 'charge' ? 'shot-charge' : b.kind === 'heart' ? 'shot-heart' : 'shot-imo';
     const im = this.a.img[key];
     const s = Math.max(1, Math.round(b.scale));
@@ -1211,6 +1562,21 @@ export class SkyEngine {
 
   private drawCompanion(): void {
     const g = this.g;
+    const fly = this.a.v2[`chars/${this.fam}/fly` as V2Name];
+    if (fly) {
+      // 직업별 비행 스프라이트 (0·1 비행, 2·3 공격/방패)
+      const attacking = this.cKick > 0.15 || (this.fam === 'halabeoji' && this.shield > 0);
+      const f = (attacking ? 2 : 0) + (Math.floor(this.t * (attacking ? 10 : 6)) % 2);
+      const bob = Math.sin(this.t * 4 + 1) * 1.5;
+      g.drawImage(fly, f * 88, 0, 88, 112, this.cx - 22, this.cy - 38 + bob - this.cKick * 2, 44, 56);
+      if (this.fam !== 'imo' && this.fam !== 'samchon' && this.cCd > 0 && this.cCd < 20) {
+        const full = this.fam === 'mom' ? 1.45 : this.fam === 'dad' ? 2.5 : this.fam === 'halmeoni' ? 1.1 : 7;
+        const k = 1 - clamp(this.cCd / full, 0, 1);
+        g.fillStyle = '#1a1226'; g.fillRect(Math.floor(this.cx - 8), Math.floor(this.cy + 16), 17, 3);
+        g.fillStyle = k >= 1 ? '#ffe34a' : '#fff8d0'; g.fillRect(Math.floor(this.cx - 7), Math.floor(this.cy + 17), Math.round(15 * k), 1);
+      }
+      return;
+    }
     const im = this.a.img[`family-${this.fam}` as ImgName];
     const bob = Math.round(Math.sin(this.t * 4 + 1) * 1.5);
     const kick = this.cKick;
@@ -1380,27 +1746,38 @@ export class SkyEngine {
 
   private drawHud(): void {
     const g = this.g;
-    // 목숨 하트
+    // 상단 HUD 띠 (전투 화면과 분리된 아케이드 패널)
+    g.fillStyle = '#120a26';
+    g.fillRect(0, 0, W, 25);
+    g.fillStyle = '#e8b53c'; g.fillRect(0, 25, W, 1);
+    g.fillStyle = '#7a4a14'; g.fillRect(0, 26, W, 1);
     for (let i = 0; i < MAX_HP; i++) {
       const im = this.a.img[i < this.hp ? 'icon-heart' : 'icon-heart-empty'];
-      g.drawImage(im, 4 + i * 11, 4);
+      g.drawImage(im, 4 + i * 10, 3);
     }
-    for (let i = 0; i < this.bombs; i++) g.drawImage(this.a.img['icon-bomb'], 4 + i * 11, 15);
-    this.text(String(this.score).padStart(8, '0'), W - 4, 3, '#fff7dc', 'right');
-    this.text(`Lv${this.power}`, W - 4, 15, '#ffe34a', 'right', 11);
+    for (let i = 0; i < this.bombs; i++) g.drawImage(this.a.img['icon-bomb'], 4 + i * 10, 14);
+    this.text(String(this.score).padStart(8, '0'), W - 4, 2, '#ffe9a8', 'right');
+    // 무기 레벨 칸 + 차지 게이지
+    for (let i = 0; i < 4; i++) { g.fillStyle = i < this.power ? '#58e0ff' : '#2a3060'; g.fillRect(W - 46 + i * 7, 16, 5, 5); }
+    this.text('P', W - 54, 13, '#58e0ff', 'left', 11);
+    if (this.charging) {
+      const k = Math.min(1, this.charge);
+      g.fillStyle = '#2a3060'; g.fillRect(64, 18, 40, 3);
+      g.fillStyle = k >= 1 ? '#ff6f9f' : '#ffe34a'; g.fillRect(64, 18, Math.round(40 * k), 3);
+    }
     const mult = Math.min(5, 1 + Math.floor(this.combo / 5));
-    if (this.combo >= 3) this.text(`${this.combo} COMBO${mult > 1 ? ` x${mult}` : ''}`, 4, this.boss ? 40 : 27, '#ff9ec0', 'left', 11);
-    // 보스 체력
+    if (this.combo >= 3) this.text(`${this.combo} HIT${mult > 1 ? ` x${mult}` : ''}`, 4, this.boss ? 40 : 30, '#ff9ec0', 'left', 11);
+    // 보스 체력 (이름판 + 단계 칸)
     if (this.boss && this.bs) {
       const f = clamp(this.boss.hp / this.boss.max, 0, 1);
-      g.fillStyle = '#3b2a3f';
-      g.fillRect(14, 30, W - 28, 7);
-      g.fillStyle = '#fff7dc';
-      g.fillRect(15, 31, W - 30, 5);
+      g.fillStyle = '#120a26'; g.fillRect(10, 28, W - 20, 10);
+      g.fillStyle = '#e8b53c'; g.fillRect(10, 38, W - 20, 1);
+      g.fillStyle = '#3a1028'; g.fillRect(46, 31, W - 60, 5);
       g.fillStyle = this.bs.phase === 1 ? '#ff6f9f' : this.bs.phase === 2 ? '#ff4f86' : '#e0482c';
-      g.fillRect(15, 31, Math.round((W - 30) * f), 5);
+      g.fillRect(46, 31, Math.round((W - 60) * f), 5);
+      g.fillStyle = '#120a26'; for (const q of [1 / 3, 2 / 3]) g.fillRect(46 + Math.round((W - 60) * q), 31, 1, 5);
+      this.text('BOSS', 12, 28, '#ff9ec0', 'left', 11);
     }
-    // 하단 동료 이름
   }
 
   private drawBanner(): void {
