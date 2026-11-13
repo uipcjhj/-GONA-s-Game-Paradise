@@ -172,7 +172,7 @@ export default function App() {
 
       {result ? (
         <div className="p-reg" style={{ top: 48, zIndex: 40 }}>
-          <Result view={result} onRetry={(gid, url) => { dismissResult(); window.location.href = launch(gid, url).url; }} onMap={() => { dismissResult(); goTab('map'); }} onRanking={() => { dismissResult(); goTab('ranking'); }} />
+          <Result view={result} onRetry={(gid, url) => { window.location.href = launch(gid, url).url; /* 화면을 닫지 않고 이동: 닫으면 뒤로가기 레이어가 history.back() 을 호출해 이동이 취소됨 */ }} onMap={() => { dismissResult(); goTab('map'); }} onRanking={() => { dismissResult(); goTab('ranking'); }} />
         </div>
       ) : null}
       <BottomNav tab={tab} onTab={goTab} />

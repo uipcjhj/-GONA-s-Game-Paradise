@@ -1,4 +1,5 @@
 import type { Island } from '../types';
+import { FOOD_URL } from '../platform/games';
 import { PLAZA } from './world';
 
 /**
@@ -12,7 +13,7 @@ export const ISLANDS: Island[] = [
     gameTitle: "GONA's Food Adventure",
     tagline: '간식을 먹으며 달리는 고나의 대모험!',
     status: 'open',
-    url: 'https://uipcjhj.github.io/GoNa/',
+    url: FOOD_URL, // 운영 주소(기본) — 개발 테스트에서만 VITE_FOOD_URL 로 로컬/개발 주소를 지정
     map: {
       hit: { x: 20, y: 225, w: 465, h: 435 },
       path: [PLAZA, { x: 450, y: 760 }, { x: 385, y: 700 }, { x: 330, y: 645 }, { x: 280, y: 590 }, { x: 305, y: 545 }],

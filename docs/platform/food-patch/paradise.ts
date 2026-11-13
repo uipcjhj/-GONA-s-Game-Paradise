@@ -166,7 +166,9 @@ export function initParadise(deps: ParadiseDeps): { active: boolean; returnUrl: 
     btn.href = session.returnUrl;
     btn.textContent = '🏝 게임천국으로 돌아가기';
     btn.setAttribute('data-gp-return', '1');
-    btn.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:99999;display:none;padding:10px 14px;font:700 13px Galmuri11,sans-serif;color:#3b1b5e;background:#fff4d6;border:3px solid #3b1b5e;text-decoration:none;box-shadow:0 3px 0 #3b1b5e;';
+    btn.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:99999;display:none;pointer-events:auto;touch-action:manipulation;padding:10px 14px;font:700 13px Galmuri11,sans-serif;color:#3b1b5e;background:#fff4d6;border:3px solid #3b1b5e;text-decoration:none;box-shadow:0 3px 0 #3b1b5e;';
+    // #ui 는 pointer-events:none 이라 버튼에서 켜 주고, 버튼 터치가 게임(점프/탭)으로 새지 않게 막음
+    for (const ev of ['pointerdown', 'touchstart', 'click']) btn.addEventListener(ev, (e) => e.stopPropagation());
     deps.parent.appendChild(btn);
     const show = (): void => {
       flush();

@@ -28,7 +28,13 @@ export interface GameDef {
  * Food 연동 상태. Food 쪽 최소 패치(docs/platform/food-patch)가 정식 배포되기 전에는 'pending'.
  * 패치 배포 후 이 값을 'live' 로 바꾸면 PLAY 가 세션을 만들어 `?gp=` 로 실행한다.
  */
-export const FOOD_LINK: 'pending' | 'live' = 'pending';
+export const PROD_FOOD_URL = 'https://uipcjhj.github.io/GoNa/';
+/**
+ * 개발 테스트에서만 켠다: 빌드 시 VITE_FOOD_LINK=live **그리고** VITE_FOOD_URL 이 운영 주소가 아닌 개발/로컬 주소일 때만 'live'.
+ * 운영 주소(PROD_FOOD_URL)를 대상으로는 어떤 설정이어도 활성화되지 않는다 — Food 패치 정식 배포 후 아래 조건을 수정할 것.
+ */
+export const FOOD_URL: string = (import.meta.env.VITE_FOOD_URL as string | undefined) || PROD_FOOD_URL;
+export const FOOD_LINK: 'pending' | 'live' = import.meta.env.VITE_FOOD_LINK === 'live' && FOOD_URL !== PROD_FOOD_URL ? 'live' : 'pending';
 
 export const GAMES: GameDef[] = [
   {
