@@ -17,15 +17,18 @@ const text = (n: Notice): { t: string; s?: string } => {
 export default function NoticeHost() {
   const { notices, dismissNotice } = usePlayer();
   const cur = notices[0];
+  // 같은 종류가 연달아 쌓이면(업적·도감·칭호) 한 번에 묶어서 보여줌
+  let run = 1;
+  while (cur && cur.kind !== 'levelup' && notices[run] && notices[run].kind === cur.kind && cur.kind !== 'attendance' && cur.kind !== 'mission') run += 1;
   useEffect(() => {
     if (!cur || cur.kind === 'levelup') return;
-    const id = window.setTimeout(dismissNotice, 2300);
+    const id = window.setTimeout(() => dismissNotice(run), 2300);
     return () => window.clearTimeout(id);
-  }, [cur, dismissNotice]);
+  }, [cur, dismissNotice, run]);
   if (!cur) return null;
   if (cur.kind === 'levelup') {
     return (
-      <div className="p-lvup" role="alertdialog" aria-label="레벨 업" onClick={dismissNotice}>
+      <div className="p-lvup" role="alertdialog" aria-label="레벨 업" onClick={() => dismissNotice(1)}>
         <div className="box">
           <h2>LEVEL UP!</h2>
           <div className="lv">Lv {cur.from} → Lv {cur.to}</div>
@@ -36,9 +39,15 @@ export default function NoticeHost() {
     );
   }
   const t = text(cur);
+  if (run > 1) {
+    const names = notices.slice(0, run).map((n) => text(n).t.replace(/^\S+ [^!]*! ?/, '') || text(n).s || '').filter(Boolean);
+    const label: Record<string, string> = { achievement: '🏆 업적', codex: '📖 도감', title: '🎖 칭호' };
+    t.t = `${label[cur.kind] ?? ''} ${run}개 ${cur.kind === 'achievement' ? '달성!' : cur.kind === 'codex' ? '등록!' : '획득!'}`;
+    t.s = names.slice(0, 3).join(' · ') + (run > 3 ? ' …' : '');
+  }
   return (
     <div className="p-notice-host" role="status">
-      <div className="p-ntoast" onClick={dismissNotice}>
+      <div className="p-ntoast" onClick={() => dismissNotice(run)}>
         <div>{t.t}{t.s && <small>{t.s}</small>}</div>
       </div>
     </div>

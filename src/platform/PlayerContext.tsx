@@ -23,7 +23,7 @@ interface Ctx {
   /** false 면 이 브라우저에서 저장이 안 됨 */
   persistent: boolean;
   notices: E.Notice[];
-  dismissNotice(): void;
+  dismissNotice(count?: number): void;
   result: ResultView | null;
   dismissResult(): void;
   retryConsume(): void;
@@ -181,7 +181,7 @@ export function PlayerProvider({ children, storage }: { children: ReactNode; sto
       loadStatus,
       persistent,
       notices,
-      dismissNotice: () => setNotices((n) => n.slice(1)),
+      dismissNotice: (count = 1) => setNotices((n) => n.slice(count)),
       result,
       dismissResult: () => setResult(null),
       retryConsume: () => {

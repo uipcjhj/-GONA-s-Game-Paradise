@@ -14,7 +14,13 @@ export function browserStorage(): KV | null {
     const s = window.localStorage;
     s.setItem('gp.v1.__probe', '1');
     s.removeItem('gp.v1.__probe');
-    return s;
+    return {
+      getItem: (k) => s.getItem(k),
+      setItem: (k, v) => s.setItem(k, v),
+      removeItem: (k) => s.removeItem(k),
+      /** localStorage 에는 키 나열이 없어 key(i) 로 직접 모음 */
+      keys: () => Array.from({ length: s.length }, (_, i) => s.key(i)).filter((k): k is string => k !== null),
+    };
   } catch {
     return null;
   }
