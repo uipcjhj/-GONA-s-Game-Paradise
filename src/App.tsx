@@ -105,6 +105,11 @@ export default function App() {
     if (player) {
       touch();
       setScreen('map');
+      // 환영 인사(접속마다 한 번) — 받을 출석 보상이 있으면 함께 안내
+      if (!(loadStatus === 'recovered' && !noticed.current)) window.setTimeout(() => {
+        playUi('open');
+        notify(`어서 와요, ${player.nickname}!${player.missions?.attendance.claimedDateKST !== player.missions?.attendance.lastDateKST ? ' 오늘 출석 보상이 기다려요' : ''}`);
+      }, 350);
       if (loadStatus === 'recovered' && !noticed.current) {
         noticed.current = true;
         notify('손상된 기록을 이전 저장본으로 복구했어요');

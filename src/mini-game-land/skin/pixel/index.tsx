@@ -31,6 +31,7 @@ import tDuck from './art/toy-duck.png';
 import tStar from './art/toy-star.png';
 import tLock from './art/toy-lock.png';
 import tPin from './art/toy-pin.png';
+import spark from './art/spark.png';
 import './pixel.css';
 
 const BODY: Record<string, string> = { red, blue, green, yellow };
@@ -82,6 +83,15 @@ const Scoreboard: UiSlots['Scoreboard'] = ({ view, pauseButton }) => (
       <span className="mgl-grow" />
       {view.lives != null ? <Lives lives={view.lives} max={view.maxLives ?? 5} /> : <span className="mgl-label">LV {view.level}</span>}
     </div>
+  </div>
+);
+
+/** 큰 글씨: 성공이면 반짝이가 사방으로 튐 */
+const Callout: UiSlots['Callout'] = ({ tone, children }) => (
+  <div className={`mgl-big px-callout ${tone === 'clear' ? 'clear' : tone === 'fail' ? 'fail' : ''}`}>
+    {children}
+    {tone === 'clear' &&
+      [0, 1, 2, 3, 4, 5, 6, 7].map((i) => <img key={i} src={spark} className="px-burst" style={{ ['--a' as string]: `${i * 45}deg` }} alt="" draggable={false} />)}
   </div>
 );
 
@@ -208,7 +218,7 @@ const pixel: Skin = {
   name: '고나 픽셀 UI (코드 도트)',
   extends: 'temp',
   tokens: { '--mgl-page-bg': '#5ec4f5', '--sc-card-w': '112px', '--sc-card-h': '120px', '--mgl-btn-depth': '4px' },
-  ui: { Background, ButtonFace, Panel, Lives, Scoreboard },
+  ui: { Background, ButtonFace, Panel, Lives, Scoreboard, Callout },
   sort: { Friend, BinFace, StageFrame },
   tower: { Backdrop: TowerBackdrop, PieceArt, PlateArt, NextQueue },
   toyroom: { Backdrop: RoomBackdrop, ShelfFrame: Shelf, ToyArt },

@@ -158,3 +158,9 @@
 .mgl-frame[data-skin='pixel'] [data-testid='pick-tower'] .px-btn-card::before { background-color: #ffe9c4; background-image: url('./art/icon-tower.png'); background-size: 40px 48px; }
 .mgl-frame[data-skin='pixel'] [data-testid='pick-toyroom'] .px-btn-card::before { background-color: #bfeedd; background-image: url('./art/toy-bear.png'); background-size: 32px 32px; }
 .mgl-frame[data-skin='pixel'] [data-testid^='pick-'] .px-btn-card p { font-size: 12px; }
+
+/* 성공 반짝이 터짐 */
+.px-callout { position: relative; }
+.px-burst { position: absolute; left: 50%; top: 50%; width: 24px; height: 24px; margin: -12px; pointer-events: none; animation: px-burst 0.7s steps(6) forwards; }
+@keyframes px-burst { 0% { transform: rotate(var(--a)) translateY(0) scale(0.4); opacity: 1; } 100% { transform: rotate(var(--a)) translateY(-120px) scale(1); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .px-burst { display: none; } }
