@@ -165,14 +165,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .title.leaving { animation: fadeout 0.2s steps(4) forwards; }
 @keyframes fadeout { to { opacity: 0; } }
 .title img { position: absolute; image-rendering: pixelated; user-select: none; -webkit-user-drag: none; pointer-events: none; }
-.t-sub {
-  position: absolute; left: 0; right: 0; margin: 0; text-align: center; line-height: 1; pointer-events: none;
-  font-size: calc(var(--u) * 11); font-weight: 700; color: #ffd84a; letter-spacing: 0;
-  /* 윤곽선·그림자도 도트 단위(1도트)로 — 부드러운 번짐 없음 */
-  text-shadow: calc(var(--u) * -1) 0 #3b1b5e, var(--u) 0 #3b1b5e, 0 calc(var(--u) * -1) #3b1b5e, 0 var(--u) #3b1b5e,
-    calc(var(--u) * -1) calc(var(--u) * -1) #3b1b5e, var(--u) calc(var(--u) * -1) #3b1b5e, calc(var(--u) * -1) var(--u) #3b1b5e, var(--u) var(--u) #3b1b5e,
-    0 calc(var(--u) * 2) #3b1b5e, var(--u) calc(var(--u) * 2) #3b1b5e, calc(var(--u) * -1) calc(var(--u) * 2) #3b1b5e;
-}
 .t-tap {
   position: absolute; left: 0; right: 0; margin: 0; text-align: center; line-height: 1; pointer-events: none;
   bottom: calc(env(safe-area-inset-bottom) + var(--u) * 5);
