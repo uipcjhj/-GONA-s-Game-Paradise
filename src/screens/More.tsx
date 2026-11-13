@@ -1,15 +1,23 @@
 import PixelIcon from '../components/PixelIcon';
+import { missionsForDate } from '../platform/engine';
+import { usePlayer } from '../platform/PlayerContext';
+import { effectiveDate } from '../platform/engine';
 
-export type MoreItem = 'achievements' | 'codex' | 'missions' | 'shop' | 'settings';
-export const MORE_ITEMS: { id: MoreItem; label: string; icon: string; soon: boolean; desc: string }[] = [
-  { id: 'achievements', label: '업적', icon: 'star', soon: true, desc: '게임을 하면서 달성한 업적과 칭호를 모아 볼 수 있어요.' },
-  { id: 'codex', label: '도감', icon: 'book', soon: true, desc: '캐릭터·괴물·간식을 만나면 도감에 기록돼요.' },
-  { id: 'missions', label: '미션', icon: 'list', soon: true, desc: '매일 새로운 미션을 하고 고나 코인을 받아요.' },
-  { id: 'shop', label: '상점', icon: 'shop', soon: true, desc: '고나 코인으로 꾸미기 아이템을 얻을 수 있어요. (무료 게임 코인 전용)' },
-  { id: 'settings', label: '설정', icon: 'gear', soon: false, desc: '' },
+export type MoreItem = 'achievements' | 'codex' | 'missions' | 'attendance' | 'shop' | 'settings';
+export const MORE_ITEMS: { id: MoreItem; label: string; icon: string; desc: string }[] = [
+  { id: 'achievements', label: '업적', icon: 'star', desc: '달성한 업적과 칭호' },
+  { id: 'codex', label: '도감', icon: 'book', desc: '만난 캐릭터와 아이템' },
+  { id: 'missions', label: '미션', icon: 'list', desc: '오늘의 일일 미션' },
+  { id: 'attendance', label: '출석', icon: 'calendar', desc: '연속 출석 보상' },
+  { id: 'shop', label: '상점', icon: 'shop', desc: '코인으로 꾸미기' },
+  { id: 'settings', label: '설정', icon: 'gear', desc: '소리 · 백업 · 데이터' },
 ];
 
 export default function More({ onOpen }: { onOpen: (id: MoreItem) => void }) {
+  const { player } = usePlayer();
+  const claimable = player ? missionsForDate(player.daily.dateKST).filter((d) => { const m = player.daily.missions[d.id]; return m && !m.claimed && m.progress >= d.target; }).length : 0;
+  const notChecked = player ? player.attendance.lastDate !== effectiveDate(player, Date.now()) : false;
+  const badge: Partial<Record<MoreItem, string>> = { missions: claimable ? `${claimable}` : '', attendance: notChecked ? 'N' : '' };
   return (
     <div className="p-screen">
       <div className="p-scroll">
@@ -18,9 +26,9 @@ export default function More({ onOpen }: { onOpen: (id: MoreItem) => void }) {
           {MORE_ITEMS.map((m) => (
             <button key={m.id} type="button" onClick={() => onOpen(m.id)}>
               <PixelIcon name={m.icon} size={3} />
-              {m.label}
+              <span>{m.label}<small style={{ display: 'block', fontSize: 10, fontWeight: 400, color: '#5d3f86' }}>{m.desc}</small></span>
               <span className="sp" />
-              {m.soon && <span className="p-chip soon">준비 중</span>}
+              {badge[m.id] ? <span className="p-chip soon">{badge[m.id]}</span> : null}
             </button>
           ))}
         </div>

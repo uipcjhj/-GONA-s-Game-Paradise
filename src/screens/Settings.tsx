@@ -7,6 +7,8 @@ import ConfirmDialog from '../ui/ConfirmDialog';
 import PixelButton from '../ui/PixelButton';
 import PixelPanel from '../ui/PixelPanel';
 import { AvatarEditor, NicknameEditor } from './Profile';
+import { canVibrate } from '../platform/haptics';
+import { DEV_SIM, simulateResult } from '../platform/devsim';
 
 type Dlg =
   | { t: 'nick' }
@@ -17,7 +19,7 @@ type Dlg =
   | { t: 'reset2' };
 
 export default function Settings({ onBack, onToast, onReset }: { onBack: () => void; onToast: (t: string) => void; onReset: () => void }) {
-  const { player, restore, reset, exportText, persistent } = usePlayer();
+  const { player, restore, reset, exportText, persistent, updateSettings, storage, consume } = usePlayer();
   const [sfxOff, setSfxOff] = useState(muted());
   const [dlg, setDlg] = useState<Dlg | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -71,7 +73,17 @@ export default function Settings({ onBack, onToast, onReset }: { onBack: () => v
             </span>
             <button type="button" className={`p-toggle${player.settings.bgm ? ' on' : ''}`} role="switch" aria-checked={player.settings.bgm} aria-label="배경음 (준비 중)" disabled />
           </div>
-          <p className="p-muted">iPhone Safari는 화면을 한 번 터치한 뒤에 소리가 나요. 배경음은 아직 없어서 나중에 켜져요.</p>
+          <div className="p-setrow">
+            <span>
+              진동 {!canVibrate() && <span className="p-chip">미지원 기기</span>}
+            </span>
+            <button type="button" className={`p-toggle${player.settings.vibration && canVibrate() ? ' on' : ''}`} role="switch" aria-checked={player.settings.vibration && canVibrate()} aria-label="진동" disabled={!canVibrate()} onClick={() => updateSettings({ vibration: !player.settings.vibration })} />
+          </div>
+          <div className="p-setrow">
+            <span>모션 줄이기</span>
+            <button type="button" className={`p-toggle${player.settings.reduceMotion ? ' on' : ''}`} role="switch" aria-checked={player.settings.reduceMotion} aria-label="모션 줄이기" onClick={() => updateSettings({ reduceMotion: !player.settings.reduceMotion })} />
+          </div>
+          <p className="p-muted">iPhone Safari는 화면을 한 번 터치한 뒤에 소리가 나요. 배경음은 아직 없어서 나중에 켜져요. 진동은 지원하는 기기에서만 동작해요.</p>
         </PixelPanel>
         <PixelPanel title="내 정보">
           <div className="p-row">
@@ -101,8 +113,17 @@ export default function Settings({ onBack, onToast, onReset }: { onBack: () => v
             초기화
           </PixelButton>
         </PixelPanel>
+        {DEV_SIM && (
+          <PixelPanel title="개발용 시뮬레이터 (운영 빌드에는 없음)">
+            <p className="p-muted">Food 패치가 적용되기 전에 결과 수신·보상 흐름을 확인하는 도구예요. 실제 게임과 똑같은 방식으로 결과를 inbox 에 넣어요.</p>
+            <div className="p-row" style={{ marginTop: 8, flexWrap: 'wrap' }}>
+              <PixelButton small variant="sub" onClick={() => { simulateResult(storage, player, { score: 3200 + Math.floor(Math.random() * 3000), stage: 2, cleared: false }); void consume(); }}>게임 오버 결과</PixelButton>
+              <PixelButton small variant="sub" onClick={() => { simulateResult(storage, player, { score: 21000, stage: 4, cleared: true, durationSec: 540 }); void consume(); }}>클리어 결과</PixelButton>
+            </div>
+          </PixelPanel>
+        )}
         <PixelPanel title="게임 정보">
-          <p className="p-muted">고나 게임천국 · 플레이어 데이터 v1 · {player.publicCode}</p>
+          <p className="p-muted">고나 게임천국 · 플레이어 데이터 v2 · {player.publicCode}. 기록은 이 기기의 로컬 저장소에만 있고 온라인 검증·조작 방지는 적용되지 않아요.</p>
         </PixelPanel>
       </div>
       {dlg?.t === 'nick' && <NicknameEditor player={player} onClose={() => setDlg(null)} onSaved={() => { setDlg(null); onToast('닉네임을 바꿨어요'); }} />}

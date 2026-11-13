@@ -401,3 +401,26 @@ describe('점수 한도', () => {
     expect(scoreLimit(g, 1e9)).toBe(g.rules.maxScore);
   });
 });
+
+import { normalizeScore, overallIndex, weeklyBest } from './ranking';
+describe('로컬 랭킹(내 기록) · 종합 지수', () => {
+  it('정규화: 0~1, 단조 증가, 상한 1', () => {
+    expect(normalizeScore(0, 100)).toBe(0);
+    expect(normalizeScore(25, 100)).toBeCloseTo(0.5);
+    expect(normalizeScore(1e9, 100)).toBe(1);
+    expect(normalizeScore(10, 100)).toBeLessThan(normalizeScore(20, 100));
+  });
+  it('종합 지수는 출시된 게임만 · 원점수 합산이 아님', () => {
+    const p = applyResult(mk(), res({ score: 5000, stage: 2 }), T0).player;
+    const o = overallIndex(p);
+    expect(o.entries.map((e) => e.gameId)).toEqual(['food-island']);
+    expect(o.index).toBe(Math.round(1000 * Math.sqrt(5000 / 20000)));
+    expect(overallIndex(mk()).index).toBe(0);
+  });
+  it('주간 최고: 이번 주만', () => {
+    const p = applyResult(mk(), res({ score: 5000 }), T0).player;
+    expect(weeklyBest(p.gameRecords['food-island'], T0)!.score).toBe(5000);
+    expect(weeklyBest(p.gameRecords['food-island'], T0 + 8 * 86400000)).toBeNull();
+    expect(weeklyBest(undefined, T0)).toBeNull();
+  });
+});

@@ -84,12 +84,12 @@ async function register(page, w, h, nick = '고나짱', avatarName = '엄마') {
     await page.waitForSelector('text=WELCOME!');
     await shot(page, w, h, '03-register-3-welcome');
     const stored = JSON.parse(await ls(page, 'gp.v1.player'));
-    ok(`[${tag}] 플레이어 저장 (playerId·publicCode·avatar)`, stored.playerId && /^[A-Z2-9]{4}$/.test(stored.publicCode) && stored.avatarId === 'mom' && stored.nickname === '고나짱' && stored.coinBalance === 0 && stored.playerLevel === 1);
+    ok(`[${tag}] 플레이어 저장 (playerId·publicCode·avatar)`, stored.playerId && /^[A-Z2-9]{4}$/.test(stored.publicCode) && stored.avatarId === 'mom' && stored.nickname === '고나짱' && stored.coinBalance === 10 && stored.playerLevel === 1);
     const pid = stored.playerId; const pcode = stored.publicCode;
     await page.getByRole('button', { name: /게임천국 입장/ }).tap();
     await page.waitForSelector('.hit');
     await page.waitForTimeout(600);
-    ok(`[${tag}] 월드맵 HUD: 닉네임·LV·코인`, (await page.locator('.p-pbtn').innerText()).includes('고나짱') && (await page.locator('.p-pbtn').innerText()).includes('LV1') && (await page.locator('.p-coinchip').innerText()).trim() === '0');
+    ok(`[${tag}] 월드맵 HUD: 닉네임·LV·코인`, (await page.locator('.p-pbtn').innerText()).includes('고나짱') && (await page.locator('.p-pbtn').innerText()).includes('LV1') && (await page.locator('.p-coinchip').innerText()).trim() === '10');
     await shot(page, w, h, '04-world-hud');
     // HUD 겹침/크기
     const geo = await page.evaluate(() => { const r = (s) => document.querySelector(s).getBoundingClientRect(); const a = r('.p-pbtn'), l = r('.logo'), c = r('.p-coinchip'), m = r('.mapbox'); return { a: [a.left, a.right], l: [l.left, l.right], c: [c.left, c.right], top: a.top >= 0 && c.top >= 0, mapH: m.height, mapTop: m.top }; });
@@ -122,24 +122,24 @@ async function register(page, w, h, nick = '고나짱', avatarName = '엄마') {
     await page.getByRole('button', { name: /PROFILE/ }).tap();
     await page.waitForSelector('.p-pcard');
     const ptxt = await page.locator('.p-pcard').innerText();
-    ok(`[${tag}] 프로필: 닉네임·식별코드·LV·XP·코인`, ptxt.includes('고나짱') && ptxt.includes('#' + pcode) && ptxt.includes('LV') && ptxt.includes('XP 0 / 100'));
-    ok(`[${tag}] 프로필: 가짜 기록 숫자 없음`, (await page.locator('.p-screen').innerText()).includes('아직 기록이 없어요'));
+    ok(`[${tag}] 프로필: 닉네임·식별코드·LV·XP·코인`, ptxt.includes('고나짱') && ptxt.includes('#' + pcode) && ptxt.includes('LV') && ptxt.includes('XP 10 / 100'));
+    ok(`[${tag}] 프로필: 가짜 기록 숫자 없음`, (await page.locator('.p-screen').innerText()).includes('아직 기록 없음'));
     await shot(page, w, h, '06-profile');
     ok(`[${tag}] 가로 스크롤 없음 (프로필)`, await noHScroll(page));
     // 닉네임 변경 (취소 → 유지, 저장 → 변경)
-    await page.getByRole('button', { name: '닉네임 변경' }).tap();
+    await page.getByRole('button', { name: '닉네임', exact: true }).tap();
     await page.fill('#gp-nick', '바뀐이름');
     await shot(page, w, h, '07-profile-nick-edit');
     await page.getByRole('button', { name: '취소' }).tap();
     ok(`[${tag}] 닉네임 편집 취소 → 기존 유지`, JSON.parse(await ls(page, 'gp.v1.player')).nickname === '고나짱');
-    await page.getByRole('button', { name: '닉네임 변경' }).tap();
+    await page.getByRole('button', { name: '닉네임', exact: true }).tap();
     await page.fill('#gp-nick', '바뀐이름');
     await page.getByRole('button', { name: '저장' }).tap();
     await page.waitForTimeout(300);
     let st = JSON.parse(await ls(page, 'gp.v1.player'));
     ok(`[${tag}] 닉네임 변경 저장 · playerId/코드 유지`, st.nickname === '바뀐이름' && st.playerId === pid && st.publicCode === pcode);
     // 아바타 변경
-    await page.getByRole('button', { name: '아바타 변경' }).tap();
+    await page.getByRole('button', { name: '아바타', exact: true }).tap();
     await page.getByRole('radio', { name: '할아버지' }).tap();
     await shot(page, w, h, '08-profile-avatar-edit');
     await page.getByRole('button', { name: '저장' }).tap();
@@ -165,7 +165,8 @@ async function register(page, w, h, nick = '고나짱', avatarName = '엄마') {
     await page.waitForSelector('.p-menu');
     await shot(page, w, h, '10-more');
     await page.getByRole('button', { name: /업적/ }).tap();
-    ok(`[${tag}] MORE: 업적 → 준비 중 화면`, await page.locator('text=준비 중이에요').count());
+    await page.waitForSelector('text=업적 ACHIEVEMENTS');
+    ok(`[${tag}] MORE: 업적 → 실제 업적 화면`, await page.locator('.p-item').count() > 5);
     await page.goBack(); await page.waitForSelector('.p-menu');
     ok(`[${tag}] 뒤로가기 → MORE 목록`, true);
     await page.getByRole('button', { name: /설정/ }).tap();

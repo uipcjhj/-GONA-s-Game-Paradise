@@ -7,7 +7,13 @@ import WorldMap from './components/WorldMap';
 import Title from './components/Title';
 import { usePlayer } from './platform/PlayerContext';
 import { useBackLayer } from './platform/useBackLayer';
-import ComingSoon from './screens/ComingSoon';
+import Achievements from './screens/Achievements';
+import Attendance from './screens/Attendance';
+import Codex from './screens/Codex';
+import Missions from './screens/Missions';
+import Result from './screens/Result';
+import Shop from './screens/Shop';
+import NoticeHost from './ui/NoticeHost';
 import More, { type MoreItem } from './screens/More';
 import Profile from './screens/Profile';
 import Ranking from './screens/Ranking';
@@ -24,7 +30,7 @@ const MAX_FRAME = 600;
 const POPUP_PX = 80; // 팝업 높이(대략)
 
 export default function App() {
-  const { player, loadStatus, touch } = usePlayer();
+  const { player, loadStatus, touch, checkIn, result, dismissResult, launch } = usePlayer();
   const [screen, setScreen] = useState<'title' | 'register' | 'recover' | 'map'>('title');
   const [tab, setTab] = useState<Tab>('map');
   const [more, setMore] = useState<MoreItem | null>(null);
@@ -79,16 +85,32 @@ export default function App() {
   useBackLayer(screen === 'map' && tab === 'more' && more !== null, () => setMore(null));
   useBackLayer(screen === 'map' && tab === 'map' && selectedId !== null, () => setSelectedId(null));
 
+  // 게임에서 돌아와 결과가 도착하면 타이틀을 건너뛰고 바로 결과 화면으로
+  useBackLayer(screen === 'map' && result !== null, dismissResult);
+  useEffect(() => {
+    if (result && player && screen === 'title') {
+      touch();
+      checkIn();
+      setScreen('map');
+    }
+  }, [result]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 타이틀 터치: 등록된 플레이어 → 월드맵 / 처음 → 등록 / 저장 손상 → 복구 안내
   const enter = () => {
     if (player) {
       touch();
+      checkIn(); // 하루 첫 접속 출석 (한국 날짜 기준, 중복 지급 없음)
       setScreen('map');
       if (loadStatus === 'recovered' && !noticed.current) {
         noticed.current = true;
         notify('손상된 기록을 이전 저장본으로 복구했어요');
       }
     } else setScreen(loadStatus === 'corrupt' || loadStatus === 'newer' ? 'recover' : 'register');
+  };
+  const openMore = (id: MoreItem) => {
+    setSelectedId(null);
+    setTab('more');
+    setMore(id);
   };
   const toMap = () => {
     setTab('map');
@@ -135,13 +157,19 @@ export default function App() {
             {selected && <IslandPanel island={selected} onClose={() => setSelectedId(null)} />}
           </div>
         )}
-        {tab === 'profile' && <Profile onToast={notify} />}
+        {tab === 'profile' && <Profile onToast={notify} onOpenMore={openMore} />}
         {tab === 'ranking' && <Ranking />}
-        {tab === 'more' && (more === null ? <More onOpen={setMore} /> : more === 'settings' ? <Settings onBack={() => setMore(null)} onToast={notify} onReset={() => { setTab('map'); setMore(null); setScreen('register'); }} /> : <ComingSoon id={more} onBack={() => setMore(null)} />)}
+        {tab === 'more' && (more === null ? <More onOpen={setMore} /> : more === 'settings' ? <Settings onBack={() => setMore(null)} onToast={notify} onReset={() => { setTab('map'); setMore(null); setScreen('register'); }} /> : more === 'achievements' ? <Achievements onBack={() => setMore(null)} /> : more === 'codex' ? <Codex onBack={() => setMore(null)} /> : more === 'missions' ? <Missions onBack={() => setMore(null)} /> : more === 'attendance' ? <Attendance onBack={() => setMore(null)} /> : <Shop onBack={() => setMore(null)} onToast={notify} />)}
       </main>
 
+      {result ? (
+        <div className="p-reg" style={{ top: 48, zIndex: 40 }}>
+          <Result view={result} onRetry={(gid, url) => { dismissResult(); window.location.href = launch(gid, url).url; }} onMap={() => { dismissResult(); goTab('map'); }} onRanking={() => { dismissResult(); goTab('ranking'); }} />
+        </div>
+      ) : null}
       <BottomNav tab={tab} onTab={goTab} />
       <Toast text={toast} />
+      <NoticeHost />
     </div>
   );
 }

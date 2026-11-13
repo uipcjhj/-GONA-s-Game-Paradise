@@ -56,6 +56,13 @@ const ICONS: Record<string, string[]> = {
   list: ['.kkkkkkkk.', 'kyyyyyyyyk', 'kygykkkkyk', 'kyyyyyyyyk', 'kygykkkkyk', 'kyyyyyyyyk', 'kygykkkkyk', '.kkkkkkkk.'],
   shop: ['...kkkk...', '..k....k..', '.kkkkkkkk.', 'kpppppppk.', 'kpppyypppk', 'kpppyypppk', 'kpppppppk.', '.kkkkkkkk.'],
   coin: ['..kkkk..', '.kyyyyk.', 'kyyYkyyk', 'kyyYkyyk', 'kyyYkyyk', 'kyyyyyyk', '.kyyyyk.', '..kkkk..'],
+  crown: ['k.k.k.k', 'kykykyk', 'kyyyyyk', 'kyyYyyk', 'kkkkkkk'],
+  heart: ['.kk.kk.', 'krrkrrk', 'krrrrrk', '.krrrk.', '..krk..', '...k...'],
+  sprout: ['..kk.kk', '.kggkgk', '.kggkk.', '..kgk..', '..kgk..', '..kgk..'],
+  check: ['........k', '.......kg', '......kg.', 'k....kg..', 'kg..kg...', '.kgkg....', '..kg.....'],
+  gift: ['..kk.kk..', '.kppkppk.', 'kkkkkkkkk', 'kppkykppk', 'kppkykppk', 'kppkykppk', 'kkkkkkkkk'],
+  calendar: ['kkkkkkkkk', 'kbbbbbbbk', 'kkkkkkkkk', 'kyykyykyk', 'kyykyykyk', 'kkkkkkkkk'],
+  question: ['..kkkk..', '.kkyykk.', '.kk..kk.', '....kk..', '...kk...', '........', '...kk...'],
 };
 const COL: Record<string, string> = {
   k: '#2f7fb8',
@@ -64,6 +71,8 @@ const COL: Record<string, string> = {
   y: '#ffd84a',
   Y: '#e8a92c',
   p: '#ffcfa8',
+  r: '#ec5048',
+  Y2: '#fff',
 };
 
 export default function PixelIcon({ name, size = 3 }: { name: keyof typeof ICONS | string; size?: number }) {
