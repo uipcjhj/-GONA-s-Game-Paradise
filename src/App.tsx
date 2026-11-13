@@ -5,9 +5,10 @@ import BottomNav, { type Tab } from './components/BottomNav';
 import IslandPanel from './components/IslandPanel';
 import { ProfileView, RankingView } from './components/InfoViews';
 import WorldMap from './components/WorldMap';
+import PixelLeaf from './components/PixelLeaf';
 
-const HEADER_PX = 52;
-const NAV_PX = 62;
+const HEADER_PX = 48;
+const NAV_PX = 66; // 떠 있는 내비게이션이 차지하는 아래쪽 자리(안전 영역 제외)
 const MAX_FRAME = 600;
 const POPUP_PX = 108;
 
@@ -49,15 +50,19 @@ export default function App() {
   const k = area.w && area.h ? fitK(area.h - reserve) : 0;
   const mapW = WORLD.w * k;
   const mapH = WORLD.h * k;
-  const mapTop = reserve ? 0 : Math.min((area.h - mapH) * 0.3, area.h - mapH - POPUP_PX);
+  const mapTop = reserve ? 0 : Math.max(0, Math.min((area.h - mapH) * 0.5, area.h - mapH - POPUP_PX));
 
   const onArrive = useCallback((id: string | null) => setSelectedId(id), []);
 
   return (
     <div className="frame" style={{ width: frameW }}>
       <header className="top">
-        <span className="top-en">GONA's Game Paradise</span>
-        <h1>고나 게임천국</h1>
+        <PixelLeaf />
+        <div className="logo">
+          <h1>GONA GONE WILD!</h1>
+          <span className="logo-ko">고나가 떴고나!</span>
+        </div>
+        <PixelLeaf flip />
       </header>
 
       <main className="stage">
