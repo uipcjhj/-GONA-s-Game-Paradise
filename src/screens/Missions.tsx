@@ -80,7 +80,7 @@ export default function Missions({ onBack, onToast }: { onBack: () => void; onTo
           >
             {claimedToday ? '오늘 출석 완료' : `출석 보상 받기 (+${attendanceReward(streak)})`}
           </PixelButton>
-          <p className="p-muted">기기 시계를 기준으로 해서 보상은 소액이에요. 내일 {addDays(today, 1).slice(5).replace('-', '/')} 에 다시 올 수 있어요.</p>
+          <p className="p-muted" style={{ marginTop: 8 }}>기기 시계를 기준으로 해서 보상은 소액이에요. 내일 {addDays(today, 1).slice(5).replace('-', '/')} 에 다시 올 수 있어요.</p>
         </PixelPanel>
         <PixelPanel title="오늘의 미션">{m.daily.map((x) => row(x.id, x.value, x.claimed))}</PixelPanel>
         <PixelPanel title="이번 주 미션" right={<span className="p-chip">접속 {weekDays(m)}일</span>}>

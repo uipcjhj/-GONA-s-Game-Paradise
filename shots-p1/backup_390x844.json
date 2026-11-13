@@ -1,15 +1,15 @@
 {
   "kind": "gona-game-paradise/player-backup",
   "schemaVersion": 2,
-  "exportedAt": "2026-11-13T15:38:05.210Z",
+  "exportedAt": "2026-11-13T15:56:42.198Z",
   "player": {
     "schemaVersion": 2,
-    "playerId": "bb5cbc8b-52e1-4f4e-9e39-f33a1e73d9aa",
+    "playerId": "9e72cb04-84ca-42fd-9d22-249e10ac6648",
     "nickname": "바뀐이름",
-    "publicCode": "ABJV",
+    "publicCode": "T4G9",
     "avatarId": "halabeoji",
-    "createdAt": "2026-11-13T15:37:50.444Z",
-    "lastPlayedAt": "2026-11-13T15:37:50.444Z",
+    "createdAt": "2026-11-13T15:56:27.332Z",
+    "lastPlayedAt": "2026-11-13T15:56:27.332Z",
     "playerLevel": 1,
     "totalXP": 0,
     "coinBalance": 0,
@@ -32,17 +32,17 @@
       "dateKST": "2026-11-14",
       "daily": [
         {
-          "id": "d-play3",
-          "value": 0,
-          "claimed": false
-        },
-        {
-          "id": "d-newbest",
+          "id": "d-clear1",
           "value": 0,
           "claimed": false
         },
         {
           "id": "d-play1",
+          "value": 0,
+          "claimed": false
+        },
+        {
+          "id": "d-play5",
           "value": 0,
           "claimed": false
         }
@@ -85,9 +85,9 @@
       }
     },
     "codex": {
-      "char-gona": "2026-11-13T15:37:50.445Z",
-      "char-mom": "2026-11-13T15:37:50.445Z",
-      "char-halabeoji": "2026-11-13T15:38:02.777Z"
+      "char-gona": "2026-11-13T15:56:27.333Z",
+      "char-mom": "2026-11-13T15:56:27.333Z",
+      "char-halabeoji": "2026-11-13T15:56:39.767Z"
     },
     "coinLog": [],
     "unlockedAvatarIds": []

@@ -119,12 +119,7 @@ export function PlayerProvider({ children, storage }: { children: ReactNode; sto
       if (rep.applied.length) {
         setPlayer(rep.player);
         setResults((r) => [...r, ...rep.applied]);
-        const items: News[] = [];
-        for (const o of rep.applied) {
-          for (const id of o.achievements) items.push({ kind: 'achievement', text: `업적 달성! ${getAchievement(id)?.name ?? id}` });
-          for (const id of o.codex) items.push({ kind: 'codex', text: `도감 등록: ${CODEX.find((c) => c.id === id)?.name ?? id}` });
-        }
-        if (items.length) setNews((n) => [...n, ...items]);
+        // 업적·도감은 결과 화면에 함께 표시되므로 토스트는 만들지 않음
       } else if (rep.duplicates && rep.player !== latest) setPlayer(rep.player);
     };
     const locks = (navigator as Navigator & { locks?: { request(name: string, cb: () => void): Promise<void> } }).locks;
