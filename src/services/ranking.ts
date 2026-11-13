@@ -8,6 +8,8 @@ export type RankingPeriod = 'weekly' | 'all-time';
 
 export interface RankingQuery {
   gameId: RankingGame;
+  /** Mini Game Land 의 개별 미니게임 */
+  subGameId?: string;
   period: RankingPeriod;
   /** 주간 랭킹 주차(서버가 KST 월요일 기준으로 계산). 비우면 이번 주 */
   weekId?: string;
@@ -20,10 +22,13 @@ export interface RankingEntry {
   publicCode: string;
   avatarId: string;
   score: number;
-  achievedAt: string;
+  achievedAt?: string;
+  titleId?: string;
+  /** 종합 랭킹: 점수에 반영된 게임 수 */
+  games?: number;
 }
 export type RankingResult =
-  | { status: 'ok'; entries: RankingEntry[]; me?: RankingEntry; updatedAt: string }
+  | { status: 'ok'; entries: RankingEntry[]; me?: RankingEntry; updatedAt: string; total?: number; weekEndsAt?: string; weekId?: string; gamesUsed?: string[] }
   | { status: 'unavailable' }
   | { status: 'error'; message: string };
 

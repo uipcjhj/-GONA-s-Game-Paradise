@@ -14,7 +14,9 @@ export const KEYS = {
 export const LEGACY_KEYS = { openingSeen: 'gona.openingSeen', mute: 'gona.mute' } as const;
 
 /** 데이터 초기화가 지우는 키 목록(= 플랫폼 키만) */
-export const RESETTABLE_KEYS: string[] = [KEYS.player, KEYS.backup, KEYS.corrupt];
+/** 온라인 랭킹 신원(서버 발급 토큰)과 제출 대기열 — 백업 파일에는 포함하지 않는다(토큰은 비밀값) */
+export const ONLINE_KEYS = { identity: `${PREFIX}online`, outbox: `${PREFIX}outbox` } as const;
+export const RESETTABLE_KEYS: string[] = [KEYS.player, KEYS.backup, KEYS.corrupt, ONLINE_KEYS.identity, ONLINE_KEYS.outbox];
 
 /** 게임 연동용 키: 세션(게임천국이 씀) · 결과 inbox(게임이 씀) · 거부된 결과 보관 */
 export const SESSION_PREFIX = `${PREFIX}session.`;

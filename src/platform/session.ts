@@ -13,9 +13,11 @@ export interface LaunchSession {
   expiresAt: string;
   /** 게임이 돌아갈 주소 — 주소창으로 받지 않고 여기 저장된 값만 쓴다(열린 리다이렉트 방지) */
   returnUrl: string;
+  /** 온라인 랭킹 서버가 발급한 세션 ID(서버가 시간을 재는 검증 경로). 없으면 로컬 기록만 */
+  serverSessionId?: string;
 }
 
-export function createSession(kv: KV, gameId: string, player: PlayerData, returnUrl: string, now: number = Date.now()): LaunchSession {
+export function createSession(kv: KV, gameId: string, player: PlayerData, returnUrl: string, now: number = Date.now(), serverSessionId?: string): LaunchSession {
   const s: LaunchSession = {
     version: 1,
     sessionId: createPlayerId(),
@@ -24,6 +26,7 @@ export function createSession(kv: KV, gameId: string, player: PlayerData, return
     startedAt: new Date(now).toISOString(),
     expiresAt: new Date(now + BALANCE.validation.sessionHours * 3600 * 1000).toISOString(),
     returnUrl,
+    ...(serverSessionId ? { serverSessionId } : {}),
   };
   kv.setItem(SESSION_PREFIX + s.sessionId, JSON.stringify(s));
   pruneSessions(kv, now);
@@ -36,7 +39,7 @@ export function getSession(kv: KV, sessionId: string): LaunchSession | null {
     const raw = kv.getItem(SESSION_PREFIX + sessionId);
     if (!raw) return null;
     const s = JSON.parse(raw) as LaunchSession;
-    if (s && s.version === 1 && s.sessionId === sessionId && typeof s.gameId === 'string' && typeof s.playerId === 'string' && !Number.isNaN(Date.parse(s.startedAt)) && !Number.isNaN(Date.parse(s.expiresAt))) return s;
+    if (s && s.version === 1 && s.sessionId === sessionId && typeof s.gameId === 'string' && typeof s.playerId === 'string' && (s.serverSessionId === undefined || typeof s.serverSessionId === 'string') && !Number.isNaN(Date.parse(s.startedAt)) && !Number.isNaN(Date.parse(s.expiresAt))) return s;
   } catch {
     /* 깨진 세션은 없는 것으로 */
   }

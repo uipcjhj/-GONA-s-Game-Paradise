@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
 import { ACHIEVEMENTS, CODEX, MISSION_POOL, TITLES } from '../platform/content';
+import { getAvatar } from '../platform/avatars';
 import { usePlayer, type Notice } from '../platform/PlayerContext';
 
 const text = (n: Notice): { t: string; s?: string } => {
   switch (n.kind) {
     case 'achievement': { const a = ACHIEVEMENTS.find((x) => x.id === n.id); return { t: `🏆 업적 달성! ${a?.name ?? ''}`, s: `🪙 +${a?.coins ?? 0}${a?.xp ? ` · XP +${a.xp}` : ''}` }; }
     case 'title': return { t: `🎖 새 칭호 획득!`, s: TITLES.find((x) => x.id === n.id)?.name };
+    case 'avatar': return { t: '🎭 새 아바타 해금!', s: getAvatar(n.id).name };
     case 'codex': return { t: `📖 도감에 등록!`, s: CODEX.find((x) => x.id === n.id)?.name };
     case 'mission': return { t: '✅ 미션 완료!', s: [...Object.values(MISSION_POOL).flat()].find((m) => m.id === n.id)?.title };
     case 'attendance': return { t: `📅 ${n.streak}일 연속 출석!`, s: `🪙 +${n.coins} · XP +${n.xp}` };

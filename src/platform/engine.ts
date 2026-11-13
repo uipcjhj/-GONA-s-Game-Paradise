@@ -3,6 +3,7 @@
  * 코인·XP·업적·칭호·도감·미션·출석·구매가 **한 객체에서 한 번에** 바뀌므로 서로 어긋나지 않는다.
  * 저장은 호출하는 쪽(PlayerContext)이 결과를 한 번만 쓴다.
  */
+import { AVATARS, isAvatarUnlocked } from './avatars';
 import { ACHIEVEMENTS, CODEX, DEFAULT_ITEMS, getItem, getMission, isTitleUnlocked, metric, MISSION_POOL, TITLES, unlockedTitles, type MissionDef } from './content';
 import { BALANCE } from './balance';
 import { getGame, type GameDef } from './games';
@@ -16,6 +17,7 @@ export type Notice =
   | { kind: 'levelup'; from: number; to: number; coins: number }
   | { kind: 'achievement'; id: string }
   | { kind: 'title'; id: string }
+  | { kind: 'avatar'; id: string }
   | { kind: 'codex'; id: string }
   | { kind: 'mission'; id: string }
   | { kind: 'attendance'; streak: number; coins: number; xp: number };
@@ -89,6 +91,12 @@ function finalize(p: PlayerData, notices: Notice[], now: number, titlesBefore: S
       p.codex[c.id] = { at: iso(now) };
       notices.push({ kind: 'codex', id: c.id });
       changed = true;
+    }
+    // 아바타 해금: 조건을 처음 충족하면 영구 해금 목록에 기록. 정식 에셋이 있는 아바타만 알림(제작 전에는 조용히 해금 상태만 저장)
+    for (const a of AVATARS) {
+      if (a.unlock.kind === 'free' || p.unlockedAvatarIds.includes(a.id) || !isAvatarUnlocked(a, p)) continue;
+      p.unlockedAvatarIds.push(a.id);
+      if (a.asset === 'ready') notices.push({ kind: 'avatar', id: a.id });
     }
     if (!changed) break;
   }

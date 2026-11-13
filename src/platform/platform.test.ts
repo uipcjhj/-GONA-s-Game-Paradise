@@ -195,15 +195,15 @@ describe('저장소 오류 내성', () => {
 });
 
 describe('아바타 · 진행도', () => {
-  it('Food 실제 캐릭터만 등록(고나·가족 6)', () => {
-    expect(AVATARS.map((a) => a.id)).toEqual(['gona', 'mom', 'dad', 'imo', 'halmeoni', 'halabeoji', 'samchon']);
+  it('운영 선택 가능 아바타는 Food 실제 에셋이 있는 고나+가족 6 (임시 도트 없음)', () => {
+    expect(AVATARS.filter((a) => a.asset === 'ready').map((a) => a.id)).toEqual(['gona', 'mom', 'dad', 'imo', 'halmeoni', 'halabeoji', 'samchon']);
     expect(AVATARS.some((a) => /strawberry|cookie|egg|star/.test(a.id))).toBe(false);
     expect(getAvatar('nope').id).toBe('gona');
   });
-  it('해금 구조', () => {
-    expect(isAvatarAvailable({ ...AVATARS[0], unlock: 'unlock' }, [])).toBe(false);
-    expect(isAvatarAvailable({ ...AVATARS[0], unlock: 'unlock' }, ['gona'])).toBe(true);
+  it('해금 구조(호환 API)', () => {
     expect(isAvatarAvailable(AVATARS[1], [])).toBe(true);
+    expect(isAvatarAvailable(AVATARS.find((a) => a.id === 'kiss')!, [])).toBe(false);
+    expect(isAvatarAvailable(AVATARS.find((a) => a.id === 'kiss')!, ['kiss'])).toBe(true);
   });
   it('XP 진행률(임시 곡선)', () => {
     expect(xpToNext(1)).toBe(100);

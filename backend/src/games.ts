@@ -15,7 +15,7 @@ export interface ServerGame {
 }
 export const SERVER_GAMES: ServerGame[] = [
   { gameId: 'food-island', live: true, maxScore: 2_000_000, maxScorePerSec: 120, carryAllowance: 60_000, stageCount: 4, hasClear: true, scoreSchemaVersion: 1, weight: 1 },
-  { gameId: 'sky-battle', live: false, maxScore: 10_000_000, maxScorePerSec: 1000, carryAllowance: 60_000, hasClear: true, scoreSchemaVersion: 1, weight: 1 },
+  { gameId: 'sky-battle', live: false, maxScore: 10_000_000, maxScorePerSec: 1000, carryAllowance: 60_000, stageCount: 5, hasClear: true, scoreSchemaVersion: 1, weight: 1 },
   { gameId: 'minigame-paradise', live: false, maxScore: 1_000_000, maxScorePerSec: 1000, carryAllowance: 60_000, hasClear: false, scoreSchemaVersion: 1, weight: 1 },
 ];
 export const AVATAR_IDS = ['gona', 'mom', 'dad', 'imo', 'halmeoni', 'halabeoji', 'samchon', 'kiss', 'sniff', 'glasses', 'farter'];

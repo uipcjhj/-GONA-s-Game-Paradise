@@ -1,4 +1,4 @@
-import { DEFAULT_AVATAR_ID, isKnownAvatar } from './avatars';
+import { AVATARS, DEFAULT_AVATAR_ID, canUseAvatar } from './avatars';
 import { createPlayerId, createPublicCode } from './ids';
 import { KEYS, KEY_PREFIXES_TO_RESET, RESETTABLE_KEYS } from './keys';
 import { checkNickname } from './nickname';
@@ -104,7 +104,7 @@ export function createPlayer(nickname: string, avatarId: string, now: Date = new
       playerId: createPlayerId(),
       nickname: nickname.normalize('NFC'),
       publicCode: createPublicCode(),
-      avatarId: isKnownAvatar(avatarId) ? avatarId : DEFAULT_AVATAR_ID,
+      avatarId: AVATARS.some((a) => a.id === avatarId && a.asset === 'ready' && a.unlock.kind === 'free') ? avatarId : DEFAULT_AVATAR_ID,
       createdAt: iso,
       lastPlayedAt: iso,
       playerLevel: 1,
@@ -134,7 +134,7 @@ export function withProfile(p: PlayerData, patch: { nickname?: string; avatarId?
     if (!checkNickname(patch.nickname).ok) return null;
     next.nickname = patch.nickname.normalize('NFC');
   }
-  if (patch.avatarId !== undefined) next.avatarId = isKnownAvatar(patch.avatarId) ? patch.avatarId : p.avatarId;
+  if (patch.avatarId !== undefined) next.avatarId = canUseAvatar(patch.avatarId, p) ? patch.avatarId : p.avatarId; // 정식 에셋이 있고 해금된 아바타만
   return next;
 }
 

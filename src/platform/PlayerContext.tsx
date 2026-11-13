@@ -8,6 +8,9 @@ import { buildLaunchUrl } from './launch';
 import { INBOX_PREFIX, KEYS } from './keys';
 import { createMemoryStorage, browserStorage, createPlayer, loadPlayer, resetPlatformData, savePlayer, withProfile, type LoadStatus } from './store';
 import type { KV, PlayerData, PlayerSettings, ShopSlot } from './types';
+import { OnlineClient, ONLINE_API, type OnlineStatus } from '../services/online';
+import { HttpRankingProvider } from '../services/rankingHttp';
+import { NullRankingProvider, type RankingProvider } from '../services/ranking';
 
 export type { Notice, ResultSummary } from './engine';
 
@@ -44,6 +47,12 @@ interface Ctx {
   unequip(slot: ShopSlot): void;
   setTitle(id: string): boolean;
   pinAchievement(id: string | undefined): void;
+  /** 온라인 랭킹: 서버 주소가 설정된 빌드에서만 enabled. 아니면 로컬 모드 */
+  online: { enabled: boolean; status: OnlineStatus; pending: number };
+  /** 랭킹 조회 제공자(서버 미연결이면 NullRankingProvider) */
+  rankingProvider: RankingProvider;
+  /** 섬 팝업을 열 때 서버 세션을 미리 만들어 둔다(PLAY 클릭은 동기라서) */
+  prepareLaunch(gameId: string): void;
   /** 개발용: 저장소 직접 접근(시뮬레이터) */
   storage: KV;
   consume(): Promise<void>;
@@ -81,6 +90,25 @@ export function PlayerProvider({ children, storage }: { children: ReactNode; sto
   const [persistent, setPersistent] = useState(durable.current);
   const [notices, setNotices] = useState<E.Notice[]>([]);
   const [result, setResult] = useState<ResultView | null>(null);
+  const [onlineStatus, setOnlineStatus] = useState<OnlineStatus>(ONLINE_API ? 'connecting' : 'off');
+  const [pending, setPending] = useState(0);
+  const clientRef = useRef<OnlineClient | null>(null);
+  if (ONLINE_API && clientRef.current === null) clientRef.current = new OnlineClient(kv, ONLINE_API);
+  const prepared = useRef<Record<string, { id: string; at: number }>>({});
+
+  /** 온라인: 등록(최초 1회) → 프로필 동기화 → 대기열 전송. 실패해도 로컬 기능에는 영향 없음 */
+  const syncOnline = useCallback(async () => {
+    const c = clientRef.current;
+    const p = playerRef.current;
+    if (!c || !p) return;
+    const id = await c.ensureRegistered(p);
+    if (id) {
+      await c.syncProfile(p);
+      const r = await c.flush();
+      setPending(r.pending);
+    }
+    setOnlineStatus(c.status);
+  }, []);
 
   /** 최신 저장본을 기준으로 변경 → 한 번 저장 → 상태 갱신. (다른 탭이 바꿨어도 덮어쓰지 않게 매번 저장소에서 다시 읽음) */
   const mutate = useCallback(
@@ -139,12 +167,21 @@ export function PlayerProvider({ children, storage }: { children: ReactNode; sto
       setPlayer(ok ? plan.player : fresh);
       const real = plan.summaries.filter((s) => !s.duplicate);
       if (real.length) setResult({ summaries: real, saveFailed: !ok });
+      if (ok && clientRef.current) {
+        // 서버가 시작 시각을 잰 세션(serverSessionId)이 있는 판만 온라인 제출 — 이전 로컬 기록은 올리지 않음
+        for (const a of plan.accepted) {
+          if (!a.serverSessionId) continue;
+          const r = a.result;
+          clientRef.current.enqueue({ resultId: r.resultId, serverSessionId: a.serverSessionId, body: { resultId: r.resultId, outcome: r.outcome, score: r.score, stage: r.stage, durationMs: r.durationMs, gameVersion: r.gameVersion, scoreSchemaVersion: r.scoreSchemaVersion, ...(r.subGameId ? { subGameId: r.subGameId } : {}) } });
+        }
+        if (plan.accepted.length) void syncOnline();
+      }
       if (ok && plan.notices.length) {
         setNotices((n) => [...n, ...plan.notices]);
         buzz(plan.player.settings.vibration, 30);
       }
     });
-  }, [kv]);
+  }, [kv, syncOnline]);
 
   // 돌아왔을 때(앱 시작 · 탭 복귀 · bfcache 복귀 · 다른 탭에서 기록) 같은 함수로 처리
   useEffect(() => {
@@ -169,6 +206,22 @@ export function PlayerProvider({ children, storage }: { children: ReactNode; sto
       window.removeEventListener('storage', onStorage);
     };
   }, [consume, kv]);
+
+  // 온라인: 플레이어가 있으면 연결 시도(주기적으로 재시도 — 서버 복구 후 대기열 동기화)
+  useEffect(() => {
+    if (!clientRef.current || !player) return;
+    void syncOnline();
+    const t = window.setInterval(() => void syncOnline(), 60_000);
+    const onVis = () => document.visibilityState === 'visible' && void syncOnline();
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.clearInterval(t);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [!!player, syncOnline]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    void clientRef.current?.syncProfile(player as PlayerData);
+  }, [player?.nickname, player?.avatarId, player?.titleId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 접근성: 모션 줄이기 설정을 문서에 반영
   useEffect(() => {
@@ -255,7 +308,10 @@ export function PlayerProvider({ children, storage }: { children: ReactNode; sto
         const p = playerRef.current;
         if (!p) return { url: baseUrl, linked: false };
         mutate((c) => E.recordLaunch(c, gameId, Date.now()));
-        const out = buildLaunchUrl(kv, gameId, baseUrl, playerRef.current ?? p, location.href.split('#')[0]);
+        const pre = prepared.current[gameId];
+        const serverSid = pre && Date.now() - pre.at < 11 * 3600_000 ? pre.id : undefined; // 서버 세션이 준비돼 있을 때만 온라인 제출 대상
+        delete prepared.current[gameId];
+        const out = buildLaunchUrl(kv, gameId, baseUrl, playerRef.current ?? p, location.href.split('#')[0], Date.now(), serverSid);
         return out;
       },
       visit: (kind, islandId) => void mutate((p) => E.recordVisit(p, kind, Date.now(), islandId)),
@@ -266,10 +322,20 @@ export function PlayerProvider({ children, storage }: { children: ReactNode; sto
       unequip: (slot) => void mutate((p) => E.unequipSlot(p, slot, Date.now())),
       setTitle: (id) => !!mutate((p) => E.setTitle(p, id, Date.now())),
       pinAchievement: (id) => void mutate((p) => E.pinAchievement(p, id, Date.now())),
+      online: { enabled: !!ONLINE_API, status: onlineStatus, pending },
+      rankingProvider: clientRef.current && clientRef.current.identity() ? new HttpRankingProvider(clientRef.current.base, clientRef.current.identity()!.token) : ONLINE_API ? new HttpRankingProvider(ONLINE_API, null) : NullRankingProvider,
+      prepareLaunch(gameId) {
+        const c = clientRef.current;
+        if (!c) return;
+        void c.createSession(gameId).then((id) => {
+          if (id) prepared.current[gameId] = { id, at: Date.now() };
+          setOnlineStatus(c.status);
+        });
+      },
       storage: kv,
       consume,
     }),
-    [player, loadStatus, persistent, notices, result, kv, mutate, consume],
+    [player, loadStatus, persistent, notices, result, kv, mutate, consume, onlineStatus, pending],
   );
   return <PlayerCtx.Provider value={value}>{children}</PlayerCtx.Provider>;
 }

@@ -1,9 +1,0 @@
-# 예시일 뿐입니다 — 계정/DB 를 만들지 않았고, 값은 모두 자리표시자입니다.
-# name = "gona-paradise-ranking"
-# main = "worker/index.ts"
-# compatibility_date = "2026-11-01"
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "gona-paradise"
-# database_id = "<승인 후 발급>"
-# [vars]  # TOKEN_PEPPER 는 secret 으로 (여기에 적지 않음)

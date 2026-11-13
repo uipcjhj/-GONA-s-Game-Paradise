@@ -17,6 +17,8 @@ export interface ConsumePlan {
   deleteKeys: string[];
   rejected: { key: string; resultId: string; reason: RejectReason | 'dup' }[];
   held: number;
+  /** 이번에 새로 반영한 결과(온라인 제출 대기열용) — 서버 세션이 있는 것만 온라인 제출 대상 */
+  accepted: { result: GameResult; serverSessionId?: string }[];
 }
 
 /**
@@ -27,6 +29,7 @@ export interface ConsumePlan {
 export function planConsume(kv: KV, player: PlayerData, now: number): ConsumePlan {
   const keys = (kv.keys?.() ?? []).filter((k) => k.startsWith(INBOX_PREFIX)).sort();
   const results: GameResult[] = [];
+  const sessions = new Map<string, string | undefined>();
   const deleteKeys: string[] = [];
   const rejected: ConsumePlan['rejected'] = [];
   let held = 0;
@@ -76,9 +79,12 @@ export function planConsume(kv: KV, player: PlayerData, now: number): ConsumePla
     }
     seen.add(id);
     results.push(v.result);
+    sessions.set(v.result.resultId, getSession(kv, v.result.sessionId)?.serverSessionId);
   }
   const applied = applyResults(player, results, now);
-  return { player: applied.player, summaries: applied.summaries, notices: applied.notices, changed: applied.changed, deleteKeys, rejected: rejected.filter((r) => r.reason !== 'dup' || true), held };
+  const fresh = new Set(applied.summaries.filter((x) => !x.duplicate).map((x) => x.resultId));
+  const accepted = results.filter((r) => fresh.has(r.resultId)).map((r) => ({ result: r, serverSessionId: sessions.get(r.resultId) }));
+  return { player: applied.player, summaries: applied.summaries, notices: applied.notices, changed: applied.changed, deleteKeys, rejected, held, accepted };
 }
 
 /** 저장이 끝난 뒤: 처리한 inbox 삭제 + 거부된 결과 요약 보관(최대 20개) */

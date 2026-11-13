@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import PixelIcon from '../components/PixelIcon';
 import { ACHIEVEMENTS, TITLES, isTitleUnlocked, unlockedTitles } from '../platform/content';
 import { getAvatar } from '../platform/avatars';
-import { GAMES } from '../platform/games';
+import { GAMES, MINI_GAMES } from '../platform/games';
 import { checkNickname } from '../platform/nickname';
 import { usePlayer } from '../platform/PlayerContext';
 import { xpProgress } from '../platform/progression';
@@ -51,7 +51,8 @@ export function AvatarEditor({ player, onClose, onSaved }: { player: PlayerData;
         <Avatar id={v} size={56} />
         <div><b style={{ fontSize: 15 }}>{a.name}</b><p className="p-muted">{a.desc}</p></div>
       </div>
-      <AvatarSelector value={v} onChange={setV} unlocked={player.unlockedAvatarIds} />
+      <AvatarSelector value={v} onChange={setV} player={player} showLocked />
+      <p className="p-muted">잠긴 아바타는 업적을 달성하면 열려요. 그림은 정식 에셋이 준비되면 함께 공개돼요.</p>
       <div className="p-row">
         <PixelButton variant="sub" className="fill" onClick={onClose}>취소</PixelButton>
         <PixelButton className="fill" disabled={v === player.avatarId} onClick={() => updateProfile({ avatarId: v }) && onSaved()}>저장</PixelButton>
@@ -117,6 +118,15 @@ function RecordRow({ rec, name }: { rec: GameRecord; name: string }) {
         <div className="p-stat"><b>{rec.bestStage ? `${rec.bestStage}단계` : '—'}</b><span>최고 단계</span></div>
       </div>
       <p className="p-muted" style={{ marginTop: 6 }}>{rec.bestStageLabel ? `${rec.bestStageLabel} · ` : ''}총 {fmtTime(rec.totalPlayTimeSec)} · 첫 플레이 {fmtDate(rec.firstPlayedAt)} · 마지막 {fmtDate(rec.lastPlayedAt)}</p>
+      {rec.subGames && Object.keys(rec.subGames).length > 0 && (
+        <div className="p-list" style={{ marginTop: 6 }} aria-label="미니게임별 기록">
+          {Object.entries(rec.subGames).map(([id, s]) => (
+            <div key={id} className="p-row" style={{ background: '#fff4d6', border: '2px solid var(--ink)', padding: '5px 8px', fontSize: 11, justifyContent: 'space-between' }}>
+              <b>{MINI_GAMES.find((m) => m.id === id)?.name ?? id}</b><span>최고 {s.bestScore.toLocaleString('ko-KR')} · {s.plays}회</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

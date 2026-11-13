@@ -1,5 +1,8 @@
 import type { Island } from '../types';
-import { FOOD_URL } from '../platform/games';
+import { FOOD_URL, TEST_GAMES } from '../platform/games';
+
+/** 모의 게임(개발 테스트 전용, 운영 빌드에는 연결되지 않음) 주소 */
+const MOCK = (import.meta.env.VITE_MOCK_GAME_URL as string | undefined) || '';
 import { PLAZA } from './world';
 
 /**
@@ -24,7 +27,8 @@ export const ISLANDS: Island[] = [
     name: '스카이 배틀',
     gameTitle: '스카이 배틀',
     tagline: '세로 스크롤 슈팅게임',
-    status: 'soon',
+    status: TEST_GAMES ? 'open' : 'soon',
+    url: TEST_GAMES ? `${MOCK}?game=sky-battle` : undefined,
     map: {
       hit: { x: 520, y: 150, w: 545, h: 410 },
       path: [PLAZA, { x: 640, y: 770 }, { x: 700, y: 700 }, { x: 750, y: 630 }, { x: 790, y: 560 }, { x: 800, y: 480 }],
@@ -35,7 +39,8 @@ export const ISLANDS: Island[] = [
     name: '미니게임천국',
     gameTitle: '미니게임천국',
     tagline: '다양한 미니게임 모음 · 게임별 최고 점수 랭킹 예정',
-    status: 'soon',
+    status: TEST_GAMES ? 'open' : 'soon',
+    url: TEST_GAMES ? `${MOCK}?game=minigame-paradise` : undefined,
     map: {
       hit: { x: 565, y: 800, w: 505, h: 480, clip: 'polygon(46% 0,100% 0,100% 100%,0 100%,0 40%,46% 29%)' },
       path: [PLAZA, { x: 620, y: 870 }, { x: 690, y: 935 }, { x: 740, y: 985 }, { x: 765, y: 1050 }, { x: 790, y: 1115 }],

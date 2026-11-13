@@ -7,7 +7,8 @@ import type { PlayerData, ShopSlot } from './types';
 // ───────── 지표(metric): 플레이어 데이터에서 계산 ─────────
 export type MetricKey =
   | 'launches' | 'plays' | 'clears' | 'newBests' | 'coinsEarned' | 'level' | 'checkinStreak' | 'missions' | 'purchases' | 'codex'
-  | 'food.bestScore' | 'food.bestStage' | 'food.clears';
+  | 'food.bestScore' | 'food.bestStage' | 'food.clears'
+  | 'sky.plays' | 'sky.clears' | 'sky.bestStage' | 'mini.plays' | 'mini.subCount';
 
 export function metric(p: PlayerData, k: MetricKey): number {
   const food = p.gameRecords['food-island'];
@@ -25,6 +26,11 @@ export function metric(p: PlayerData, k: MetricKey): number {
     case 'food.bestScore': return food?.bestScore ?? 0;
     case 'food.bestStage': return food?.bestStage ?? 0;
     case 'food.clears': return food?.clears ?? 0;
+    case 'sky.plays': return p.gameRecords['sky-battle']?.plays ?? 0;
+    case 'sky.clears': return p.gameRecords['sky-battle']?.clears ?? 0;
+    case 'sky.bestStage': return p.gameRecords['sky-battle']?.bestStage ?? 0;
+    case 'mini.plays': return p.gameRecords['minigame-paradise']?.plays ?? 0;
+    case 'mini.subCount': return Object.keys(p.gameRecords['minigame-paradise']?.subGames ?? {}).length;
   }
 }
 
@@ -41,7 +47,7 @@ export interface AchievementDef {
   titleId?: string;
   /** 게임 연동(결과 수신)이 있어야 달성 가능한가 */
   needsGameLink?: boolean;
-  group: 'common' | 'food';
+  group: 'common' | 'food' | 'sky' | 'mini';
 }
 export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'first_adventure', name: '첫 모험 시작', desc: '게임천국에서 게임을 처음 실행하기', metric: 'launches', target: 1, coins: 10, xp: 20, group: 'common' },
@@ -64,6 +70,13 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'food_score_5000', name: '간식 사냥꾼', desc: 'Food Adventure 5,000점 달성', metric: 'food.bestScore', target: 5000, coins: 30, xp: 40, needsGameLink: true, group: 'food' },
   { id: 'food_score_20000', name: '간식 대왕', desc: 'Food Adventure 20,000점 달성', metric: 'food.bestScore', target: 20000, coins: 100, xp: 150, titleId: 't_snackking', needsGameLink: true, group: 'food' },
   { id: 'food_clear_3', name: '가족 엔딩 단골', desc: 'Food Adventure 3회 클리어', metric: 'food.clears', target: 3, coins: 80, xp: 100, needsGameLink: true, group: 'food' },
+  // Sky Battle · Mini Game Land — 실제 게임 연동(결과 수신)이 있어야 달성 가능. 게임이 출시되면 자동으로 진행됨
+  { id: 'sky_first', name: '첫 출격', desc: 'Sky Battle 첫 판 완료', metric: 'sky.plays', target: 1, coins: 20, xp: 30, needsGameLink: true, group: 'sky' },
+  { id: 'sky_stage_3', name: '하늘의 용사', desc: 'Sky Battle 3스테이지 도달', metric: 'sky.bestStage', target: 3, coins: 40, xp: 60, needsGameLink: true, group: 'sky' },
+  { id: 'sky_clear', name: '하늘 평정', desc: 'Sky Battle 클리어', metric: 'sky.clears', target: 1, coins: 80, xp: 120, needsGameLink: true, group: 'sky' },
+  { id: 'mini_first', name: '미니게임 입문', desc: '미니게임 첫 판 완료', metric: 'mini.plays', target: 1, coins: 20, xp: 30, needsGameLink: true, group: 'mini' },
+  { id: 'mini_three', name: '미니게임 탐험가', desc: '서로 다른 미니게임 3종 플레이', metric: 'mini.subCount', target: 3, coins: 60, xp: 80, needsGameLink: true, group: 'mini' },
+  { id: 'mini_20', name: '미니게임 단골', desc: '미니게임 누적 20판', metric: 'mini.plays', target: 20, coins: 60, xp: 80, needsGameLink: true, group: 'mini' },
 ];
 
 // ───────── 칭호 ─────────

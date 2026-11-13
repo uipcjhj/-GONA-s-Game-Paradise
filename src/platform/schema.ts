@@ -1,4 +1,4 @@
-import { isKnownAvatar, DEFAULT_AVATAR_ID } from './avatars';
+import { AVATARS, DEFAULT_AVATAR_ID } from './avatars';
 import { BALANCE } from './balance';
 import { DEFAULT_ITEMS, DEFAULT_TITLE, getItem, SHOP_SLOTS, TITLES } from './content';
 import { CODE_RE } from './ids';
@@ -152,7 +152,7 @@ export function validatePlayer(raw: unknown): PlayerData | null {
     playerId,
     nickname: nickname.normalize('NFC'),
     publicCode,
-    avatarId: typeof raw.avatarId === 'string' && isKnownAvatar(raw.avatarId) ? raw.avatarId : DEFAULT_AVATAR_ID,
+    avatarId: typeof raw.avatarId === 'string' && AVATARS.some((a) => a.id === raw.avatarId && a.asset === 'ready') ? raw.avatarId : DEFAULT_AVATAR_ID,
     createdAt: raw.createdAt,
     lastPlayedAt: isIso(raw.lastPlayedAt) ? raw.lastPlayedAt : raw.createdAt,
     playerLevel: level,

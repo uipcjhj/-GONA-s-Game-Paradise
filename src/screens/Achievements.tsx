@@ -8,11 +8,12 @@ import { fmtDate } from './Profile';
 
 export default function Achievements({ onBack }: { onBack: () => void }) {
   const { player, pinAchievement } = usePlayer();
-  const [tab, setTab] = useState<'all' | 'common' | 'food'>('all');
+  const [tab, setTab] = useState<'all' | 'common' | 'food' | 'sky' | 'mini'>('all');
   if (!player) return null;
   const list = ACHIEVEMENTS.filter((a) => tab === 'all' || a.group === tab);
   const got = Object.keys(player.achievements).length;
   const linkPending = getGame('food-island')?.link === 'pending';
+  const soonGroups = new Set([...(getGame('sky-battle')?.status === 'soon' ? ['sky'] : []), ...(getGame('minigame-paradise')?.status === 'soon' ? ['mini'] : [])]);
   return (
     <div className="p-screen">
       <div className="p-bar"><button type="button" className="p-back" onClick={onBack} aria-label="뒤로">‹</button><h2>업적 ACHIEVEMENTS</h2></div>
@@ -20,7 +21,7 @@ export default function Achievements({ onBack }: { onBack: () => void }) {
         <section className="p-panel p-row"><b style={{ flex: 1, fontSize: 13 }}>달성 {got} / {ACHIEVEMENTS.length}</b><span className="p-bar-xp" style={{ flex: 2 }}><i style={{ width: `${(got / ACHIEVEMENTS.length) * 100}%` }} /></span></section>
         {linkPending && <div className="p-link-note">🔌 Food Adventure 기록 연동 준비 중이라 <b>게임 플레이 기록이 필요한 업적</b>은 아직 진행되지 않아요.</div>}
         <div className="p-tabs" role="tablist">
-          {([['all', '전체'], ['common', '공통'], ['food', 'Food']] as const).map(([id, l]) => (
+          {([['all', '전체'], ['common', '공통'], ['food', 'Food'], ['sky', 'Sky'], ['mini', 'Mini']] as const).map(([id, l]) => (
             <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{l}</button>
           ))}
         </div>
@@ -29,7 +30,8 @@ export default function Achievements({ onBack }: { onBack: () => void }) {
             const done = player.achievements[a.id];
             const v = Math.min(a.target, metric(player, a.metric));
             const title = a.titleId ? TITLES.find((t) => t.id === a.titleId) : undefined;
-            const blocked = !done && a.needsGameLink && linkPending && v === 0;
+            const soon = soonGroups.has(a.group);
+            const blocked = !done && a.needsGameLink && (linkPending || soon) && v === 0;
             return (
               <div key={a.id} className={`p-item${done ? '' : ' lock'}`}>
                 <span className="ic"><PixelIcon name={done ? 'star' : 'lock'} size={3} /></span>
@@ -39,7 +41,7 @@ export default function Achievements({ onBack }: { onBack: () => void }) {
                   {done ? <span className="p-chip ok">달성 {fmtDate(done.at)}</span> : (
                     <div className="p-prog"><span className="p-bar-xp" style={{ height: 7 }}><i style={{ width: `${(v / a.target) * 100}%` }} /></span><small>{v.toLocaleString('ko-KR')}/{a.target.toLocaleString('ko-KR')}</small></div>
                   )}
-                  {blocked && <span className="p-chip soon" style={{ marginTop: 3 }}>게임 연동 대기</span>}
+                  {blocked && <span className="p-chip soon" style={{ marginTop: 3 }}>{soon ? 'COMING SOON' : '게임 연동 대기'}</span>}
                 </div>
                 <div className="rw">
                   <span>🪙 {a.coins}{a.xp ? ` · XP ${a.xp}` : ''}</span>
