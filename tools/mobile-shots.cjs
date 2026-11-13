@@ -27,11 +27,15 @@ fs.mkdirSync(outDir, { recursive: true });
 
 async function capture(browser, url, tag, [w, h]) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+  await ctx.addInitScript(() => { try { localStorage.setItem('gona.openingSeen', '1'); } catch (e) {} }); // 오프닝은 건너뛴 재방문 상태
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   await page.goto(url);
+  if (await page.waitForSelector('.title, .hit', { timeout: 10000 }).then((el) => el.evaluate((n) => n.classList.contains('title')))) {
+    await page.touchscreen.tap(w / 2, h / 2); // 타이틀 → 월드맵 (실제 흐름 그대로)
+  }
   await page.waitForSelector('.hit', { timeout: 10000 });
   await page.waitForTimeout(700);
   const name = `${w}x${h}`;

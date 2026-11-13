@@ -159,3 +159,72 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .row { border-bottom-color: #cfeaff; }
 .row b { color: #e0608e; }
 .view .note { color: #1b6aa5; }
+
+/* ───────── 타이틀 · 오프닝 (장면 = 150×340 도트, 맨 아래 기준 · 정수 배율 --u) ───────── */
+.title { position: fixed; inset: 0; overflow: hidden; background: #86c6e4; cursor: pointer; z-index: 20; outline: none; }
+.title.leaving { animation: fadeout 0.22s steps(4) forwards; }
+@keyframes fadeout { to { opacity: 0; } }
+.scene { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); }
+.px { image-rendering: pixelated; display: block; position: absolute; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+.scene .bg { left: 0; top: 0; width: 100%; height: 100%; }
+.fp { width: calc(var(--u) * 17); height: calc(var(--u) * 20); opacity: 0.9; }
+.fly { left: 0; top: calc(var(--u) * 168); width: calc(var(--u) * 100); height: calc(var(--u) * 54); opacity: 0; }
+.logo { left: calc(var(--u) * 19); top: calc(var(--u) * 158); width: calc(var(--u) * 112); height: calc(var(--u) * 52); transform-origin: 50% 100%; }
+.sub { left: calc(var(--u) * 27); top: calc(var(--u) * 224); width: calc(var(--u) * 96); height: calc(var(--u) * 20); }
+.spark { width: calc(var(--u) * 7); height: calc(var(--u) * 7); opacity: 0; }
+.gona-title { position: absolute; left: calc(var(--u) * 109); top: calc(var(--u) * 266); width: calc(var(--u) * 27); height: calc(var(--u) * 34); pointer-events: none; }
+.gona-title img { position: static; width: 100%; height: 100%; }
+.title:not(.playing) .gona-title img { animation: idle 1.2s steps(1) infinite; }
+
+.tap {
+  position: absolute; left: 0; right: 0; margin: 0; text-align: center; bottom: calc(env(safe-area-inset-bottom) + 18px);
+  font-size: 14px; font-weight: 700; letter-spacing: 1px; color: #fff3d6; pointer-events: none;
+  text-shadow: -1px 0 #4a2f55, 1px 0 #4a2f55, 0 -1px #4a2f55, 0 1px #4a2f55, 0 3px #4a2f55;
+  animation: blink 1s steps(1) infinite;
+}
+.title.playing .tap { opacity: 0; animation: none; }
+.title.playing:not(.seeking) .tap { animation: tapin 0s linear 2400ms forwards; }
+.title.seeking .tap { animation: none; }
+@keyframes tapin { to { opacity: 1; } }
+@keyframes blink { 0%, 100% { opacity: 1; } 55% { opacity: 0; } }
+
+.replay {
+  position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 10px; padding: 7px 9px 8px; font-size: 11px; font-weight: 700; line-height: 1;
+  color: #4a2f55; background: #fff3d6; border: 2px solid #4a2f55; box-shadow: 0 2px 0 #4a2f55; cursor: pointer;
+}
+.replay:active { transform: translateY(2px); box-shadow: none; }
+
+/* 오프닝 타임라인: 0~0.6 발자국 · 0.6~1.2 날아가는 실루엣 · 1.2~2.4 로고 착지  (?seek=ms 로 특정 시각에서 정지해 검수) */
+.title.playing .fp { opacity: 0; animation: fp 0.2s steps(5) calc(var(--d) - var(--seek, 0ms)) both; }
+.title.playing .fly { animation: fly 0.6s linear calc(600ms - var(--seek, 0ms)) both; }
+.title.playing .logo { opacity: 0; animation: logo 1.2s linear calc(1200ms - var(--seek, 0ms)) both; }
+.title.playing .sub { opacity: 0; animation: sub 0.3s steps(5) calc(1900ms - var(--seek, 0ms)) both; }
+.title.playing .gona-title { opacity: 0; animation: gonain 0.45s steps(6) calc(1950ms - var(--seek, 0ms)) both; }
+.title.playing .spark { animation: spark 0.5s steps(5) calc(1860ms + var(--k) * 60ms - var(--seek, 0ms)) both; }
+.title.seeking * { animation-play-state: paused !important; }
+
+@keyframes fp { 0% { opacity: 0; transform: scale(0.3) translateY(calc(var(--u) * -8)); } 55% { opacity: 1; transform: scale(1.3); } 100% { opacity: 0.9; transform: scale(1); } }
+@keyframes fly {
+  0% { opacity: 1; transform: translate(calc(var(--u) * -110), calc(var(--u) * 24)) rotate(-8deg); }
+  50% { opacity: 1; transform: translate(calc(var(--u) * 25), calc(var(--u) * -14)) rotate(0deg); }
+  100% { opacity: 1; transform: translate(calc(var(--u) * 160), calc(var(--u) * -34)) rotate(8deg); }
+}
+@keyframes logo {
+  0% { opacity: 0; transform: translateY(calc(var(--u) * -34)) scale(0.12); }
+  8% { opacity: 1; }
+  38% { opacity: 1; transform: translateY(calc(var(--u) * -6)) scale(1.3, 1.3); }
+  52% { transform: translateY(calc(var(--u) * 3)) scale(1.08, 0.82); }
+  64% { transform: translateY(calc(var(--u) * -9)) scale(0.96, 1.1); }
+  78% { transform: translateY(0) scale(1.04, 0.93); }
+  90% { transform: translateY(calc(var(--u) * -2)) scale(0.99, 1.02); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes sub { 0% { opacity: 0; transform: scale(0.2, 1); } 70% { opacity: 1; transform: scale(1.12, 1); } 100% { opacity: 1; transform: none; } }
+@keyframes gonain { 0% { opacity: 0; transform: translateY(calc(var(--u) * -30)); } 40% { opacity: 1; transform: translateY(calc(var(--u) * -6)); } 70% { transform: translateY(0) scale(1.06, 0.92); } 100% { opacity: 1; transform: none; } }
+@keyframes spark {
+  0% { opacity: 0; transform: scale(0.2); } 30% { opacity: 1; transform: scale(1.5); } 100% { opacity: 0; transform: scale(0.8) translateY(calc(var(--u) * -6)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title.playing .fly, .title.playing .logo, .title.playing .fp, .title.playing .sub, .title.playing .gona-title, .title.playing .spark { animation-duration: 0.01s !important; }
+}
