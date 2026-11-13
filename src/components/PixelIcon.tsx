@@ -52,7 +52,7 @@ const ICONS: Record<string, string[]> = {
   ],
 };
 const COL: Record<string, string> = {
-  k: '#3b2a3f',
+  k: '#2f7fb8',
   g: '#78c64c',
   b: '#5aa9ff',
   y: '#ffd84a',

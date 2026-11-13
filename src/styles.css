@@ -4,13 +4,14 @@
   --wood: #b57b4e;
   --woodD: #8f5c3a;
   --gold: #ffd84a;
-  --sea: #2f86c9;
+  --sea: #1daefd;
+  --nav: 66px;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body, #root { height: 100%; margin: 0; }
 body {
-  background: #1f5f9a;
-  background-image: radial-gradient(#2a74b3 1px, transparent 1px);
+  background: #6cc8fb;
+  background-image: radial-gradient(#8bd6ff 1px, transparent 1px);
   background-size: 8px 8px;
   font-family: Galmuri11, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   color: var(--line);
@@ -33,33 +34,24 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: var(--sea);
   position: relative;
   overflow: hidden;
-  box-shadow: 0 0 0 3px var(--line), 0 0 40px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 0 2px #fff8, 0 0 32px rgba(0, 80, 150, 0.25);
   padding-top: env(safe-area-inset-top);
 }
 
-/* ── 상단 로고 */
+/* ── 상단 로고: 하늘색 바탕에 그대로 얹힌 작은 도트 로고 (배너·테두리·그림자 없음) */
 .top {
-  flex: 0 0 52px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  background: linear-gradient(#ffe9a8, #ffd466);
-  border-bottom: 3px solid var(--line);
-  box-shadow: inset 0 -3px 0 #e8a92c;
-  z-index: 5;
+  flex: 0 0 48px; display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: var(--sea); z-index: 5;
 }
-.top-en { font-size: 10px; letter-spacing: 1px; color: #8f5c3a; }
+.logo { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .top h1 {
-  margin: 0;
-  font-size: 20px;
-  line-height: 1;
-  color: #fff;
-  text-shadow: -2px 0 var(--line), 2px 0 var(--line), 0 -2px var(--line), 0 2px var(--line), -2px -2px var(--line), 2px -2px var(--line), -2px 2px var(--line), 2px 2px var(--line), 0 4px #c9852a;
+  margin: 0; font-size: 17px; line-height: 1; letter-spacing: 0.5px; font-weight: 700; color: #fff;
+  text-shadow: -1px 0 #0b79c9, 1px 0 #0b79c9, 0 -1px #0b79c9, 0 1px #0b79c9;
 }
+.logo-ko { font-size: 11px; line-height: 1; font-weight: 700; color: #fff7a8; text-shadow: -1px 0 #0b79c9, 1px 0 #0b79c9, 0 -1px #0b79c9, 0 1px #0b79c9; }
+.leaf { flex: none; image-rendering: pixelated; }
 
-.stage { flex: 1 1 0; min-height: 0; position: relative; display: flex; flex-direction: column; background: var(--sea); }
+.stage { flex: 1 1 0; min-height: 0; position: relative; display: flex; flex-direction: column; background: var(--sea); padding-bottom: calc(var(--nav) + env(safe-area-inset-bottom)); }
 
 /* ── 월드맵: 이미지 + 고나 + 터치 영역이 모두 같은 좌표계(.world, 이미지 픽셀 단위)에 있고 통째로 scale */
 .mapbox { flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; background: #1daefd; }
@@ -128,18 +120,21 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .btn-go:active { transform: translateY(2px); box-shadow: inset 0 -3px 0 #e8a92c; }
 .btn-off { background: #d8d2c4; color: #7a7366; box-shadow: inset 0 -5px 0 #b9b2a2; cursor: not-allowed; font-size: 13px; }
 
-/* ── 하단 메뉴 */
+/* ── 하단 메뉴: 작게 떠 있는 둥근 알약형 */
 .nav {
-  flex: 0 0 62px; display: grid; grid-template-columns: repeat(3, 1fr);
-  background: #6b4330; border-top: 3px solid var(--line); box-shadow: inset 0 3px 0 #8f5c3a; z-index: 7;
-  padding-bottom: env(safe-area-inset-bottom); box-sizing: content-box;
+  position: absolute; left: 50%; transform: translateX(-50%); z-index: 7;
+  bottom: calc(env(safe-area-inset-bottom) + 8px);
+  width: min(300px, calc(100% - 28px)); height: 54px; padding: 4px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  background: #fff8e1; border: 2px solid #bfe6ff; border-radius: 27px;
+  box-shadow: 0 2px 0 rgba(11, 121, 201, 0.35);
 }
 .nav-btn {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  background: none; border: 0; padding: 0; color: #f6dcb6; font-size: 12px; font-weight: 700;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  background: none; border: 0; border-radius: 22px; padding: 0; color: #3f7ba6; font-size: 11px; font-weight: 700; line-height: 1;
 }
-.nav-btn svg { opacity: 0.7; }
-.nav-btn.on { color: #fff; background: linear-gradient(#a8643a, #8f5c3a); box-shadow: inset 0 3px 0 var(--gold); }
+.nav-btn svg { opacity: 0.85; }
+.nav-btn.on { background: #a6e66a; color: #24581a; }
 .nav-btn.on svg { opacity: 1; animation: idle 1s steps(1) infinite; }
 
 /* ── 프로필 · 랭킹 */
@@ -158,3 +153,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .glow, .glow i, .star, .gona img, .popup { animation: none !important; }
 }
+
+/* 프로필·랭킹: 하늘색 계열로 통일 */
+.card { border: 2px solid #9fd8ff; box-shadow: 0 2px 0 rgba(11, 121, 201, 0.3); color: #2b6a99; }
+.card h2 { color: #2b6a99; }
+.card .muted { color: #3f7ba6; }
+.row { border-bottom-color: #cfeaff; }
+.row b { color: #e0608e; }
+.view .note { color: #1b6aa5; }

@@ -12,7 +12,7 @@ export default function BottomNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) =>
     <nav className="nav" aria-label="메뉴">
       {TABS.map((t) => (
         <button key={t.id} type="button" className={`nav-btn${tab === t.id ? ' on' : ''}`} aria-current={tab === t.id ? 'page' : undefined} onClick={() => onTab(t.id)}>
-          <PixelIcon name={t.icon} size={3} />
+          <PixelIcon name={t.icon} size={2} />
           <span>{t.label}</span>
         </button>
       ))}
