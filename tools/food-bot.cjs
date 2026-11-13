@@ -123,7 +123,7 @@ async function playBot(page, input, opts = {}) {
       const want = s.snackList.find((n) => n.alt >= 14 && n.alt <= 60 && (n.x - x1) / s.speed > 0.15 && (n.x - x1) / s.speed < 0.3);
       if (want) { await input.tapXY(...jumpXY); lastJump = Date.now(); }
     }
-    if (s.b && s.b.special >= 1) { btn.special = btn.special || (await input.center('.bt-special')); if (btn.special) await input.tapXY(...btn.special); }
+    if (s.b && s.b.special >= 1) { btn.special = btn.special || (await input.center('.bt-special:not(.bt-special2)')); if (btn.special) await input.tapXY(...btn.special); }
     else if (s.canThrow && !s.out && (s.b || s.monsters.some((mx) => mx > s.px + 15 && mx < s.px + 170))) { btn.attack = btn.attack || (await input.center('.bt-attack')); if (btn.attack) await input.tapXY(...btn.attack); }
     await page.waitForTimeout(REACT);
   }
