@@ -1,0 +1,85 @@
+/* 기반(base) 스타일 — 레이아웃·터치 영역·동작에 필요한 것만. 색·도트·프레임 같은 '겉모습'은 스킨(skin/*)이 담당합니다.
+   (게임별 레이아웃은 각 게임 폴더의 css) */
+:root {
+  /* 스킨이 덮어쓰는 토큰 */
+  --mgl-boot-bg: #1daefd; /* 스킨이 불러와지기 전·바깥 여백 색 */
+  --mgl-page-bg: var(--mgl-boot-bg);
+  --mgl-btn-depth: 5px; /* 버튼 아래로 튀어나오는 그림자 높이(스킨 버튼이 정함) */
+
+  /* ── 레이아웃 토큰: 크기·간격. 스킨의 tokens 로 덮어쓸 수 있음(화면 구성·UI 크기를 나중에 바꾸기 위한 자리).
+        터치 영역·동작 로직과는 무관하게 값만 바꾸면 됨 — 단, --mgl-tap-min 은 44px 미만으로 줄이지 말 것(모바일 터치). */
+  --mgl-tap-min: 44px;
+  --mgl-btn-h-lg: 52px;
+  --mgl-screen-pad: 16px 16px 12px;
+  --mgl-screen-gap: 12px;
+  --mgl-list-gap: 12px;
+  --mgl-menu-gap: 6px;
+  --mgl-menu-pad: 0 12px;
+  --mgl-actions-gap: 6px;
+  --mgl-actions-pad: 8px 4px 0;
+  --mgl-home-pad-top: 20px;
+  --mgl-stepper-gap: 14px;
+  --mgl-foot-gap: 8px;
+  --mgl-intro-gap: 14px;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  background: var(--mgl-page-bg);
+  font-family: Galmuri11, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  overflow: hidden;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+img { display: block; -webkit-user-drag: none; image-rendering: pixelated; }
+button { font: inherit; color: inherit; cursor: pointer; }
+h1, h2, h3, p { margin: 0; }
+
+.mgl-frame {
+  height: 100vh; height: 100dvh;
+  width: 100%; max-width: 480px; margin: 0 auto;
+  display: flex; flex-direction: column; position: relative; overflow: hidden;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.mgl-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.mgl-frame > :not(.mgl-bg) { position: relative; z-index: 1; }
+
+/* ── 버튼: 터치 영역은 기반이 보장(최소 44px). 겉모습은 안쪽 .mgl-face 를 스킨이 그림 */
+.mgl-hit {
+  display: inline-flex; align-items: stretch; min-height: var(--mgl-tap-min); padding: 0; border: 0; background: none;
+  color: inherit; font: inherit; text-decoration: none; text-align: center; touch-action: manipulation;
+  margin-bottom: var(--mgl-btn-depth);
+}
+.mgl-hit-lg { min-height: var(--mgl-btn-h-lg); }
+.mgl-hit-icon { min-width: var(--mgl-tap-min); }
+.mgl-hit-card { display: flex; width: 100%; margin-bottom: 0; text-align: left; }
+.mgl-hit:disabled { cursor: default; }
+.mgl-face { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; min-width: 0; }
+
+/* ── 공통 화면 레이아웃 */
+.mgl-screen { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: var(--mgl-screen-gap); padding: var(--mgl-screen-pad); overflow-y: auto; border: 0; background: none; text-align: center; width: 100%; }
+.mgl-list { display: flex; flex-direction: column; gap: var(--mgl-list-gap); }
+.mgl-actions { display: flex; flex-direction: column; gap: var(--mgl-actions-gap); margin-top: auto; padding: var(--mgl-actions-pad); }
+.mgl-grow { flex: 1; }
+.mgl-center { display: flex; align-items: center; justify-content: center; height: 100%; }
+.mgl-stepper { display: flex; align-items: center; justify-content: center; gap: var(--mgl-stepper-gap); }
+.mgl-home { align-items: center; justify-content: space-between; padding-top: var(--mgl-home-pad-top); }
+.mgl-hero-wrap { flex: none; display: flex; justify-content: center; }
+.mgl-menu { width: 100%; display: flex; flex-direction: column; gap: var(--mgl-menu-gap); padding: var(--mgl-menu-pad); }
+.mgl-foot { width: 100%; display: flex; justify-content: space-between; gap: var(--mgl-foot-gap); padding: var(--mgl-menu-pad); }
+.mgl-result { align-items: stretch; }
+.mgl-intro { align-items: center; justify-content: center; gap: var(--mgl-intro-gap); cursor: pointer; }
+
+/* ── 라운드: 점수판 + 플레이 영역 */
+.mgl-round { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+.mgl-slot-scoreboard { flex: none; position: relative; z-index: 2; }
+.mgl-play { flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; touch-action: none; }
+.mgl-overlay { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; }
+.mgl-overlay-pass { pointer-events: none; }
+
+@media (max-height: 560px) {
+  .mgl-hero-wrap { display: none; }
+}

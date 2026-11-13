@@ -1,0 +1,24 @@
+/* 와이어프레임 스킨(점검용) — wf- 접두 클래스만 사용 */
+.wf-bg { position: absolute; inset: 0; background: #fff; background-image: linear-gradient(#e5e5e5 1px, transparent 1px), linear-gradient(90deg, #e5e5e5 1px, transparent 1px); background-size: 16px 16px; }
+.wf-btn { padding: 8px 16px; background: #fff; border: 2px solid #000; font-weight: 700; font-size: 15px; color: #000; }
+.wf-btn-primary { background: #ddd; }
+.wf-btn-sm { font-size: 13px; }
+.wf-btn-card { flex-direction: column; align-items: flex-start; justify-content: flex-start; text-align: left; font-weight: 400; font-size: 13px; }
+.wf-btn-card h3 { font-size: 16px; }
+.mgl-hit:active:not(:disabled) .wf-btn { background: #000; color: #fff; }
+.mgl-hit:disabled .wf-btn { color: #999; border-color: #999; }
+.wf-hud { padding: 6px 8px; display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; background: #fff; border-bottom: 2px solid #000; color: #000; }
+.wf-hud-main { display: flex; flex-direction: column; font-size: 12px; line-height: 1.3; }
+.wf-bar { grid-column: 1 / -1; height: 8px; border: 2px solid #000; }
+.wf-bar i { display: block; height: 100%; background: #000; }
+.wf-friend { width: 100%; height: 100%; border: 3px solid #000; background: #fff; color: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; }
+.wf-friend b { font-size: 16px; padding: 1px 6px; border: 2px solid #000; }
+.wf-friend[data-color='red'] b { background: #f99; }
+.wf-friend[data-color='blue'] b { background: #99f; }
+.wf-friend[data-color='green'] b { background: #9f9; }
+.wf-friend[data-color='yellow'] b { background: #ff9; }
+.wf-stage { position: absolute; inset: 4px; border: 2px dashed #888; }
+.wf-stage[data-reversed='1'] { border-color: #e33; }
+.wf-bin { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 4px; border: 2px solid #000; background: #fff; color: #000; font-size: 13px; font-weight: 700; text-align: center; word-break: keep-all; }
+.wf-bin i { font-style: normal; width: 18px; height: 18px; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; flex: none; }
+.sc-bins[data-hint='0'] .sc-bin:nth-child(1) .wf-bin, .sc-bins[data-hint='1'] .sc-bin:nth-child(2) .wf-bin, .sc-bins[data-hint='2'] .sc-bin:nth-child(3) .wf-bin { background: #ddd; }
