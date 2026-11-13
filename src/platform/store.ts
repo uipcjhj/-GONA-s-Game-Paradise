@@ -1,8 +1,9 @@
 import { DEFAULT_AVATAR_ID, isKnownAvatar } from './avatars';
 import { createPlayerId, createPublicCode } from './ids';
-import { KEYS, RESETTABLE_KEYS } from './keys';
+import { KEYS, RESETTABLE_KEYS, RESETTABLE_PREFIXES } from './keys';
 import { checkNickname } from './nickname';
 import { parsePlayerJson } from './schema';
+import { DEFAULT_OWNED } from './shop';
 import { SCHEMA_VERSION, type KV, type PlayerData } from './types';
 
 /** 브라우저 localStorage (사용 불가 환경이면 null) */
@@ -24,6 +25,7 @@ export function createMemoryStorage(initial: Record<string, string> = {}): KV & 
     getItem: (k) => (m.has(k) ? (m.get(k) as string) : null),
     setItem: (k, v) => void m.set(k, String(v)),
     removeItem: (k) => void m.delete(k),
+    keys: () => [...m.keys()],
     dump: () => Object.fromEntries(m),
   };
 }
@@ -34,14 +36,36 @@ export interface LoadResult {
   player: PlayerData | null;
 }
 
-function safeGet(kv: KV, key: string): string | null {
+/** 접두사로 시작하는 키 목록 (localStorage·메모리 저장소 모두 지원) */
+export function listKeys(kv: KV, prefix: string): string[] {
+  try {
+    if (kv.keys) return kv.keys().filter((k) => k.startsWith(prefix));
+    const out: string[] = [];
+    const n = kv.length ?? 0;
+    for (let i = 0; i < n; i++) {
+      const k = kv.key?.(i);
+      if (k && k.startsWith(prefix)) out.push(k);
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+export function safeRemove(kv: KV, key: string): void {
+  try {
+    kv.removeItem(key);
+  } catch {
+    /* 무시 */
+  }
+}
+export function safeGet(kv: KV, key: string): string | null {
   try {
     return kv.getItem(key);
   } catch {
     return null;
   }
 }
-function safeSet(kv: KV, key: string, value: string): boolean {
+export function safeSet(kv: KV, key: string, value: string): boolean {
   try {
     kv.setItem(key, value);
     return true;
@@ -100,9 +124,18 @@ export function createPlayer(nickname: string, avatarId: string, now: Date = new
       playerLevel: 1,
       totalXP: 0,
       coinBalance: 0,
-      settings: { bgm: true },
+      settings: { bgm: true, vibration: true, reduceMotion: false },
       gameRecords: {},
-      achievements: [],
+      totalPlayCount: 0,
+      totalPlayTimeSec: 0,
+      resultLedger: [],
+      daily: { dateKST: '', byGame: {} },
+      achievements: {},
+      stats: {},
+      missions: null,
+      inventory: { owned: [...DEFAULT_OWNED], equipped: { frame: 'frame-gold', background: 'bg-sky' } },
+      codex: {},
+      coinLog: [],
       unlockedAvatarIds: [],
     },
   };
@@ -128,4 +161,5 @@ export function resetPlatformData(kv: KV): void {
       /* 무시 */
     }
   }
+  for (const pre of RESETTABLE_PREFIXES) for (const k of listKeys(kv, pre)) safeRemove(kv, k);
 }
