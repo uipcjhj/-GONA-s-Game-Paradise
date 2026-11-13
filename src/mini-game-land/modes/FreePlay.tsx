@@ -129,7 +129,7 @@ export default function FreePlay({ exit }: { exit: () => void }) {
         seed={mixSeed(stage.seed, free.level)}
         mode="free"
         timeScale={overflowTimeScale(free.level, game.meta.maxLevel)}
-        hud={{ label: game.meta.title, level: free.level, baseScore: free.runScore }}
+        hud={{ label: game.meta.shortTitle ?? game.meta.title, level: free.level, baseScore: free.runScore }}
         onEnd={onEnd}
       />
     );

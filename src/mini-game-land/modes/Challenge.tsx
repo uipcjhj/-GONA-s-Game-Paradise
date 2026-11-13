@@ -130,7 +130,7 @@ export default function Challenge({ exit }: { exit: () => void }) {
         seed={stage.plan.seed}
         mode="challenge"
         timeScale={stage.plan.timeScale}
-        hud={{ label: `ROUND ${stage.plan.round} · ${g.meta.title}`, lives: st.lives, maxLives: CHALLENGE.maxLives, baseScore: st.score }}
+        hud={{ label: `ROUND ${stage.plan.round} · ${g.meta.shortTitle ?? g.meta.title}`, lives: st.lives, maxLives: CHALLENGE.maxLives, baseScore: st.score }}
         onEnd={(s) => onEnd(stage.plan, s)}
       />
     );

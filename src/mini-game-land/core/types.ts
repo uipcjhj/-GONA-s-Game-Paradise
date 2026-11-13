@@ -41,6 +41,8 @@ export interface GameViewProps<P> {
 
 export interface GameMeta {
   title: string;
+  /** HUD 처럼 좁은 곳에 쓰는 짧은 이름(없으면 title) */
+  shortTitle?: string;
   tagline: string;
   howTo: string[];
   /** 이 레벨까지는 난이도 파라미터가 올라감. 이후는 시간만 압축 */
