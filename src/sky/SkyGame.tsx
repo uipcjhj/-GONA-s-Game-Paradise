@@ -21,7 +21,13 @@ type Phase = 'loading' | 'select' | 'play' | 'result';
 export default function SkyGame({ onExit }: { onExit: () => void }) {
   const [phase, setPhase] = useState<Phase>('loading');
   const [assets, setAssets] = useState<Assets | null>(null);
-  const [fam, setFam] = useState<FamilyId>(() => (localStorage.getItem('gona.sky.fam') as FamilyId | null) ?? 'mom');
+  const [fam, setFam] = useState<FamilyId>(() => {
+    try {
+      return (localStorage.getItem('gona.sky.fam') as FamilyId | null) ?? 'mom';
+    } catch {
+      return 'mom';
+    }
+  });
   const [run, setRun] = useState(0);
   const [paused, setPaused] = useState(false);
   const [result, setResult] = useState<EndInfo | null>(null);
