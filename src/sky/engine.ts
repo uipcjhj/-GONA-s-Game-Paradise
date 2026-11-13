@@ -3,6 +3,7 @@
  * 논리 해상도 180×320 (9:16) 도트 → 정수 배율로 캔버스에 그림 (image-rendering: pixelated)
  */
 import { type Assets, type Sheet, type ImgName, whiteOf, sfx, startBgm, stopBgm } from './assets';
+import { CHARACTERS } from './data/characters';
 
 export const W = 180;
 export const H = 320;
@@ -50,13 +51,9 @@ interface BossState {
   atk: string; at: number; rest: number; last: string; phase: 1 | 2 | 3; n: number; tx: number; sub: number; minion: number; dyingT: number;
 }
 
-const FAMILY_NAME: Record<FamilyId, string> = { mom: '엄마', dad: '아빠', imo: '이모', halmeoni: '할머니', halabeoji: '할아버지' };
+/** 선택 화면 표시용 정보 — 데이터는 src/sky/data/characters.ts 에서 관리 (대사·이름 수정은 그 파일만) */
 export const FAMILY_INFO: Record<FamilyId, { name: string; skill: string; desc: string }> = {
-  mom: { name: FAMILY_NAME.mom, skill: '하트 광역 공격', desc: '사방으로 퍼지는 하트 폭죽!' },
-  dad: { name: FAMILY_NAME.dad, skill: '강력한 직선 공격', desc: '적 탄을 지우는 굵은 광선' },
-  imo: { name: FAMILY_NAME.imo, skill: '유도 마법탄', desc: '적을 쫓아가는 마법 구슬' },
-  halmeoni: { name: FAMILY_NAME.halmeoni, skill: '체력 회복', desc: '주기적으로 하트 1칸 회복' },
-  halabeoji: { name: FAMILY_NAME.halabeoji, skill: '보호막', desc: '탄 1발을 막아 주는 방패' },
+  mom: CHARACTERS.mom, dad: CHARACTERS.dad, imo: CHARACTERS.imo, halmeoni: CHARACTERS.halmeoni, halabeoji: CHARACTERS.halabeoji,
 };
 
 const MAX_HP = 5;
