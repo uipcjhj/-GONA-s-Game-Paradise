@@ -1,0 +1,137 @@
+/* ═══ 플랫폼 UI (Phase 1) — 노치 모서리 · 굵은 외곽선 · 도트 체크 배경. 기존 로고·월드맵 스타일은 건드리지 않음 ═══ */
+:root { --ink: #3b1b5e; --notch: 0 -3px 0 0 var(--ink), 0 3px 0 0 var(--ink), -3px 0 0 0 var(--ink), 3px 0 0 0 var(--ink); }
+
+/* ── 헤더 HUD (B안): 로고 좌우 장식 별 자리에 플레이어 버튼 · 코인 */
+.top.hud { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px; padding: 0 8px; align-items: center; }
+.top.hud .logo { justify-self: center; }
+.p-pbtn {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 100%; min-width: 0; margin: 3px; padding: 3px 7px 3px 3px; justify-self: start;
+  background: #fff4d6; border: 0; box-shadow: var(--notch), inset 0 -3px 0 #e8d5a0; text-align: left; min-height: 34px;
+}
+.p-pbtn:active { transform: translateY(2px); }
+.p-pbtn .meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.p-pbtn .nm { font-size: 10px; line-height: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 64px; }
+.p-pbtn .lv { font-size: 9px; line-height: 1; font-weight: 700; color: #7a3fb0; }
+.p-coinchip { display: inline-flex; align-items: center; gap: 4px; margin: 3px; padding: 6px 7px 6px 6px; justify-self: end; max-width: 100%; background: #fff4d6; box-shadow: var(--notch), inset 0 -3px 0 #e8d5a0; font-size: 11px; font-weight: 700; line-height: 1; white-space: nowrap; }
+.p-coinchip svg { flex: none; }
+@media (max-width: 350px) { .p-pbtn .nm { max-width: 40px; } }
+
+/* ── 하단 메뉴 4탭 (기존 알약형 유지, 칸만 4개) */
+.nav { width: min(340px, calc(100% - 20px)); grid-template-columns: repeat(4, 1fr); }
+.nav-btn { position: relative; font-size: 10px; letter-spacing: -0.2px; }
+.nav-btn .pip { position: absolute; right: 12px; top: 5px; width: 7px; height: 7px; background: #ec5048; border: 2px solid #fff8e1; }
+
+/* ── 아바타 */
+.p-av { display: inline-grid; place-items: center; flex: none; overflow: hidden; background: #cfeeff; border: 2px solid var(--ink); }
+.p-av img { width: 100%; height: 100%; object-fit: contain; }
+
+/* ── 화면 틀 */
+.p-screen { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; background: #8fd0f2 conic-gradient(rgba(255,255,255,.14) 25%, transparent 0 50%, rgba(255,255,255,.14) 0 75%, transparent 0) 0 0 / 8px 8px; }
+.p-bar { flex: 0 0 44px; display: flex; align-items: center; gap: 8px; padding: 0 8px; background: var(--sea); border-bottom: 3px solid #0b79c9; }
+.p-bar h2 { margin: 0; font-size: 15px; color: #fff; flex: 1; text-shadow: -1px 0 #0b79c9, 1px 0 #0b79c9, 0 -1px #0b79c9, 0 1px #0b79c9; }
+.p-back { width: 30px; height: 30px; margin: 3px; padding: 0; border: 0; background: #fff; box-shadow: var(--notch), inset 0 -3px 0 #d9d9e6; font-weight: 700; font-size: 16px; line-height: 1; }
+.p-back:active { transform: translateY(2px); }
+.p-scroll { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 12px; scrollbar-width: none; user-select: none; }
+.p-scroll::-webkit-scrollbar { display: none; }
+.p-ribbon { align-self: center; background: var(--ink); color: #fff4d6; font-size: 12px; font-weight: 700; padding: 5px 12px 6px; letter-spacing: 2px; box-shadow: 0 0 0 2px #fff4d6, 0 0 0 4px var(--ink); margin: 4px 0; flex: none; }
+
+/* ── 패널 · 버튼 · 칩 */
+.p-panel { background: #fff4d6; border: 0; padding: 10px; box-shadow: var(--notch), inset 0 3px 0 #fff, inset 0 -3px 0 rgba(59,27,94,.12), 0 6px 0 0 rgba(59,27,94,.28); flex: none; }
+.p-panel h3 { margin: 0 0 8px; font-size: 12px; line-height: 1; display: flex; align-items: center; gap: 6px; }
+.p-muted { margin: 0; font-size: 11px; line-height: 1.5; color: #5d3f86; word-break: keep-all; }
+.p-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 14px; font-size: 14px; font-weight: 700; border: 0; color: var(--ink);
+  background: #ffc21a; box-shadow: var(--notch), inset 0 -5px 0 #e8a92c, inset 0 3px 0 rgba(255,255,255,.55);
+}
+.p-btn:active { transform: translateY(2px); box-shadow: var(--notch), inset 0 3px 0 #e8a92c; }
+.p-btn.sub { background: #fff; box-shadow: var(--notch), inset 0 -5px 0 #d9d9e6, inset 0 3px 0 #fff; }
+.p-btn.off, .p-btn:disabled { background: #d8d2c4; color: #7a7366; box-shadow: var(--notch), inset 0 -5px 0 #b9b2a2; cursor: not-allowed; }
+.p-btn.off:active, .p-btn:disabled:active { transform: none; }
+.p-btn.danger { background: #ff8a80; box-shadow: var(--notch), inset 0 -5px 0 #d85c58, inset 0 3px 0 rgba(255,255,255,.5); }
+.p-btn.sm { min-height: 36px; font-size: 12px; padding: 0 10px; }
+.p-btn.big { min-height: 52px; font-size: 16px; letter-spacing: 1px; }
+.p-btn.block { width: 100%; }
+.p-row { display: flex; align-items: center; gap: 8px; }
+.p-row > .p-btn.fill { flex: 1; }
+.p-chip { display: inline-block; font-size: 10px; line-height: 1; padding: 4px 6px 5px; border: 2px solid var(--ink); font-weight: 700; background: #fff; white-space: nowrap; }
+.p-chip.ok { background: #8fe06a; } .p-chip.soon { background: #ffb3c6; } .p-chip.gold { background: #ffc21a; } .p-chip.blue { background: #bfe6ff; }
+.p-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; flex: none; padding: 3px; }
+.p-tabs::-webkit-scrollbar { display: none; }
+.p-tabs button { flex: none; padding: 9px 11px 10px; font-size: 11px; font-weight: 700; line-height: 1; background: #fff; border: 2px solid var(--ink); }
+.p-tabs button.on { background: #ffc21a; box-shadow: inset 0 -3px 0 #e8a92c; }
+.p-stat { background: #fff; border: 2px solid var(--ink); padding: 8px 6px; text-align: center; }
+.p-stat b { display: block; font-size: 15px; line-height: 1.1; } .p-stat span { font-size: 9px; color: #6b4a8a; }
+.p-bar-xp { position: relative; height: 9px; background: #e7d9b4; border: 1px solid var(--ink); flex: 1; min-width: 40px; }
+.p-bar-xp > i { position: absolute; left: 0; top: 0; bottom: 0; background: repeating-linear-gradient(90deg, #78c64c 0 4px, #4ea43f 4px 5px); }
+
+/* ── 등록 */
+.p-reg { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); }
+.p-reg .p-scroll { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+.p-steps { display: flex; gap: 6px; justify-content: center; flex: none; }
+.p-steps i { display: grid; place-items: center; width: 22px; height: 18px; font-style: normal; font-size: 10px; font-weight: 700; background: #fff; border: 2px solid var(--ink); }
+.p-steps i.on { background: #ffc21a; }
+.p-hero { display: flex; align-items: flex-end; gap: 8px; justify-content: center; flex: none; }
+.p-stagebox { position: relative; display: grid; place-items: end center; width: 84px; height: 104px; }
+.p-stagebox img { width: 76px; height: 96px; position: relative; z-index: 1; image-rendering: pixelated; }
+.p-stagebox.lg { width: 120px; height: 140px; } .p-stagebox.lg img { width: 100px; height: 126px; }
+.p-stagebox i { position: absolute; bottom: 0; left: 8%; right: 8%; height: 10px; background: #78c64c; box-shadow: var(--notch), inset 0 3px 0 #a6e66a; }
+.p-hop { animation: p-hop .8s steps(4) infinite alternate; } @keyframes p-hop { to { transform: translateY(-10px); } }
+.p-bubble { background: #fff; padding: 8px 10px; font-size: 12px; line-height: 1.5; text-align: center; box-shadow: var(--notch); flex: none; margin: 3px; }
+.p-field { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.p-field input { height: 48px; font: inherit; font-size: 20px; font-weight: 700; letter-spacing: 2px; text-align: center; border: 0; outline: none; width: 100%; color: var(--ink); background: #fff4d6; box-shadow: var(--notch), inset 0 3px 0 rgba(0,0,0,.12); user-select: text; -webkit-user-select: text; }
+.p-field input:focus { box-shadow: var(--notch), inset 0 3px 0 rgba(0,0,0,.12), 0 0 0 6px #ffc21a; }
+.p-field input.bad { box-shadow: var(--notch), inset 0 3px 0 rgba(0,0,0,.12), 0 0 0 6px #ff8a80; }
+.p-slots { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
+.p-slots i { height: 26px; display: grid; place-items: center; font-style: normal; font-size: 12px; font-weight: 700; background: #fff; border: 2px solid var(--ink); overflow: hidden; }
+.p-slots i.cur { background: #ffc21a; animation: p-blink .8s steps(2) infinite; } @keyframes p-blink { 50% { background: #fff; } }
+.p-hint { font-size: 10px; line-height: 1.4; display: flex; gap: 5px; flex-wrap: wrap; }
+.p-hint i { font-style: normal; padding: 2px 5px; border: 1px solid var(--ink); background: #fff; }
+.p-hint i.ok { background: #8fe06a; } .p-hint i.bad { background: #ffb3c6; }
+.p-error { margin: 0; font-size: 11px; font-weight: 700; color: #b3261e; min-height: 16px; }
+
+/* ── 아바타 선택 카드 */
+.p-pick { display: grid; grid-template-columns: 92px 1fr; gap: 10px; align-items: center; flex: none; }
+.p-preview { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; text-align: center; background: #fff4d6; box-shadow: var(--notch), inset 0 3px 0 #fff; font-size: 12px; margin: 3px; }
+.p-preview .frame { width: 76px; height: 76px; background: repeating-conic-gradient(#cfeeff 0 25%, #b7e3fb 0 50%) 0 0 / 8px 8px; box-shadow: 0 0 0 3px #ffc21a, 0 0 0 6px var(--ink); margin: 6px; display: grid; place-items: center; }
+.p-preview .frame img { width: 68px; height: 68px; }
+.p-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; padding: 3px; }
+.p-card { position: relative; border: 0; background: #fff; box-shadow: var(--notch); padding: 4px 0 4px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; font-weight: 700; min-width: 0; }
+.p-card img { width: 56px; height: 56px; background: #cfeeff; }
+.p-card.on { background: #ffc21a; box-shadow: var(--notch), inset 0 -4px 0 #e8a92c; }
+.p-card em { position: absolute; left: 2px; top: 1px; font-style: normal; font-size: 10px; color: #ec5048; }
+.p-card:active { transform: translateY(2px); }
+.p-idcard { display: flex; gap: 8px; align-items: center; background: #fff4d6; padding: 8px 12px; box-shadow: var(--notch), inset 0 3px 0 #fff; text-align: left; flex: none; margin: 3px; }
+
+/* ── 프로필 */
+.p-pcard { display: grid; grid-template-columns: 96px 1fr; gap: 10px; flex: none; background: linear-gradient(180deg, #fff4d6 0 62%, #ffe9b0 62%); padding: 10px; box-shadow: var(--notch), inset 0 3px 0 #fff, 0 6px 0 0 rgba(59,27,94,.28); }
+.p-portrait { position: relative; display: grid; place-items: center; background: repeating-conic-gradient(#cfeeff 0 25%, #b7e3fb 0 50%) 0 0 / 8px 8px; box-shadow: 0 0 0 3px #ffc21a, 0 0 0 6px var(--ink); margin: 6px; height: 84px; }
+.p-portrait img { width: 76px; height: 76px; }
+.p-lvbadge { position: absolute; left: -10px; bottom: -10px; background: var(--ink); color: #fff4d6; font-size: 9px; padding: 3px 4px; display: flex; gap: 2px; align-items: baseline; box-shadow: 0 0 0 2px #fff4d6; } .p-lvbadge b { font-size: 14px; color: #ffc21a; }
+.p-info { display: flex; flex-direction: column; gap: 5px; min-width: 0; justify-content: center; }
+.p-nameplate { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; } .p-nameplate b { font-size: 17px; line-height: 1.1; word-break: break-all; }
+.p-xp { display: flex; flex-direction: column; gap: 3px; } .p-xp small, .p-coinline small { font-size: 9px; color: #5d3f86; }
+.p-coinline { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700; }
+.p-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 18px 12px; }
+.p-empty b { font-size: 14px; }
+
+/* ── MORE · 설정 */
+.p-menu { display: grid; gap: 10px; }
+.p-menu button { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 12px; text-align: left; font-size: 14px; font-weight: 700; background: #fff4d6; border: 0; box-shadow: var(--notch), inset 0 -4px 0 #e8d5a0, inset 0 3px 0 #fff; margin: 3px; }
+.p-menu button:active { transform: translateY(2px); }
+.p-menu button .sp { flex: 1; }
+.p-setrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; font-size: 13px; font-weight: 700; border-bottom: 2px dashed #e2c08a; }
+.p-setrow:last-child { border-bottom: 0; }
+.p-toggle { position: relative; width: 52px; height: 28px; padding: 0; border: 2px solid var(--ink); background: #d8d2c4; flex: none; }
+.p-toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: #fff; border: 2px solid var(--ink); }
+.p-toggle.on { background: #8fe06a; } .p-toggle.on::after { left: 24px; }
+.p-toggle:disabled { opacity: .55; cursor: not-allowed; }
+
+/* ── 모달 · 토스트 */
+.p-scrim { position: absolute; inset: 0; z-index: 30; background: rgba(40,20,70,.5); display: grid; place-items: center; padding: 20px; animation: p-fade .15s steps(3); }
+@keyframes p-fade { from { opacity: 0; } to { opacity: 1; } }
+.p-modal { width: 100%; max-width: 340px; max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #fff4d6; padding: 12px; box-shadow: var(--notch), inset 0 3px 0 #fff, 0 6px 0 0 rgba(59,27,94,.28); scrollbar-width: none; }
+.p-modal h3 { margin: 0; font-size: 15px; }
+.p-toast { position: absolute; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 58px); z-index: 40; max-width: calc(100% - 24px); background: var(--ink); color: #fff4d6; border: 3px solid #fff4d6; padding: 8px 12px; font-size: 12px; font-weight: 700; text-align: center; animation: p-fade .15s steps(3); pointer-events: none; }
+.p-notice { background: #ffb3c6; border: 2px solid var(--ink); padding: 8px 10px; font-size: 11px; line-height: 1.5; flex: none; }
+
+@media (prefers-reduced-motion: reduce) { .p-hop, .p-slots i.cur, .p-scrim, .p-toast { animation: none !important; } }

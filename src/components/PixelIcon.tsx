@@ -50,6 +50,12 @@ const ICONS: Record<string, string[]> = {
     '.kyykkyyk.',
     '.kkk..kkk.',
   ],
+  more: ['..........', '..........', '.kk.kk.kk.', '.kk.kk.kk.', '..........'],
+  gear: ['..k.kk.k..', '.kkkkkkkk.', 'kkyyyyyykk', '.kyykkyyk.', '.kyykkyyk.', 'kkyyyyyykk', '.kkkkkkkk.', '..k.kk.k..'],
+  book: ['.kkkkkkkk.', 'kbbbkbbbk.', 'kbbbkbbbk.', 'kbbbkbbbk.', 'kbbbkbbbk.', 'kkkkkkkkk.'],
+  list: ['.kkkkkkkk.', 'kyyyyyyyyk', 'kygykkkkyk', 'kyyyyyyyyk', 'kygykkkkyk', 'kyyyyyyyyk', 'kygykkkkyk', '.kkkkkkkk.'],
+  shop: ['...kkkk...', '..k....k..', '.kkkkkkkk.', 'kpppppppk.', 'kpppyypppk', 'kpppyypppk', 'kpppppppk.', '.kkkkkkkk.'],
+  coin: ['..kkkk..', '.kyyyyk.', 'kyyYkyyk', 'kyyYkyyk', 'kyyYkyyk', 'kyyyyyyk', '.kyyyyk.', '..kkkk..'],
 };
 const COL: Record<string, string> = {
   k: '#2f7fb8',

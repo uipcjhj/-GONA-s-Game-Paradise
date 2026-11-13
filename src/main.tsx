@@ -3,7 +3,9 @@ import { createRoot } from 'react-dom/client';
 import regular from 'galmuri/dist/Galmuri11.woff2?url';
 import bold from 'galmuri/dist/Galmuri11-Bold.woff2?url';
 import App from './App';
+import { PlayerProvider } from './platform/PlayerContext';
 import './styles.css';
+import './ui/pixel.css';
 
 // 도트 한글 폰트(Galmuri, OFL) — 필요한 두 굵기만 불러옴
 const font = document.createElement('style');
@@ -14,6 +16,8 @@ document.head.appendChild(font);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <PlayerProvider>
+      <App />
+    </PlayerProvider>
   </StrictMode>,
 );

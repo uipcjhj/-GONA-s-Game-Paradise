@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#1daefd" />
+    <title>GONA GONE WILD! 플랫폼 UI 시안 (프로토타입)</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="phone" id="app"></div>
+    <div class="proto" id="proto">
+      <button id="protoBtn">☰ 시안 목록</button>
+      <nav>
+        <a href="#register">1 닉네임 등록</a>
+        <a href="#world?hud=A">2-A HUD 안 A (지도 위 오버레이)</a>
+        <a href="#world?hud=B">2-B HUD 안 B (헤더 내장, 추천)</a>
+        <a href="#world?hud=C">2-C HUD 안 C (하단탭 아바타)</a>
+        <a href="#world?island=food">3 섬 선택 팝업 (Food)</a>
+        <a href="#world?island=sky">3b 섬 팝업 (COMING SOON)</a>
+        <a href="#world?more=1">3c 더보기 메뉴</a>
+        <a href="#profile">4 프로필</a>
+        <a href="#ranking">5 랭킹 (미연결 상태)</a>
+        <a href="#ranking?demo=1">5b 랭킹 (연결 후 예시)</a>
+        <a href="#achievements">6 업적</a>
+        <a href="#codex">7 도감</a>
+        <a href="#missions">8 미션·출석</a>
+        <a href="#shop">9 상점</a>
+        <a href="#settings">10 설정</a>
+      </nav>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>

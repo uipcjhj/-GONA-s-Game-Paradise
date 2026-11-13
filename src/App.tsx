@@ -3,10 +3,20 @@ import { ISLANDS } from './data/islands';
 import { VIEW, WORLD } from './data/world';
 import BottomNav, { type Tab } from './components/BottomNav';
 import IslandPanel from './components/IslandPanel';
-import { ProfileView, RankingView } from './components/InfoViews';
 import WorldMap from './components/WorldMap';
-import PixelLeaf from './components/PixelLeaf';
 import Title from './components/Title';
+import { usePlayer } from './platform/PlayerContext';
+import { useBackLayer } from './platform/useBackLayer';
+import ComingSoon from './screens/ComingSoon';
+import More, { type MoreItem } from './screens/More';
+import Profile from './screens/Profile';
+import Ranking from './screens/Ranking';
+import Recover from './screens/Recover';
+import Register from './screens/Register';
+import Settings from './screens/Settings';
+import CoinChip from './ui/CoinChip';
+import PlayerButton from './ui/PlayerButton';
+import Toast from './ui/Toast';
 
 const HEADER_PX = 48;
 const NAV_PX = 66; // 떠 있는 내비게이션이 차지하는 아래쪽 자리(안전 영역 제외)
@@ -14,8 +24,18 @@ const MAX_FRAME = 600;
 const POPUP_PX = 80; // 팝업 높이(대략)
 
 export default function App() {
-  const [screen, setScreen] = useState<'title' | 'map'>('title');
+  const { player, loadStatus, touch } = usePlayer();
+  const [screen, setScreen] = useState<'title' | 'register' | 'recover' | 'map'>('title');
   const [tab, setTab] = useState<Tab>('map');
+  const [more, setMore] = useState<MoreItem | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<number>(0);
+  const noticed = useRef(false);
+  const notify = useCallback((t: string) => {
+    setToast(t);
+    window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 1800);
+  }, []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [vp, setVp] = useState({ w: window.innerWidth, h: window.innerHeight });
   const [area, setArea] = useState({ w: 0, h: 0 });
@@ -55,17 +75,51 @@ export default function App() {
 
   const onArrive = useCallback((id: string | null) => setSelectedId(id), []);
 
-  if (screen === 'title') return <Title onStart={() => setScreen('map')} />;
+  // 열린 하위 화면·팝업은 브라우저 뒤로가기로 하나씩 닫힘
+  useBackLayer(screen === 'map' && tab === 'more' && more !== null, () => setMore(null));
+  useBackLayer(screen === 'map' && tab === 'map' && selectedId !== null, () => setSelectedId(null));
+
+  // 타이틀 터치: 등록된 플레이어 → 월드맵 / 처음 → 등록 / 저장 손상 → 복구 안내
+  const enter = () => {
+    if (player) {
+      touch();
+      setScreen('map');
+      if (loadStatus === 'recovered' && !noticed.current) {
+        noticed.current = true;
+        notify('손상된 기록을 이전 저장본으로 복구했어요');
+      }
+    } else setScreen(loadStatus === 'corrupt' || loadStatus === 'newer' ? 'recover' : 'register');
+  };
+  const toMap = () => {
+    setTab('map');
+    setMore(null);
+    setScreen('map');
+  };
+  const goTab = (t: Tab) => {
+    setToast(null);
+    setTab(t);
+    setMore(null);
+    if (t !== 'map') setSelectedId(null);
+  };
+
+  if (screen === 'title') return <Title onStart={enter} />;
+  if (screen === 'register' || screen === 'recover' || !player) {
+    return (
+      <div className="frame" style={{ width: frameW }}>
+        {screen === 'recover' ? <Recover newer={loadStatus === 'newer'} onDone={() => setScreen(player ? 'map' : 'register')} /> : <Register onEnter={toMap} />}
+      </div>
+    );
+  }
 
   return (
     <div className="frame" style={{ width: frameW }}>
-      <header className="top">
-        <PixelLeaf />
+      <header className="top hud">
+        <PlayerButton player={player} onClick={() => goTab('profile')} />
         <div className="logo">
           <h1>GONA GONE WILD!</h1>
           <span className="logo-ko">고나가 떴고나!</span>
         </div>
-        <PixelLeaf flip />
+        <CoinChip value={player.coinBalance} />
       </header>
 
       <main className="stage">
@@ -81,11 +135,13 @@ export default function App() {
             {selected && <IslandPanel island={selected} onClose={() => setSelectedId(null)} />}
           </div>
         )}
-        {tab === 'profile' && <ProfileView />}
-        {tab === 'ranking' && <RankingView />}
+        {tab === 'profile' && <Profile onToast={notify} />}
+        {tab === 'ranking' && <Ranking />}
+        {tab === 'more' && (more === null ? <More onOpen={setMore} /> : more === 'settings' ? <Settings onBack={() => setMore(null)} onToast={notify} onReset={() => { setTab('map'); setMore(null); setScreen('register'); }} /> : <ComingSoon id={more} onBack={() => setMore(null)} />)}
       </main>
 
-      <BottomNav tab={tab} onTab={setTab} />
+      <BottomNav tab={tab} onTab={goTab} />
+      <Toast text={toast} />
     </div>
   );
 }
