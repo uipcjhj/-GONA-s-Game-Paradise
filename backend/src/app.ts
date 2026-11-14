@@ -10,8 +10,13 @@ const SESSION_MS = 12 * 3600 * 1000;
 const MAX_SUBMISSIONS_PER_SESSION = 40;
 
 class HttpError extends Error {
-  constructor(public status: number, public code: string, message?: string) {
+  // 타입 스트립(node 직접 실행)과 호환되도록 생성자 매개변수 프로퍼티를 쓰지 않는다
+  status: number;
+  code: string;
+  constructor(status: number, code: string, message?: string) {
     super(message ?? code);
+    this.status = status;
+    this.code = code;
   }
 }
 const bad = (status: number, code: string, message?: string): never => {

@@ -30,3 +30,6 @@
   - **옵션 B (full-development 기준)**: `src/mini-game-land` 와 UI 효과/9-slice 를 이식(충돌 지점이 `pixel.css`·`App.tsx` 등 여러 곳).
   - 추천은 **옵션 A**. 단 두 브랜치의 규칙 수치(보상·한도)·업적 목록·저장 키를 하나로 정하는 결정이 먼저 필요합니다.
 - 어느 쪽이든 Food 패치/실게임 검증 결과(이 브랜치)와 Mini 실게임 통합 결과(platform-home)는 **둘 다 보존**해야 합니다.
+
+## 통합 결과 (실행됨)
+`claude/platform-release-candidate` 는 full-development 를 기준으로 platform-home 의 **기능**(뒤로가기 스택 수정)만 이식했고, 화면·소리 꾸밈은 디자인 승인 전이라 이식하지 않았다. 상세: `RELEASE_CANDIDATE_REPORT.md` 1절.

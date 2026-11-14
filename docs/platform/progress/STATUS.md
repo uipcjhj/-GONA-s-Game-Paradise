@@ -13,3 +13,6 @@
 
 ## 보류(승인·외부 작업 필요)
 Cloudflare 계정/D1 생성·배포, Food 패치 정식 반영(main), 운영 배포, 몬스터·보스 정식 PNG, 보상 수치 확정(D7), 복구 코드(D8), 실제 iPhone 수동 검증.
+
+## 출시 후보 (`claude/platform-release-candidate`)
+통합·보스 재도전·통합 스트레스·UI 검수 완료 — 자세한 내용과 테스트 결과는 `../RELEASE_CANDIDATE_REPORT.md`, 출시 절차는 `../RELEASE_CHECKLIST.md`.
