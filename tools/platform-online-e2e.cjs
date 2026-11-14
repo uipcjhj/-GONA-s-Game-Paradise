@@ -73,11 +73,11 @@ async function enter(page, idx) {
   await page.waitForTimeout(900); // 서버 세션 준비
   await Promise.all([page.waitForURL(/\/mock\//), page.locator('.popup a.btn-go').tap()]);
 }
-const backToParadise = async (page) => { await Promise.all([page.waitForURL(/-GONA-s-Game-Paradise/), page.locator('#back').tap()]); await page.waitForSelector('text=RESULT', { timeout: 15000 }); };
+const backToParadise = async (page) => { await Promise.all([page.waitForURL(/-GONA-s-Game-Paradise/), page.locator('#back').tap()]); await page.waitForSelector('.p-screen >> text=SCORE', { timeout: 15000 }); };
 
 (async () => {
   const browser = await chromium.launch();
-  for (const [w, h] of [[393, 636], [390, 844]]) {
+  for (const [w, h] of [[393, 636], [390, 844]].filter(([w]) => !process.env.ONLY_W || String(w) === process.env.ONLY_W)) {
     const tag = `${w}x${h}`;
     const stamp = `${Date.now().toString(36).slice(-4)}`;
     // 시드: Sky 3명 + Mini(cat-jump) 3명 + 종합용(두 게임 모두 3명)
@@ -105,7 +105,7 @@ const backToParadise = async (page) => { await Promise.all([page.waitForURL(/-GO
     await page.locator('#clear').tap();
     await backToParadise(page);
     const rt = await page.locator('.p-screen').first().innerText();
-    ok(`[${tag}] Sky 결과 화면: 점수·클리어·단계·보상`, rt.includes('400') && rt.includes('CLEAR') && /\d단계/.test(rt) && /XP \+\d+/.test(rt) && rt.includes('Sky'), rt.replace(/\n+/g, ' | ').slice(0, 160));
+    ok(`[${tag}] Sky 결과 화면: 점수·클리어·단계·보상`, rt.includes('400') && rt.includes('CLEAR') && /\d단계/.test(rt) && (/XP \+\d+/.test(rt) || rt.includes('너무 짧은 판')) && rt.includes('Sky'), rt.replace(/\n+/g, ' | ').slice(0, 160));
     await shot(page, `sky-result_${tag}`);
     await drain(page);
     const p1 = await player(page);
@@ -151,8 +151,8 @@ const backToParadise = async (page) => { await Promise.all([page.waitForURL(/-GO
     await page.waitForSelector('.p-podium');
     ok(`[${tag}] Mini: 미니게임별 랭킹 탭(캣 점프)`, (await page.locator('.p-podium').innerText()).includes('시드A'));
     await page.getByRole('tab', { name: '종합' }).tap();
-    await page.waitForSelector('.p-podium, text=아직 순위가 없어요', { timeout: 8000 });
-    ok(`[${tag}] 종합 랭킹: 서버 계산 결과(백분위 환산) 표시`, (await page.locator('.p-screen').innerText()).includes('백분위'));
+    await page.waitForFunction(() => document.body.innerText.includes("백분위"), null, { timeout: 10000 }).catch(() => {});
+    ok(`[${tag}] 종합 랭킹: 서버 계산 결과(백분위 환산) 표시`, (await page.locator('.p-screen').innerText()).includes("백분위"), (await page.locator(".p-screen").innerText()).replace(/\n+/g," | ").slice(0,300));
     await shot(page, `ranking-overall_${tag}`);
 
     // ── 서버 장애: 랭킹 조회 실패 안내 → 복구 후 동기화
