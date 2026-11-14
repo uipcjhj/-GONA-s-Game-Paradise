@@ -48,7 +48,8 @@ async function start(page, game) {
   stop = await recorder(page, `${out}/tower`);
   for (let k = 0; k < 6; k++) {
     await page.waitForFunction(() => document.querySelector('[data-testid=stage]')?.dataset.phase === 'aim', null, { timeout: 9000 }).catch(() => {});
-    const s = await page.evaluate(() => { const d = document.querySelector('[data-testid=stage]').dataset; return { aim: +d.aimX, sup: +d.supportX, k: +d.scale }; });
+    const s = await page.evaluate(() => { const e = document.querySelector('[data-testid=stage]'); if (!e || e.dataset.phase !== 'aim') return null; const d = e.dataset; return { aim: +d.aimX, sup: +d.supportX, k: +d.scale }; });
+    if (!s) break; // 목표 높이에 닿아 결과 화면으로 넘어감
     const box = await page.locator('[data-testid=stage]').boundingBox();
     const x0 = box.x + box.width / 2, y0 = box.y + box.height * 0.75, dx = (s.sup - s.aim) * s.k + (k % 2 ? 6 : -6);
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y: y0 }] });

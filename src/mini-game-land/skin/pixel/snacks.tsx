@@ -80,7 +80,7 @@ export function SnackArt({ piece, ghost }: { piece: TowerPieceView; ghost?: bool
       </g>
       <polygon points={pts} fill="none" stroke={INK} strokeWidth={1.5} strokeLinejoin="miter" />
       {Array.from({ length: piece.weight }, (_, i) => (
-        <rect key={i} x={-((piece.weight * 4 - 1) / 2) + i * 4} y={-1} width={3} height={3} fill={INK} opacity={0.55} />
+        <rect key={i} x={-((piece.weight * 4 - 1) / 2) + i * 4} y={-1} width={3} height={3} fill={INK} opacity={0.35} />
       ))}
     </svg>
   );
