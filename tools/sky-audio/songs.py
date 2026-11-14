@@ -11,7 +11,7 @@ from synth import (SR, Song, n2m, i_brass, i_lead, i_chip, i_bell, i_bass, i_gui
                    d_kick, d_snare, d_hat, d_crash, d_tom, d_timpani, periodic_file, make_ir)
 
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
-OUT = os.path.join(ROOT, 'public', 'assets', 'sky', 'audio')
+OUT = os.path.join(ROOT, 'src', 'sky', 'sound')
 os.makedirs(OUT, exist_ok=True)
 
 # 코드 이름 → 구성음(옥타브 4 기준 midi)
@@ -104,7 +104,7 @@ def write(name, data, loop_len=None, pre=0.25):
     wav = os.path.join('/tmp', f'gona-{name}.wav')
     wavfile.write(wav, SR, (np.clip(data.T, -1, 1) * 32767).astype(np.int16))
     mp3 = os.path.join(OUT, f'bgm-{name}.mp3')
-    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', wav, '-codec:a', 'libmp3lame', '-b:a', '128k', mp3], check=True)
+    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', wav, '-codec:a', 'libmp3lame', '-b:a', '96k', mp3], check=True)
     os.remove(wav)
     print(name, f'{data.shape[1] / SR:.2f}s', os.path.getsize(mp3) // 1024, 'KB')
     return {'loop': [pre, pre + loop_len]} if loop_len else {}

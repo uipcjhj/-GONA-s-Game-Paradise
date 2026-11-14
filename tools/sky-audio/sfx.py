@@ -6,7 +6,7 @@ import numpy as np
 from scipy.io import wavfile
 from synth import SR, saw, square, sine, tri, noise, expdec, env, lp, hp, bp, mtof, n2m, i_bell, i_brass, i_chip, d_kick, d_crash, d_timpani
 
-OUT = os.path.join(os.path.dirname(__file__), '..', '..', 'public', 'assets', 'sky', 'audio')
+OUT = os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'sky', 'sound')
 os.makedirs(OUT, exist_ok=True)
 OSR = 22050
 R = np.random.RandomState(99)
@@ -222,3 +222,10 @@ for i, m in enumerate([62, 69, 74]):
     x += at(i_brass(m, 0.12 if i < 2 else 0.6, 1.0), i * 0.13, T)
 x += at(d_crash(0.6), 0.26, T)[: len(x)] if False else 0
 save('start', x, 0.8)
+# 보스 장갑 파손: 금속 찢어지는 '콰직' + 중형 폭발
+T = 1.1
+n = int(0.45 * SR)
+t = t_(0.45)
+crunch = sum(np.sin(2 * np.pi * fr * t + 2.5 * np.sin(2 * np.pi * fr * 1.37 * t)) * expdec(n, 0.09) for fr in (240, 380, 610)) * 0.4
+crunch += bp(noise(n), 900, 5000) * expdec(n, 0.06)
+save('armorBreak', np.tanh(mix(crunch * 1.2, at(boom(0.9, 0.2, 2200, 55, 1.2), 0.04, T)) * 1.5), 0.92)

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadAssets, type Assets } from './assets';
-import { initAudio, preloadAudio, playBgm, stopBgm, sfx, isMuted, setMuted, audioUnlocked, audioState, audioTap } from './audio';
+import { initAudio, preloadAudio, playBgm, stopBgm, sfx, isMuted, setMuted, audioUnlocked, audioState, audioTap, audioDiag, unlockAudio, reviveAudio, testBeep, forceHtmlAudio } from './audio';
 import { SkyEngine, SPECIAL_NAME, type EndInfo, type FamilyId } from './engine';
 import { CHARACTERS } from './data/characters';
 import { settings, saveSettings, canVibrate } from './settings';
@@ -57,7 +57,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
 
   useEffect(() => {
     initAudio();
-    if (location.search.includes('skytest')) Object.assign(window, { __skyAudio: audioState, __skyAudioTap: audioTap });
+    if (location.search.includes('skytest')) Object.assign(window, { __skyAudio: audioState, __skyAudioTap: audioTap, __skyAudioDiag: audioDiag, __skyForceHtml: forceHtmlAudio });
     void preloadAudio('menu');
     // 글자 캐시가 대체 글꼴로 굳지 않도록 픽셀 글꼴을 먼저 불러 둠
     const fonts = document.fonts ? Promise.race([document.fonts.load('700 22px Galmuri11'), new Promise((r) => setTimeout(r, 2500))]) : Promise.resolve();
@@ -86,10 +86,13 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
   // 캔버스 크기: 9:16 을 화면에 최대한 크게. 세로 여백이 충분하면 조작 버튼을 전투 화면 밖 하단 바로
   const CTRL = 66;
   const [box, setBox] = useState({ w: 360, h: 640, bar: false });
+  const [vp, setVp] = useState({ w: window.innerWidth, h: window.innerHeight });
+  const [diag, setDiag] = useState(audioDiag);
   useEffect(() => {
     const on = () => {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
+      setVp({ w: vw, h: vh });
       const bar = vh - Math.min(vw, 540) * (16 / 9) >= CTRL;
       const w = Math.floor(Math.min(vw, ((bar ? vh - CTRL : vh) * 9) / 16, 540));
       setBox({ w, h: Math.floor((w * 16) / 9), bar });
@@ -164,6 +167,13 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
     setPhase('play');
   }, []);
 
+  useEffect(() => {
+    if (!paused) return;
+    setDiag(audioDiag());
+    const id = window.setInterval(() => setDiag(audioDiag()), 500);
+    return () => window.clearInterval(id);
+  }, [paused]);
+
   const togglePause = (p: boolean) => {
     engine.current?.setPaused(p);
     setPaused(p);
@@ -181,6 +191,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
 
   if (phase === 'title') {
     const go = () => {
+      unlockAudio(); // iOS: START 터치 안에서 직접 오디오 잠금 해제
       if (leaving) return;
       sfx('menuOk');
       setLeaving(true);
@@ -189,22 +200,37 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
         setPhase('select');
       }, 520);
     };
+    // 타이틀 전용 구도: 로고(위) · 캐릭터 띠(가운데, 원화의 인물 영역 33%~100%를 통째로) · 메뉴(아래, 별도 영역)
+    const ART_W = 688;
+    const ART_H = 1024;
+    const BAND = 0.33; // 원화에서 가족 일러스트가 시작하는 높이 비율
+    const logoW = Math.round(Math.min(vp.w * 0.62, 300, (vp.h * 0.2) / 0.672));
+    const logoH = Math.round(logoW * 0.672);
+    const top = 10 + logoH + 2;
+    const menuH = soundOn ? 104 : 120;
+    const bottom = vp.h - menuH;
+    const bandPx = ART_H * (1 - BAND);
+    const k = Math.min(vp.w / ART_W, Math.max(120, bottom - top) / bandPx);
+    const aw = ART_W * k;
+    const ah = ART_H * k;
+    const artTop = top + (bottom - top - bandPx * k) / 2 - ART_H * BAND * k;
     return (
-      <div className={`sky ttl${leaving ? ' out' : ''}`} onPointerDown={() => setSoundOn(true)}>
+      <div className={`sky ttl${leaving ? ' out' : ''}`} onPointerDown={() => { unlockAudio(); setSoundOn(true); }}>
         <div className="ttl-bg" aria-hidden />
         <div className="ttl-cloud c1" aria-hidden />
         <div className="ttl-cloud c2" aria-hidden />
-        <img className="ttl-art" src={`${BASE}v2/title/keyart.jpg`} alt="고나와 가족이 황혼의 부유왕국 하늘을 나는 그림" />
+        <img className={`ttl-art${aw < vp.w - 2 ? ' narrow' : ''}`} style={{ width: aw, height: ah, left: (vp.w - aw) / 2, top: artTop }} src={`${BASE}v2/title/keyart.jpg`} alt="고나와 가족이 황혼의 부유왕국 하늘을 나는 그림" />
         <div className="ttl-sparks" aria-hidden>
           {Array.from({ length: 12 }, (_, i) => <i key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.37) % 2.6}s`, animationDuration: `${2.2 + (i % 4) * 0.5}s` }} />)}
         </div>
-        <img className="ttl-logo" src={`${BASE}v2/title/logo.png`} alt="GONA's Sky Adventure" />
-        <div className="ttl-menu">
-          <button type="button" className="ttl-start" onClick={go}>PRESS START</button>
-          <button type="button" className="ttl-map" onClick={() => { sfx('menuMove'); onExit(); }}>월드맵으로</button>
+        <img className="ttl-logo" style={{ width: logoW }} src={`${BASE}v2/title/logo.png`} alt="GONA's Sky Adventure" />
+        <div className="ttl-menu" style={{ height: menuH }}>
+          <div className="ttl-row">
+            <button type="button" className="ttl-start" onClick={go}>PRESS START</button>
+            <button type="button" className="ttl-map" onClick={() => { sfx('menuMove'); onExit(); }}>월드맵</button>
+          </div>
           {!soundOn && <p className="ttl-hint">♪ 화면을 터치하면 음악이 켜져요</p>}
-          {best > 0 && <p className="ttl-best">HI-SCORE {String(best).padStart(8, '0')}</p>}
-          <p className="ttl-copy">STAGE 1 · 황혼의 부유왕국 — 개발판</p>
+          <p className="ttl-copy">{best > 0 && <b>HI-SCORE {String(best).padStart(8, '0')}</b>} STAGE 1 · 개발판</p>
         </div>
         <div className="ttl-wipe" aria-hidden />
       </div>
@@ -231,10 +257,6 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
           <button type="button" className="sel-arrow" onClick={() => step(-1)} aria-label="이전">◀</button>
           <div className="sel-art" key={fam}>
             <img className="sel-illust" src={`${BASE}v2/chars/${fam}/illust.png`} alt={c.name} />
-            <div className="sel-plate">
-              <b>{c.name}</b>
-              <span>{c.job}</span>
-            </div>
           </div>
           <button type="button" className="sel-arrow" onClick={() => step(1)} aria-label="다음">▶</button>
         </div>
@@ -244,22 +266,22 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
             <div className="sel-spr sel-spr-fam" style={{ backgroundImage: `url(${BASE}v2/chars/${fam}/fly.png)` }} />
           </div>
           <dl>
+            <dt className="sel-name">{c.name}</dt><dd className="sel-job">{c.job}</dd>
             <dt>일반</dt><dd>{c.attack}</dd>
             <dt>필살기</dt><dd><b>{SPECIAL_NAME[fam]}</b> — {SP_DESC[fam]}</dd>
           </dl>
         </div>
-        <p className="sel-line">“{c.sortieLine}”</p>
         <ul className="sel-roster">
           {FAMILY.map((f) => (
             <li key={f}>
-              <button type="button" className={f === fam ? 'on' : ''} onClick={() => pick(f)} aria-label={CHARACTERS[f].name} style={{ backgroundImage: `url(${BASE}v2/chars/${f}/illust.png)` }}>
+              <button type="button" className={f === fam ? 'on' : ''} onClick={() => pick(f)} aria-label={CHARACTERS[f].name} style={{ backgroundImage: `url(${BASE}v2/chars/${f}/face.png)` }}>
                 {f === fam && <i>1P</i>}
               </button>
             </li>
           ))}
         </ul>
         <div className="sel-btns">
-          <button type="button" className="sky-btn sky-btn-go" onClick={() => { sfx('menuOk'); start(fam); }}>출격!</button>
+          <button type="button" className="sky-btn sky-btn-go" onClick={() => { unlockAudio(); sfx('menuOk'); start(fam); }}>출격!</button>
           <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setPhase('title'); }}>타이틀</button>
         </div>
       </div>
@@ -293,7 +315,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
                 onContextMenu={(e) => e.preventDefault()}
                 aria-label={`가족 필살기 ${Math.floor(gauge * 100)}%`}
               >
-                <span className="sp-face" style={{ backgroundImage: `url(${BASE}v2/chars/${fam}/illust.png)` }} />
+                <span className="sp-face" style={{ backgroundImage: `url(${BASE}v2/chars/${fam}/face.png)` }} />
                 <span className="sp-fill" style={{ height: `${Math.round(gauge * 100)}%` }} />
                 <b>{ready ? '필살!' : `${Math.floor(gauge * 100)}%`}</b>
               </button>
@@ -311,6 +333,18 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
               <div className="sky-opt">
                 <span>소리</span>
                 <button type="button" className={!mute ? 'on' : ''} onClick={() => { setMuted(!mute); setMute(!mute); }}>{mute ? '꺼짐' : '켜짐'}</button>
+              </div>
+              <div className="sky-diag">
+                <b>오디오 상태</b>
+                <span>
+                  {diag.mode === 'webaudio' ? 'Web Audio' : 'HTML5 오디오'} · {diag.ctx} · {diag.unlocked ? '잠금 해제됨' : '첫 터치 대기'} · 음원 {diag.decoded}/{diag.total}
+                  {' · '}BGM {diag.bgm ?? '없음'}{diag.playing ? '(재생)' : ''}{diag.muted ? ' · 음소거' : ''}
+                </span>
+                {diag.errors.length > 0 && <small>{diag.errors[diag.errors.length - 1]}</small>}
+                <div className="sky-diag-btns">
+                  <button type="button" onClick={() => { reviveAudio(); setDiag(audioDiag()); }}>소리 다시 켜기</button>
+                  <button type="button" onClick={() => testBeep()}>테스트음</button>
+                </div>
               </div>
               <div className="sky-opt">
                 <span>화면 흔들림</span>

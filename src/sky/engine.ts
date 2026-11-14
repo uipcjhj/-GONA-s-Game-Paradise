@@ -71,7 +71,7 @@ interface Enemy {
 interface Item { x: number; y: number; kind: 'cookie' | 'strawberry' | 'banana' | 'star'; age: number; alive: boolean }
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; col: string; size: number; g: number }
 interface Boom { x: number; y: number; age: number; delay: number; scale: number }
-type FxKind = 'spark' | 'metal' | 'weak' | 'ring' | 'puff';
+type FxKind = 'spark' | 'metal' | 'weak' | 'ring' | 'puff' | 'smoke';
 interface Fx { kind: FxKind; x: number; y: number; age: number; dur: number; scale: number; vy: number }
 interface Prop { name: V2Name; x: number; y: number; v: number; layer: number; vx: number }
 interface Float { x: number; y: number; text: string; age: number; col: string }
@@ -225,6 +225,14 @@ export class SkyEngine {
   private boss: Enemy | null = null;
   private bs: BossState | null = null;
   private bossSpawned = false;
+  /** 보스 피격 반응: 번쩍임 쿨타임 · 흔들림 · 체력바 잔상 · 장갑 파손 단계 */
+  private bossFlashCd = 0;
+  private bossRecoil = 0;
+  private bossTrail = 1;
+  private bossBarHit = 0;
+  private armorStage = 0;
+  private bossMask: { w: number; h: number; m: Uint8Array }[] = [];
+  private smokeT = 0;
   private warned = false;
   private timeline: Spawn[] = [];
   private tlIdx = 0;
@@ -898,6 +906,36 @@ export class SkyEngine {
     this.boss = e;
     this.bs = { mode: 'enter', atk: '', at: 0, rest: 1, last: '', phase: 1, n: 0, tx: W / 2, sub: 0, minion: 5, dyingT: 0 };
     playBgm('boss', 0.2, 0.5);
+    this.bossTrail = 1;
+    this.armorStage = 0;
+    if (!this.bossMask.length) this.bossMask = this.buildBossMask();
+  }
+
+  /** 보스 실루엣 마스크 (논리 해상도, 프레임 2개) — 총알이 실제 그림에 닿은 지점에서 맞도록 */
+  private buildBossMask(): { w: number; h: number; m: Uint8Array }[] {
+    const im = this.a.v2['stage1/boss'];
+    const fw = im.width / 2;
+    const out: { w: number; h: number; m: Uint8Array }[] = [];
+    for (let f = 0; f < 2; f++) {
+      const w = Math.round(fw / R);
+      const h = Math.round(im.height / R);
+      const [c, g] = this.mkCanvas(w, h);
+      g.drawImage(im, f * fw, 0, fw, im.height, 0, 0, w, h);
+      const d = g.getImageData(0, 0, w, h).data;
+      const m = new Uint8Array(w * h);
+      for (let i = 0; i < w * h; i++) m[i] = d[i * 4 + 3] > 100 ? 1 : 0;
+      void c;
+      out.push({ w, h, m });
+    }
+    return out;
+  }
+  private bossSolid(e: Enemy, x: number, y: number): boolean {
+    const mk = this.bossMask[this.bs && this.bs.phase >= 2 ? 1 : 0];
+    if (!mk) return true;
+    const lx = Math.floor(x - (e.x - mk.w / 2));
+    const ly = Math.floor(y - (e.y - mk.h / 2));
+    if (lx < 0 || ly < 0 || lx >= mk.w || ly >= mk.h) return false;
+    return mk.m[ly * mk.w + lx] === 1;
   }
 
   private updateEnemies(dt: number): void {
@@ -1003,6 +1041,21 @@ export class SkyEngine {
   private updateBoss(e: Enemy, dt: number): void {
     const b = this.bs!;
     const frac = e.hp / e.max;
+    this.bossFlashCd -= dt;
+    this.bossRecoil = Math.max(0, this.bossRecoil - dt * 12);
+    this.bossBarHit = Math.max(0, this.bossBarHit - dt);
+    // 체력바 잔상: 실제 체력을 0.35초 늦게 따라감
+    this.bossTrail += (Math.max(0, frac) - this.bossTrail) * Math.min(1, dt * (this.bossBarHit > 0 ? 0.6 : 3.2));
+    // 파손된 장갑 자리에서 연기·불꽃
+    this.smokeT -= dt;
+    if (this.smokeT <= 0 && this.armorStage > 0) {
+      this.smokeT = 0.16;
+      for (let i = 0; i < this.armorStage; i++) {
+        const [dx, dy] = SkyEngine.ARMOR_PTS[i];
+        if (Math.random() < 0.7) this.addFx('smoke', e.x + dx + rand(-3, 3), e.y + dy, 0.55, 0.7, -26);
+        if (Math.random() < 0.5) this.part(e.x + dx + rand(-3, 3), e.y + dy, rand(-12, 12), rand(-50, -20), 0.4, Math.random() < 0.5 ? '#ffb040' : '#ff6020', 2, -20);
+      }
+    }
     if (b.mode === 'dying') {
       b.dyingT += dt;
       // 대형 연쇄 폭발: 점점 잦아지고 커짐
@@ -1022,6 +1075,10 @@ export class SkyEngine {
         this.flashWhite = 1;
         this.kick(1, 0.14);
         for (let i = 0; i < 8; i++) this.addBoom(e.x + rand(-48, 48), e.y + rand(-48, 48), rand(1.1, 1.7), i * 0.06);
+        // 최종 대폭발: 중심 초대형 3겹
+        this.addBoom(e.x, e.y, 2.6, 0.05);
+        this.addBoom(e.x - 20, e.y + 10, 2.0, 0.18);
+        this.addBoom(e.x + 22, e.y - 8, 2.2, 0.3);
         this.addFx('ring', e.x, e.y, 2.6, 0.5);
         this.addFx('ring', e.x, e.y, 1.6, 0.4);
         this.debris(e.x, e.y, 40, ['#c02040', '#d8a040', '#5a5a66', '#ff9ec0']);
@@ -1336,6 +1393,25 @@ export class SkyEngine {
     if (!quiet) this.floatText(x, y, `${add}`, '#fff7dc');
   }
 
+  /** 장갑 파손: 체력 80·60·40·20% 마다 큰 파열 + 그 자리에서 계속 연기·불꽃 */
+  private static ARMOR_PTS = [[-30, -18], [30, -8], [-20, 24], [24, 28]];
+  private checkArmor(e: Enemy): void {
+    const frac = e.hp / e.max;
+    const next = this.armorStage < 4 && frac <= 0.8 - this.armorStage * 0.2;
+    if (!next || !this.bs || this.bs.mode === 'dying') return;
+    const [dx, dy] = SkyEngine.ARMOR_PTS[this.armorStage];
+    this.armorStage++;
+    const x = e.x + dx;
+    const y = e.y + dy;
+    for (let i = 0; i < 4; i++) this.addBoom(x + rand(-8, 8), y + rand(-8, 8), rand(0.6, 0.9), i * 0.06);
+    this.addFx('ring', x, y, 1.0, 0.3);
+    this.debris(x, y, 14, ['#c02040', '#d8a040', '#5a5a66', '#3a2a2a']);
+    this.kick(0.45, 0.06);
+    sfx('armorBreak');
+    buzz(40);
+    this.floatText(x, y - 10, 'ARMOR BREAK!', '#ffc040');
+  }
+
   /** 피해 처리. src: 맞힌 탄 종류(이펙트·소리 결정), hx/hy: 맞은 위치 */
   private damage(e: Enemy, dmg: number, src: PKind | 'bomb' | 'beam' | 'body', hx: number, hy: number): void {
     if (e.dead || e.y < -6) return;
@@ -1344,17 +1420,32 @@ export class SkyEngine {
       const b = this.bs!;
       if (b.mode === 'enter' || b.mode === 'dying') return;
       const weak = (hx - e.x - WEAK.dx) ** 2 + (hy - e.y - WEAK.dy) ** 2 < WEAK.r * WEAK.r;
-      if (weak) {
-        dmg *= 1.5;
-        this.addFx('weak', hx, hy, strong ? 1.4 : 0.8, 0.22);
-        sfx('bossWeak');
-      } else {
-        this.addFx('metal', hx, hy, strong ? 1.5 : 0.9, 0.24);
-        sfx('bossHit');
+      if (src !== 'beam' && src !== 'bomb') {
+        if (weak) {
+          dmg *= 1.5;
+          // 약점: 분홍 충격파 + 결정 파편
+          this.addFx('weak', hx, hy, strong ? 1.6 : 1.15, 0.24);
+          if (Math.random() < 0.35) this.addFx('ring', hx, hy, 0.55, 0.2);
+          for (let i = 0; i < 2; i++) this.part(hx, hy, rand(-70, 70), rand(-90, -10), 0.35, i ? '#ffb8d8' : '#ffffff', 2, 160);
+          sfx('bossWeak');
+        } else {
+          // 장갑: 금속 섬광 + 주황 불티 · 회색 파편
+          this.addFx('metal', hx, hy, strong ? 1.7 : 1.25, 0.24);
+          this.part(hx, hy, rand(-80, 80), rand(-100, -30), 0.3, '#ffc040', 1, 220);
+          if (Math.random() < 0.5) this.part(hx, hy, rand(-60, 60), rand(-70, -10), 0.5, '#9aa4b4', 2, 260);
+          sfx('bossHit', 1, weak ? 1 : rand(0.92, 1.08));
+        }
+      } else if (Math.random() < 0.3) this.addFx('metal', hx, hy, 1.1, 0.2);
+      // 피격 번쩍임: 짧게, 연속 사격 중에도 깜박이듯 (항상 하얗게 덮이지 않도록 쿨타임)
+      if (this.bossFlashCd <= 0) {
+        e.flash = strong ? 0.07 : 0.035;
+        this.bossFlashCd = strong ? 0.1 : 0.2;
       }
+      this.bossRecoil = Math.min(1.6, this.bossRecoil + (strong ? 1.6 : 0.5));
+      this.bossBarHit = 0.12;
       if (strong) {
-        this.kick(0.35, 0.06);
-        this.addFx('ring', hx, hy, 1.0, 0.28);
+        this.kick(0.38, 0.07);
+        this.addFx('ring', hx, hy, 1.2, 0.3);
         buzz(30);
       }
     } else if (src !== 'bomb') {
@@ -1363,7 +1454,8 @@ export class SkyEngine {
       if (strong) this.kick(0.2, 0.04);
     }
     e.hp -= dmg;
-    e.flash = 0.06;
+    if (e.kind !== 'boss') e.flash = 0.06;
+    else this.checkArmor(e);
     this.addGauge(dmg * (e.kind === 'boss' ? 0.0022 : 0.003));
     if (e.hp > 0) return;
     if (e.kind === 'boss') {
@@ -1423,11 +1515,21 @@ export class SkyEngine {
       for (const e of this.en) {
         if (e.dead) continue;
         if (b.pierce && b.hits.includes(e.id)) continue;
-        const rr = b.r + e.hr;
-        if ((b.x - e.x) ** 2 + (b.y - e.y) ** 2 < rr * rr) {
-          // 맞은 지점: 탄 위치를 적 외곽 쪽으로
-          const hy = Math.max(b.y, e.y - e.hr * 0.7);
-          this.damage(e, b.dmg, b.kind, b.x, hy);
+        let hit: boolean;
+        let hx = b.x;
+        let hy = b.y;
+        if (e.kind === 'boss' && b.kind !== 'drill') {
+          // 보스: 그림 실루엣에 닿은 정확한 지점 (탄 머리 → 몸통 순으로 검사)
+          hit = Math.abs(b.x - e.x) < 60 && Math.abs(b.y - e.y) < 64 && (this.bossSolid(e, b.x, b.y - 4) || this.bossSolid(e, b.x, b.y) || (b.r > 5 && this.bossSolid(e, b.x, b.y - b.r)));
+          if (hit && b.kind === 'charge') { hx = b.x; hy = b.y - b.r * 0.6; }
+          else if (hit) hy = this.bossSolid(e, b.x, b.y - 4) ? b.y - 4 : b.y;
+        } else {
+          const rr = b.r + e.hr;
+          hit = (b.x - e.x) ** 2 + (b.y - e.y) ** 2 < rr * rr;
+          hy = Math.max(b.y, e.y - e.hr * 0.7);
+        }
+        if (hit) {
+          this.damage(e, b.dmg, b.kind, hx, hy);
           if (b.kind === 'potion') {
             for (const o of this.en) if (o !== e && (o.x - b.x) ** 2 + (o.y - b.y) ** 2 < 26 * 26) this.damage(o, 2, 'potion', o.x, o.y);
             this.addBoom(b.x, b.y, 0.35, 0);
@@ -1525,6 +1627,19 @@ export class SkyEngine {
     c = cc;
     this.propBaked.set(key, c);
     return c;
+  }
+  private darkPuffC: HTMLCanvasElement | null = null;
+  private darkPuff(): HTMLImageElement {
+    if (!this.darkPuffC) {
+      const im = this.a.v2['fx/steam-puff'];
+      const [c, g] = this.mkCanvas(im.width, im.height);
+      g.drawImage(im, 0, 0);
+      g.globalCompositeOperation = 'source-atop';
+      g.fillStyle = 'rgba(30, 22, 40, 0.62)';
+      g.fillRect(0, 0, c.width, c.height);
+      this.darkPuffC = c;
+    }
+    return this.darkPuffC as unknown as HTMLImageElement;
   }
   /** 적 탄: 크기·각도별로 최종 픽셀 크기 그림을 한 번만 만듦 (회전·확대를 매 프레임 하지 않음) */
   private ebSprite(look: BulletLook, r: number, ang: number, pulse: number): HTMLCanvasElement {
@@ -1817,6 +1932,14 @@ export class SkyEngine {
       case 'weak': this.frame(v['fx/weak'], Math.min(3, Math.floor(k * 4)), 4, f.x, f.y, f.scale); break;
       case 'ring': this.frame(v['fx/ring'], Math.min(3, Math.floor(k * 4)), 4, f.x, f.y, f.scale); break;
       case 'puff': this.frame(v['fx/steam-puff'], Math.min(2, Math.floor(k * 3)), 3, f.x, f.y, f.scale); break;
+      case 'smoke': {
+        // 보스 파손 연기: 회색 구름을 어둡게 (미리 구운 사본)
+        const g = this.g;
+        g.globalAlpha = 0.85 - k * 0.6;
+        this.frame(this.darkPuff(), Math.min(2, Math.floor(k * 3)), 3, f.x, f.y, f.scale + k * 0.5);
+        g.globalAlpha = 1;
+        break;
+      }
     }
   }
 
@@ -1857,8 +1980,8 @@ export class SkyEngine {
     const x = Math.round((cx - w / 2) * R) / R;
     const y = Math.round((cy - h / 2) * R) / R;
     g.drawImage(im, sx, 0, sw, im.height, x, y, w, h);
-    if (white && (w < 60 || Math.floor(this.t * 30) % 3 === 0)) {
-      g.globalAlpha = w < 60 ? 0.55 : 0.22;
+    if (white) {
+      g.globalAlpha = w < 60 ? 0.55 : 0.34;
       g.drawImage(whiteOf(this.a, im), sx, 0, sw, im.height, x, y, w, h);
       g.globalAlpha = 1;
     }
@@ -1889,7 +2012,7 @@ export class SkyEngine {
     const im = v['stage1/boss'];
     const fw = im.width / 2;
     const shakeX = b.mode === 'dying' ? Math.sin(e.age * 60) * 1.5 : 0;
-    this.drawV2(im, e.x + shakeX, e.y, white, 0, b.phase >= 2 || b.mode === 'dying' ? fw : 0, fw);
+    this.drawV2(im, e.x + shakeX, e.y - Math.round(this.bossRecoil), white, 0, b.phase >= 2 || b.mode === 'dying' ? fw : 0, fw);
     if (b.mode === 'atk' && b.atk === 'dash' && b.at < 0.9) {
       const g = this.g;
       g.fillStyle = Math.floor(b.at * 10) % 2 ? '#ff4f86' : '#fff';
@@ -2056,7 +2179,12 @@ export class SkyEngine {
       g.fillStyle = '#e8b53c'; g.fillRect(10, 38, W - 20, 1);
       g.fillStyle = '#3a1028'; g.fillRect(46, 31, W - 60, 5);
       g.fillStyle = this.bs.phase === 1 ? '#ff6f9f' : this.bs.phase === 2 ? '#ff4f86' : '#e0482c';
+      // 잔상(흰색) → 실제 체력: 맞는 순간 줄어드는 양이 보이게
+      g.fillStyle = '#fff4d6';
+      g.fillRect(46, 31, Math.round((W - 60) * clamp(this.bossTrail, f, 1)), 5);
+      g.fillStyle = this.bs.phase === 1 ? '#ff6f9f' : this.bs.phase === 2 ? '#ff4f86' : '#e0482c';
       g.fillRect(46, 31, Math.round((W - 60) * f), 5);
+      if (this.bossBarHit > 0.06) { g.fillStyle = '#ffffff'; g.fillRect(46, 31, Math.round((W - 60) * f), 1); g.fillRect(45 + Math.round((W - 60) * f), 30, 2, 7); }
       g.fillStyle = '#120a26'; for (const q of [1 / 3, 2 / 3]) g.fillRect(46 + Math.round((W - 60) * q), 31, 1, 5);
       this.text('BOSS', 12, 28, '#ff9ec0', 'left', 11);
     }

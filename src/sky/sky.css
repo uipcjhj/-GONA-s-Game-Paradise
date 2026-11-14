@@ -45,14 +45,14 @@
 .sel-sub { font-size: 11px; color: #cfc4ff; }
 .sel-main { display: flex; align-items: center; gap: 4px; width: 100%; max-width: 420px; }
 .sel-arrow { flex: none; width: 34px; height: 64px; font-family: inherit; font-size: 16px; color: #ffe9a8; background: #20124a; border: 3px solid #e8b53c; box-shadow: inset 0 -4px 0 #120a26; cursor: pointer; }
-.sel-art { flex: 1; position: relative; height: min(46vh, 380px); border: 3px solid #e8b53c; box-shadow: inset 0 0 0 3px #120a26;
+.sel-art { flex: 1; position: relative; height: min(50vh, 440px); border: 3px solid #e8b53c; box-shadow: inset 0 0 0 3px #120a26;
   background: radial-gradient(circle at 50% 40%, #6a2e88 0, #2c1460 55%, #140a2c 100%); overflow: hidden; animation: selin 0.32s steps(4) both; }
 .sel-art::before { content: ''; position: absolute; inset: 0; background: repeating-conic-gradient(from 0deg at 50% 45%, rgba(255, 220, 140, 0.13) 0 6deg, transparent 6deg 18deg); }
-.sel-illust { position: absolute; left: 50%; bottom: 0; height: 96%; transform: translateX(-50%); animation: selslide 0.32s ease-out both; }
+.sel-illust { position: absolute; left: 6px; top: 6px; width: calc(100% - 12px); height: calc(100% - 12px); object-fit: contain; object-position: center; animation: selslide 0.32s steps(4) both; }
 .sel-plate { position: absolute; left: 6px; bottom: 6px; display: flex; flex-direction: column; padding: 4px 8px 5px; background: #120a26; border: 2px solid #e8b53c; }
 .sel-plate b { font-size: 18px; color: #fff; } .sel-plate span { font-size: 11px; color: #ff9ec0; }
 @keyframes selin { from { filter: brightness(2.2); } to { filter: none; } }
-@keyframes selslide { from { transform: translateX(-20%); opacity: 0; } to { transform: translateX(-50%); opacity: 1; } }
+@keyframes selslide { from { transform: translateX(-12%); opacity: 0; } to { transform: none; opacity: 1; } }
 .sel-info { display: flex; gap: 8px; align-items: center; width: 100%; max-width: 420px; padding: 6px 8px; background: #120a26; border: 2px solid #e8b53c; }
 .sel-preview { flex: none; display: flex; align-items: flex-end; gap: 2px; width: 104px; height: 64px; padding: 2px; border: 2px solid #3a2a6a;
   background: url(/assets/sky/v2/stage1/bg-backdrop.png) center / cover; image-rendering: pixelated; }
@@ -65,7 +65,7 @@
 .sel-info dt { color: #e8b53c; font-weight: 700; } .sel-info dd { margin: 0; color: #fff4d6; }
 .sel-line { margin: 0; font-size: 12px; color: #cfc4ff; text-align: center; }
 .sel-roster { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; width: 100%; max-width: 420px; }
-.sel-roster button { position: relative; width: 100%; aspect-ratio: 1; padding: 0; background: #20124a no-repeat center 8% / 170% auto; border: 2px solid #4a3a8a; cursor: pointer; }
+.sel-roster button { position: relative; width: 100%; aspect-ratio: 1; padding: 0; background: #20124a no-repeat center / cover; border: 2px solid #4a3a8a; cursor: pointer; }
 .sel-roster button.on { border-color: #ffe9a8; box-shadow: 0 0 0 2px #e8b53c; }
 .sel-roster i { position: absolute; left: 50%; top: -9px; transform: translateX(-50%); font-style: normal; font-size: 9px; font-weight: 700; color: #120a26; background: #ffe9a8; padding: 0 3px; }
 .sel-btns { display: flex; gap: 8px; }
@@ -81,7 +81,7 @@
 .sky-bomb { right: 8px; width: 64px; height: 44px; font-size: 13px; background: #ff9ec0; box-shadow: inset 0 -5px 0 #d9407a; }
 .sky-bomb small { display: block; font-size: 10px; line-height: 1; }
 .sky-sp { right: 8px; bottom: 52px; width: 64px; height: 52px; background: #20124a; overflow: hidden; border-color: #e8b53c; }
-.sky-sp .sp-face { position: absolute; inset: 0; background: no-repeat center 6% / 150% auto; opacity: 0.45; filter: grayscale(0.6); }
+.sky-sp .sp-face { position: absolute; inset: 0; background: no-repeat center / cover; opacity: 0.45; filter: grayscale(0.6); }
 .sky-sp .sp-fill { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(232, 169, 44, 0.55); }
 .sky-sp b { position: relative; display: block; font-size: 12px; color: #fff4d6; text-shadow: 0 1px #120a26, 1px 0 #120a26, -1px 0 #120a26, 0 -1px #120a26; margin-top: 26px; }
 .sky-sp.ready { opacity: 1; border-color: #fff4d6; animation: spready 0.4s steps(2) infinite; }
@@ -108,9 +108,13 @@
 .ttl { background: #1a0c34; justify-content: flex-end; }
 .ttl-bg { position: absolute; inset: 0; background: url(/assets/sky/v2/stage1/bg-backdrop.png) center top / 100% auto repeat-y; image-rendering: pixelated; animation: ttlscroll 40s linear infinite; }
 @keyframes ttlscroll { to { background-position: center 200vw; } }
-.ttl-art { position: absolute; left: 50%; bottom: 0; width: 100%; max-width: 560px; transform: translateX(-50%); display: block;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 9%); mask-image: linear-gradient(to bottom, transparent 0, #000 9%); animation: ttlart 0.9s steps(6) both; }
-@keyframes ttlart { from { transform: translate(-50%, 6%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+.ttl-art { position: absolute; display: block; max-width: none;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 95%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 95%, transparent 100%);
+  animation: ttlart 0.9s steps(6) both; }
+.ttl-art.narrow { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 95%, transparent 100%), linear-gradient(to right, transparent 0, #000 7%, #000 93%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 95%, transparent 100%), linear-gradient(to right, transparent 0, #000 7%, #000 93%, transparent 100%);
+  -webkit-mask-composite: source-in; mask-composite: intersect; }
+@keyframes ttlart { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 .ttl-cloud { position: absolute; image-rendering: pixelated; background-repeat: no-repeat; background-size: contain; pointer-events: none; opacity: 0.85; }
 .ttl-cloud.c1 { width: 200px; height: 143px; top: 34%; left: -220px; background-image: url(/assets/sky/v2/stage1/cloud-big.png); animation: ttlcloud 26s linear infinite; }
 .ttl-cloud.c2 { width: 170px; height: 116px; top: 10%; left: -190px; background-image: url(/assets/sky/v2/stage1/cloud-small.png); animation: ttlcloud 34s linear -12s infinite; }
@@ -119,22 +123,32 @@
 .ttl-sparks i { position: absolute; bottom: -20px; width: 16px; height: 16px; background: url(/assets/sky/v2/fx/star-p.png) 0 0 / 32px 16px; image-rendering: pixelated;
   animation-name: ttlspark; animation-timing-function: steps(24); animation-iteration-count: infinite; }
 @keyframes ttlspark { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-105vh); opacity: 0; } }
-.ttl-logo { position: absolute; left: 50%; top: calc(env(safe-area-inset-top) + 2vh); width: min(86vw, 430px); transform: translateX(-50%);
-  filter: drop-shadow(0 4px 0 #120a26); animation: ttllogo 0.7s steps(5) 0.3s both, ttlbob 2.4s steps(2) 1.2s infinite; }
+.ttl-logo { position: absolute; left: 50%; top: calc(env(safe-area-inset-top) + 10px); transform: translateX(-50%);
+  filter: drop-shadow(0 3px 0 #120a26); animation: ttllogo 0.7s steps(5) 0.3s both, ttlbob 2.4s steps(2) 1.2s infinite; }
 @keyframes ttllogo { from { transform: translate(-50%, -40px) scale(1.25); opacity: 0; } to { transform: translate(-50%, 0) scale(1); opacity: 1; } }
 @keyframes ttlbob { 50% { margin-top: 3px; } }
-.ttl-menu { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding: 14px 10px calc(env(safe-area-inset-bottom) + 10px); background: linear-gradient(to bottom, transparent, rgba(12, 6, 24, 0.82) 30%); }
-.ttl-start { min-width: 220px; min-height: 52px; font-family: inherit; font-size: 22px; font-weight: 700; letter-spacing: 2px; color: #ffe9a8;
+.ttl-menu { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 10px env(safe-area-inset-bottom); background: #120a26; border-top: 3px solid #e8b53c; box-shadow: inset 0 3px 0 #3a2a6a; }
+.ttl-row { display: flex; gap: 8px; align-items: stretch; }
+.ttl-start { min-width: 190px; min-height: 52px; font-family: inherit; font-size: 20px; font-weight: 700; letter-spacing: 2px; color: #ffe9a8;
   background: #20124a; border: 3px solid #e8b53c; box-shadow: inset 0 -5px 0 #120a26, 0 0 0 3px #120a26; cursor: pointer;
   text-shadow: 0 2px #7a4a14; animation: ttlblink 1s steps(2) infinite; }
 .ttl.out .ttl-start { animation: ttlblink 0.12s steps(2) infinite; }
 @keyframes ttlblink { 50% { color: #ffffff; border-color: #fff4d6; } }
-.ttl-map { min-height: 40px; padding: 0 16px; font-family: inherit; font-size: 13px; font-weight: 700; color: #fff4d6; background: #120a26; border: 2px solid #6a5aa8; cursor: pointer; }
+.ttl-map { min-height: 52px; padding: 0 12px; font-family: inherit; font-size: 13px; font-weight: 700; color: #fff4d6; background: #120a26; border: 2px solid #6a5aa8; cursor: pointer; }
 .ttl-hint { margin: 0; font-size: 11px; color: #cfc4ff; animation: ttlblink 1.4s steps(2) infinite; }
 .ttl-best { margin: 0; font-size: 11px; color: #ffd84a; }
-.ttl-copy { margin: 0; font-size: 10px; color: #9a8ac8; }
+.ttl-copy { margin: 0; font-size: 10px; color: #9a8ac8; } .ttl-copy b { color: #ffd84a; font-weight: 700; margin-right: 6px; }
 .ttl-wipe { position: absolute; inset: 0; pointer-events: none; background: #fff; opacity: 0; }
 .ttl.out .ttl-wipe { animation: ttlwipe 0.52s steps(6) forwards; }
 @keyframes ttlwipe { 0% { opacity: 0.9; background: #fff; } 30% { opacity: 0.4; background: #fff; } 100% { opacity: 1; background: #120a26; clip-path: none; } }
 @media (prefers-reduced-motion: reduce) { .ttl-bg, .ttl-cloud, .ttl-sparks i, .ttl-logo, .ttl-start { animation: none; } }
+
+/* 일시정지: 오디오 진단 */
+.sky-diag { display: flex; flex-direction: column; gap: 3px; padding: 6px; text-align: left; font-size: 11px; background: #f3e6c4; border: 2px solid #3b2a3f; }
+.sky-diag b { font-size: 12px; } .sky-diag small { color: #b0304a; font-size: 10px; word-break: break-all; }
+.sky-diag-btns { display: flex; gap: 4px; }
+.sky-diag-btns button { flex: 1; min-height: 36px; font-family: inherit; font-size: 12px; font-weight: 700; color: #3b2a3f; background: #ffd84a; border: 2px solid #3b2a3f; cursor: pointer; }
+.sel-info dt.sel-name { font-size: 16px; color: #ffffff; } .sel-info dd.sel-job { font-size: 12px; color: #ff9ec0; align-self: center; }
+.sel > .sel-head { margin-top: auto; } .sel > .sel-btns { margin-bottom: auto; }
+.sky-overlay { overflow-y: auto; } .sky-overlay .sky-panel { margin: auto; }
