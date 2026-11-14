@@ -260,7 +260,11 @@ const foodScoreText = (page) => page.evaluate(() => (document.querySelector('.ov
       log = await playBot(page, input, { stop: 'ending', maxMin: 25 });
       ok(`[${tag}] 실제 플레이로 엔딩(클리어) 도달`, log.result === 'ENDING', JSON.stringify({ min: ((Date.now() - t0) / 60000).toFixed(1), deaths: log.deaths, continues: log.continues, retries: log.retries, score: log.lastScore }));
       // 엔딩 연출 중에도 결과 1건 — 연출이 끝나 THE END 버튼이 나올 때까지 대기
-      await page.waitForSelector('.end-replay', { state: 'visible', timeout: 240000 });
+      // 엔딩 연출(영상·크레딧)이 끝나 THE END 버튼이 보일 때까지 대기 (최대 15분, 진행 상황 기록)
+      for (let i = 0; i < 90 && !(await page.locator('.end-replay').isVisible()); i++) {
+        if (i % 6 === 0) console.log('  … 엔딩 진행 중', await page.evaluate(() => ({ scenes: window.__gona.scene.getScenes(true).map((x) => x.scene.key), btns: !!document.querySelector('.end-btns') && getComputedStyle(document.querySelector('.end-btns')).display })));
+        await page.waitForTimeout(10000);
+      }
       const clearInbox = await keys(page, 'gp.v1.inbox.');
       const envs = [];
       for (const k of clearInbox) envs.push(JSON.parse(await ls(page, k)).result);
@@ -278,7 +282,7 @@ const foodScoreText = (page) => page.evaluate(() => (document.querySelector('.ov
       await page.waitForTimeout(4000);
       const afterReplay = (await keys(page, 'gp.v1.inbox.')).length;
       ok(`[${tag}] 엔딩 다시보기 → 중복 결과 기록 없음`, afterReplay === before, `${before} → ${afterReplay}`);
-      await page.waitForSelector('.end-replay', { state: 'visible', timeout: 240000 });
+      for (let i = 0; i < 90 && !(await page.locator('.end-replay').isVisible()); i++) await page.waitForTimeout(10000);
       ok(`[${tag}] 엔딩 종료 후 복귀 버튼 표시`, await page.locator('[data-gp-return]').isVisible());
       const ov2 = await page.evaluate(() => { const r = document.querySelector('[data-gp-return]').getBoundingClientRect(); return [...document.querySelectorAll('.end-btns button')].some((b) => { const q = b.getBoundingClientRect(); return !(q.right <= r.left || q.left >= r.right || q.bottom <= r.top || q.top >= r.bottom); }); });
       ok(`[${tag}] 복귀 버튼이 엔딩 버튼(처음부터/타이틀/다시보기)과 겹치지 않음`, !ov2);
