@@ -19,7 +19,7 @@ export default function Result({ view, onRetry, onMap, onRanking }: { view: Resu
   const tag = view.saveFailed ? null : cleared ? { t: '★ CLEAR! ★', c: 'clear' } : s.isNewBest && !first ? { t: '★ NEW BEST! ★', c: '' } : first ? { t: '첫 기록!', c: 'first' } : null;
   const rank = s.levelAfter > s.levelBefore;
   return (
-    <div className="p-screen">
+    <div className="p-screen p-result-screen">
       <div className="p-scroll" style={{ paddingTop: 8, gap: 8 }}>
         <div className="p-ribbon" style={{ margin: '0 auto', padding: '3px 10px 4px' }}>{view.saveFailed ? 'RESULT · 저장 실패' : cleared ? 'ADVENTURE CLEAR' : 'RESULT'}</div>
         <div className="p-gamerow">

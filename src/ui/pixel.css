@@ -204,6 +204,8 @@
 
 /* 알림 · 레벨업 */
 .p-notice-host { position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top) + 56px); z-index: 45; display: flex; justify-content: center; pointer-events: none; }
+/* 결과 화면이 떠 있을 때는 결과 내용(제목 리본·게임 줄)을 가리지 않도록 헤더 높이로 올림 */
+:root:has(.p-result-screen) .p-notice-host { top: calc(env(safe-area-inset-top) + 2px); }
 .p-ntoast { display: flex; align-items: center; gap: 8px; max-width: calc(100% - 20px); background: var(--ink); color: #fff4d6; border: 3px solid #fff4d6; padding: 7px 11px; font-size: 12px; font-weight: 700; animation: p-drop .25s steps(4); pointer-events: auto; }
 .p-ntoast small { display: block; font-size: 10px; font-weight: 400; color: #ffe9b0; }
 @keyframes p-drop { from { transform: translateY(-18px); opacity: 0; } to { transform: none; opacity: 1; } }
@@ -241,3 +243,15 @@
 .p-card.lock { background: #e9e4f2; color: #5d3f86; cursor: not-allowed; }
 .p-card.lock .lockbox { width: 56px; height: 56px; display: grid; place-items: center; background: #d8d2c4; }
 .p-card small { font-size: 8px; font-weight: 400; line-height: 1.2; }
+
+/* ───── 터치 영역 확장 (모바일 검수): 보이는 크기·모양은 그대로 두고 눌리는 영역만 44×44px 이상으로 ───── */
+.p-tabs button, .p-btn.sm, .p-toggle, .p-pbtn, .p-back, .nav-btn { position: relative; }
+.p-tabs button::before, .p-btn.sm::before, .p-toggle::before, .p-pbtn::before {
+  content: ''; position: absolute; top: 50%; left: 50%; width: max(100%, 46px); height: max(100%, 48px); transform: translate(-50%, -50%);
+}
+/* 뒤로 버튼은 위쪽이 헤더에 맞닿아 있어 아래·오른쪽으로 넓힘 */
+.p-back { z-index: 2; }
+.p-back::before { content: ''; position: absolute; top: -1px; left: -5px; width: 46px; height: 54px; }
+.nav-btn::before { content: ''; position: absolute; inset: -2px 0; }
+/* 탭 줄은 가로 스크롤 영역이라 확장 영역이 잘리지 않도록 위아래 여유를 둠 */
+.p-tabs { padding-top: 7px; padding-bottom: 7px; }
