@@ -1,5 +1,5 @@
 import { ISLANDS } from '../data/islands';
-import { getGame } from '../platform/games';
+import { getGame, SKY_DEV } from '../platform/games';
 import { usePlayer, type ResultView } from '../platform/PlayerContext';
 import PixelButton from '../ui/PixelButton';
 import PixelPanel from '../ui/PixelPanel';
@@ -71,7 +71,7 @@ export default function Result({ view, onRetry, onMap, onRanking }: { view: Resu
                 <div className="p-stat"><b>{fmtDate(s.lastPlayedAt).slice(5)}</b><span>마지막 플레이</span></div>
               </div>
             </PixelPanel>
-            <PixelButton big block disabled={!island?.url} onClick={() => island?.url && onRetry(island.id, island.url)}>
+            <PixelButton big block disabled={!(island?.url || (island?.id === 'sky-battle' && SKY_DEV))} onClick={() => island && onRetry(island.id, island.url ?? '')}>
               ▶ {cleared ? '한 번 더!' : '다시 도전'}
             </PixelButton>
             <div className="p-row">

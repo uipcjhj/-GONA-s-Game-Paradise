@@ -5,6 +5,8 @@ import { getGame } from './games';
 import { buzz } from './haptics';
 import { finishConsume, planConsume } from './inbox';
 import { buildLaunchUrl } from './launch';
+import { createPlayerId } from './ids';
+import { createSession, inboxKey } from './session';
 import { INBOX_PREFIX, KEYS } from './keys';
 import { createMemoryStorage, browserStorage, createPlayer, loadPlayer, resetPlatformData, savePlayer, withProfile, type LoadStatus } from './store';
 import type { KV, PlayerData, PlayerSettings, ShopSlot } from './types';
@@ -51,6 +53,10 @@ interface Ctx {
   online: { enabled: boolean; status: OnlineStatus; pending: number };
   /** 랭킹 조회 제공자(서버 미연결이면 NullRankingProvider) */
   rankingProvider: RankingProvider;
+  /** 같은 앱 안에서 실행하는 게임(Sky Adventure): 실행 기록 + 서버 세션 연결 */
+  beginInApp(gameId: string): void;
+  /** 같은 앱 안 게임의 한 판 결과를 외부 게임과 똑같은 검증·반영 경로(세션→inbox→consume)로 전달 */
+  reportInApp(gameId: string, r: { outcome: 'cleared' | 'failed'; score: number; stage?: number; stageLabel?: string; durationMs: number; extra?: Record<string, number | string | boolean> }): void;
   /** 섬 팝업을 열 때 서버 세션을 미리 만들어 둔다(PLAY 클릭은 동기라서) */
   prepareLaunch(gameId: string): void;
   /** 개발용: 저장소 직접 접근(시뮬레이터) */
@@ -95,6 +101,7 @@ export function PlayerProvider({ children, storage }: { children: ReactNode; sto
   const clientRef = useRef<OnlineClient | null>(null);
   if (ONLINE_API && clientRef.current === null) clientRef.current = new OnlineClient(kv, ONLINE_API);
   const prepared = useRef<Record<string, { id: string; at: number }>>({});
+  const inApp = useRef<Record<string, string | undefined>>({});
 
   /** 온라인: 등록(최초 1회) → 프로필 동기화 → 대기열 전송. 실패해도 로컬 기능에는 영향 없음 */
   const syncOnline = useCallback(async () => {
@@ -324,6 +331,27 @@ export function PlayerProvider({ children, storage }: { children: ReactNode; sto
       pinAchievement: (id) => void mutate((p) => E.pinAchievement(p, id, Date.now())),
       online: { enabled: !!ONLINE_API, status: onlineStatus, pending },
       rankingProvider: clientRef.current && clientRef.current.identity() ? new HttpRankingProvider(clientRef.current.base, clientRef.current.identity()!.token) : ONLINE_API ? new HttpRankingProvider(ONLINE_API, null) : NullRankingProvider,
+      beginInApp(gameId) {
+        mutate((c) => E.recordLaunch(c, gameId, Date.now()));
+        const pre = prepared.current[gameId];
+        inApp.current[gameId] = pre && Date.now() - pre.at < 11 * 3600_000 ? pre.id : undefined;
+        delete prepared.current[gameId];
+      },
+      reportInApp(gameId, r) {
+        const p = playerRef.current;
+        if (!p) return;
+        const now = Date.now();
+        const s = createSession(kv, gameId, p, location.href.split('#')[0], now - r.durationMs - 1000, inApp.current[gameId]);
+        const resultId = createPlayerId();
+        const env = { kind: 'gp-result', v: 1, sdk: 'in-app', result: { resultId, sessionId: s.sessionId, gameId, gameVersion: 'in-app', scoreSchemaVersion: 1, outcome: r.outcome, score: Math.max(0, Math.floor(r.score)), stage: r.stage, stageLabel: r.stageLabel, startedAt: new Date(now - r.durationMs).toISOString(), endedAt: new Date(now).toISOString(), durationMs: Math.max(0, Math.round(r.durationMs)), extra: r.extra } };
+        try {
+          kv.setItem(inboxKey(resultId), JSON.stringify(env));
+        } catch {
+          return;
+        }
+        inApp.current[gameId] = undefined;
+        void consume();
+      },
       prepareLaunch(gameId) {
         const c = clientRef.current;
         if (!c) return;

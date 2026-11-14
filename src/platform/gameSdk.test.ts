@@ -23,17 +23,17 @@ function setup(gameId: string, sess?: { gameId?: string; ret?: string }) {
 const inbox = (kv: ReturnType<typeof createMemoryStorage>) => kv.keys!().filter((k) => k.startsWith(INBOX_PREFIX));
 
 describe('공통 게임 SDK (Sky Battle · Mini Game Land 용) ↔ 게임천국 수신', () => {
-  it('Sky Battle: 시작 → 클리어(스테이지 5) → inbox → 게임천국 반영(단계·클리어)', () => {
+  it('Sky Battle: 시작 → 클리어(스테이지 1) → inbox → 게임천국 반영(단계·클리어)', () => {
     const { kv, gp, player } = setup('sky-battle');
     expect(gp.active).toBe(true);
     gp.runStart();
     t += 200000;
-    gp.runEnd({ outcome: 'cleared', score: 48000, stage: 5, stageLabel: '최종 스테이지', extra: { bossKills: 3 } });
+    gp.runEnd({ outcome: 'cleared', score: 48000, stage: 1, stageLabel: '스테이지 1', extra: { bossKills: 1 } });
     const plan = planConsume(kv, player, t);
     expect(plan.rejected).toEqual([]);
-    expect(plan.summaries[0]).toMatchObject({ gameId: 'sky-battle', outcome: 'cleared', stage: 5, score: 48000, durationSec: 200 });
-    expect(plan.player.gameRecords['sky-battle']).toMatchObject({ bestScore: 48000, bestStage: 5, plays: 1, clears: 1 });
-    expect(plan.player.achievements.sky_first && plan.player.achievements.sky_clear && plan.player.achievements.sky_stage_3).toBeTruthy();
+    expect(plan.summaries[0]).toMatchObject({ gameId: 'sky-battle', outcome: 'cleared', stage: 1, score: 48000, durationSec: 200 });
+    expect(plan.player.gameRecords['sky-battle']).toMatchObject({ bestScore: 48000, bestStage: 1, plays: 1, clears: 1 });
+    expect(plan.player.achievements.sky_first && plan.player.achievements.sky_clear).toBeTruthy();
   });
   it('Mini Game Land: subGameId 별 기록 분리(미니게임별 최고·플레이 횟수) + 미니게임 업적', () => {
     const { kv, gp, player } = setup('minigame-paradise');

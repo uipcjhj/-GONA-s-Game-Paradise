@@ -235,10 +235,10 @@ describe('랭킹', () => {
     await play(s, ps[0].token, 90000, { wait: 1000, dur: 1000 });
     await play(s, ps[1].token, 50000, { wait: 1000, dur: 1000 });
     await play(s, ps[2].token, 10000, { wait: 1000, dur: 1000 });
-    await play(s, ps[0].token, 10, { game: 'sky-battle', wait: 20 });
-    await play(s, ps[1].token, 30, { game: 'sky-battle', wait: 20 });
-    await play(s, ps[2].token, 20, { game: 'sky-battle', wait: 20 });
-    await play(s, ps[3].token, 5, { game: 'sky-battle', wait: 20 });
+    await play(s, ps[0].token, 10, { game: 'sky-battle', wait: 20, stage: 1 });
+    await play(s, ps[1].token, 30, { game: 'sky-battle', wait: 20, stage: 1 });
+    await play(s, ps[2].token, 20, { game: 'sky-battle', wait: 20, stage: 1 });
+    await play(s, ps[3].token, 5, { game: 'sky-battle', wait: 20, stage: 1 });
     const o = (await s.call('GET', '/v1/rankings/overall?period=all', ps[1].token)).json;
     expect(o.gamesUsed.sort()).toEqual(['food-island', 'sky-battle']);
     expect(o.entries.map((e: { nickname: string }) => e.nickname)).not.toContain('라라'); // 1개 게임만

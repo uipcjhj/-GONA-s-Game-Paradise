@@ -60,3 +60,16 @@ npm run preview
 2. `main` 에 푸시(또는 병합)하면 자동 배포 → `https://uipcjhj.github.io/-GONA-s-Game-Paradise/`
 
 `base: './'` 설정이라 하위 경로에서도 그대로 동작합니다.
+
+## GONA's Sky Adventure (개발판 · 1차)
+
+건버드 스타일 세로 스크롤 슈팅게임. **독립 모듈** (`src/sky/`) — 기존 월드맵 코드는 `App.tsx`·`IslandPanel.tsx` 의 진입 연결(약 15줄)만 건드립니다.
+
+- 진입: 개발 서버(`npm run dev`) / 주소 뒤 `?dev`(스카이 섬 팝업에 입장 버튼) / `#sky`(바로 시작). **정식 빌드에서는 섬이 계속 COMING SOON** 입니다.
+- 미리보기 빌드: `VITE_SKY_PREVIEW=1 npm run build` → 열자마자 슈팅게임 시작
+- 조작: 화면 드래그 이동(자동 공격) · `차지` 버튼 꾹→떼면 관통 차지샷 · `폭탄`(3개) · 키보드 방향키/WASD, Z(또는 Space) 차지, X 폭탄, P 일시정지
+- 에셋: `public/assets/sky/` (전용 PNG, `tools/build-sky-assets.py` 로 생성). 원본(Food Adventure `uipcjhj/GoNa`)은 읽기만 하고 수정하지 않음
+  - 고나: 원본 `dino.png` 프레임 그대로 + 익룡 날개(새 제작)
+  - 가족: 엔딩 스프라이트 v3 정면 프레임 그대로
+  - 몬스터·보스·탄: 원본 도트 코드(`src/sky/art/*`)를 복사해 그대로 사용 (안경잽이 · 배불뚝이 아저씨 · 뽀뽀괴물)
+- 검수 스크립트: `tools/sky-shots.cjs`(모바일 캡처) · `tools/sky-flow.cjs`(동료 5종·차지·폭탄·게임오버·클리어·복귀)

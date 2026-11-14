@@ -72,7 +72,6 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'food_clear_3', name: '가족 엔딩 단골', desc: 'Food Adventure 3회 클리어', metric: 'food.clears', target: 3, coins: 80, xp: 100, needsGameLink: true, group: 'food' },
   // Sky Battle · Mini Game Land — 실제 게임 연동(결과 수신)이 있어야 달성 가능. 게임이 출시되면 자동으로 진행됨
   { id: 'sky_first', name: '첫 출격', desc: 'Sky Battle 첫 판 완료', metric: 'sky.plays', target: 1, coins: 20, xp: 30, needsGameLink: true, group: 'sky' },
-  { id: 'sky_stage_3', name: '하늘의 용사', desc: 'Sky Battle 3스테이지 도달', metric: 'sky.bestStage', target: 3, coins: 40, xp: 60, needsGameLink: true, group: 'sky' },
   { id: 'sky_clear', name: '하늘 평정', desc: 'Sky Battle 클리어', metric: 'sky.clears', target: 1, coins: 80, xp: 120, needsGameLink: true, group: 'sky' },
   { id: 'mini_first', name: '미니게임 입문', desc: '미니게임 첫 판 완료', metric: 'mini.plays', target: 1, coins: 20, xp: 30, needsGameLink: true, group: 'mini' },
   { id: 'mini_three', name: '미니게임 탐험가', desc: '서로 다른 미니게임 3종 플레이', metric: 'mini.subCount', target: 3, coins: 60, xp: 80, needsGameLink: true, group: 'mini' },

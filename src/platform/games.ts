@@ -39,6 +39,12 @@ export const FOOD_LINK: 'pending' | 'live' = import.meta.env.VITE_FOOD_LINK === 
 /** 개발 테스트 전용: 모의 게임으로 Sky/Mini 연동 흐름을 검증할 때만 켠다(운영 빌드 기본 꺼짐) */
 export const TEST_GAMES: boolean = import.meta.env.VITE_TEST_GAMES === '1';
 
+/**
+ * Sky Adventure(슈팅게임) 개발판 플래그: 개발 서버 · 주소에 ?dev · #sky · VITE_SKY_PREVIEW=1 일 때만 플레이 가능. 정식 배포 화면은 COMING SOON 유지.
+ * (Sky 개발 브랜치 gonas-sky-adventure-dev 의 게이팅을 그대로 따름 — 사용자 승인 전에는 운영에서 열리지 않음)
+ */
+export const SKY_DEV: boolean = typeof location !== 'undefined' && (import.meta.env.VITE_SKY_PREVIEW === '1' || import.meta.env.DEV || /[?&]dev(=|&|$)/.test(location.search) || location.hash === '#sky');
+
 export const GAMES: GameDef[] = [
   {
     gameId: 'food-island',
@@ -62,9 +68,9 @@ export const GAMES: GameDef[] = [
     gameId: 'sky-battle',
     name: 'GONA Sky Battle',
     short: 'Sky',
-    rules: { higherIsBetter: true, maxScore: 10_000_000, maxScorePerSec: 1000, stageCount: 5, hasClear: true, scoreSchemaVersion: 1, referenceScore: 100000, weight: 1 },
-    status: TEST_GAMES ? 'live' : 'soon',
-    link: TEST_GAMES ? 'live' : 'pending',
+    rules: { higherIsBetter: true, maxScore: 10_000_000, maxScorePerSec: 1000, stageCount: 1, hasClear: true, scoreSchemaVersion: 1, referenceScore: 100000, weight: 1 },
+    status: TEST_GAMES || SKY_DEV ? 'live' : 'soon',
+    link: TEST_GAMES || SKY_DEV ? 'live' : 'pending',
   },
   {
     gameId: 'minigame-paradise',

@@ -23,6 +23,8 @@ import Settings from './screens/Settings';
 import CoinChip from './ui/CoinChip';
 import PlayerButton from './ui/PlayerButton';
 import Toast from './ui/Toast';
+import SkyGame from './sky/SkyGame';
+import { SKY_DEV } from './platform/games';
 
 const HEADER_PX = 48;
 const NAV_PX = 66; // 떠 있는 내비게이션이 차지하는 아래쪽 자리(안전 영역 제외)
@@ -30,8 +32,8 @@ const MAX_FRAME = 600;
 const POPUP_PX = 80; // 팝업 높이(대략)
 
 export default function App() {
-  const { player, loadStatus, touch, checkIn, result, dismissResult, launch } = usePlayer();
-  const [screen, setScreen] = useState<'title' | 'register' | 'recover' | 'map'>('title');
+  const { player, loadStatus, touch, checkIn, result, dismissResult, launch, reportInApp } = usePlayer();
+  const [screen, setScreen] = useState<'title' | 'register' | 'recover' | 'map' | 'sky'>('title');
   const [tab, setTab] = useState<Tab>('map');
   const [more, setMore] = useState<MoreItem | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -46,7 +48,10 @@ export default function App() {
   const [vp, setVp] = useState({ w: window.innerWidth, h: window.innerHeight });
   const [area, setArea] = useState({ w: 0, h: 0 });
   const mapBox = useRef<HTMLDivElement>(null);
-  const selected = ISLANDS.find((i) => i.id === selectedId) ?? null;
+  const found = ISLANDS.find((i) => i.id === selectedId) ?? null;
+  // Sky Adventure: 개발판(SKY_DEV)에서만 입장 가능. 정식 배포 화면은 COMING SOON
+  const selected = found && found.id === 'sky-battle' && SKY_DEV ? { ...found, status: 'open' as const, gameTitle: "GONA's Sky Adventure", tagline: '건버드 스타일 세로 슈팅 · 개발판(테스트)' } : found;
+  const exitSky = () => setScreen('map');
 
   useEffect(() => {
     const on = () => setVp({ w: window.innerWidth, h: window.innerHeight });
@@ -132,6 +137,7 @@ export default function App() {
     if (t !== 'map') setSelectedId(null);
   };
 
+  if (screen === 'sky' && player) return <SkyGame onExit={exitSky} onResult={(r) => reportInApp('sky-battle', { outcome: r.won ? 'cleared' : 'failed', score: r.score, stage: 1, stageLabel: '스테이지 1', durationMs: Math.round(r.time * 1000), extra: { maxCombo: r.maxCombo } })} />;
   if (screen === 'title') return <Title onStart={enter} />;
   if (screen === 'register' || screen === 'recover' || !player) {
     return (
@@ -162,7 +168,7 @@ export default function App() {
                 </div>
               </div>
             )}
-            {selected && <IslandPanel island={selected} onClose={() => setSelectedId(null)} />}
+            {selected && <IslandPanel island={selected} onClose={() => setSelectedId(null)} onEnter={selected.id === 'sky-battle' && SKY_DEV ? () => setScreen('sky') : undefined} />}
           </div>
         )}
         {tab === 'profile' && <Profile onToast={notify} onOpenMore={openMore} />}
@@ -172,7 +178,7 @@ export default function App() {
 
       {result ? (
         <div className="p-reg" style={{ top: 48, zIndex: 40 }}>
-          <Result view={result} onRetry={(gid, url) => { window.location.href = launch(gid, url).url; /* 화면을 닫지 않고 이동: 닫으면 뒤로가기 레이어가 history.back() 을 호출해 이동이 취소됨 */ }} onMap={() => { dismissResult(); goTab('map'); }} onRanking={() => { dismissResult(); goTab('ranking'); }} />
+          <Result view={result} onRetry={(gid, url) => { if (gid === 'sky-battle') { dismissResult(); setScreen('sky'); return; } window.location.href = launch(gid, url).url; /* 화면을 닫지 않고 이동: 닫으면 뒤로가기 레이어가 history.back() 을 호출해 이동이 취소됨 */ }} onMap={() => { dismissResult(); goTab('map'); }} onRanking={() => { dismissResult(); goTab('ranking'); }} />
         </div>
       ) : null}
       <BottomNav tab={tab} onTab={goTab} />
