@@ -1,30 +1,30 @@
-# Sky Battle · Mini Game Land 연동 준비 (Phase 5·6)
+# Sky Adventure · Mini Game Land 실연동 (Phase 5·6)
 
-## 조사 결과
-- 접근 가능한 저장소(`list_repos`): `uipcjhj/-GONA-s-Game-Paradise`, `uipcjhj/GoNa`(Food), `movex-marketing-dashboard`, `gpt` — **Sky Battle 과 Mini Game Land 의 게임 저장소·브랜치는 존재하지 않음.** Food 저장소에도 두 게임 코드는 없다.
-- 따라서 실제 게임 연동(점수 구조·이벤트 분석, 패치, 단독 실행 회귀)은 **보류**했고, 두 게임을 새로 만들거나 디자인을 가정하지 않았다. 아래 "준비물"만 구현했다. 게임 저장소가 생기면 이 문서의 절차대로 연결한다.
+## 조사 결과 (정정)
+이전 판은 "게임 저장소·브랜치가 없다"고 적었으나 **틀렸다.** 두 게임 코드는 이 저장소(`-GONA-s-Game-Paradise`)의 별도 원격 브랜치에 존재했고, 개발 브랜치 `claude/platform-full-development` 로 병합해 플랫폼 결과 파이프라인에 연결했다.
 
-## 구현한 준비물 (모두 테스트됨)
-| 항목 | 위치 | 내용 |
-|---|---|---|
-| 게임 등록 | `src/platform/games.ts` · `src/data/islands.ts` | sky-battle / minigame-paradise 등록(점수 한도·단계·클리어 여부·가중치), 현재 `COMING SOON` |
-| 공통 SDK | `docs/platform/sdk/gp-sdk.js` (+ `.d.ts`) | 의존성 없는 ES 모듈. `initGame → runStart/Pause/Resume/End`. 판당 1건·일시정지 제외·저장 실패 재시도·비활성 no-op. Food 패치와 같은 계약 |
-| 결과 계약 | `GAME_RESULT_CONTRACT.md` | gameId·subGameId·sessionId·score·outcome(clearStatus)·stage·durationMs·endedAt·scoreSchemaVersion·gameVersion |
-| Mini 하위 게임 | `GameRecord.subGames` · `MINI_GAMES` | 미니게임별 최고·플레이 횟수·마지막 플레이, 랭킹 탭(서버 `sub_game_id`), 프로필 표시 |
-| 업적 | `content.ts` | Sky 3개(첫 출격·3스테이지·클리어), Mini 3개(첫 판·3종 플레이·20판) — 게임 연동 전에는 "COMING SOON" 표시, 진행 없음 |
-| 보상 엔진 | `engine.ts` | 게임 무관 공통(기본 XP + 점수 + 클리어 + 신기록, 하루/세션 한도) |
-| 결과 화면·다시 하기·월드맵 | `Result.tsx` | 게임 이름만 레지스트리에서 읽음 — 새 게임은 코드 변경 없이 사용 |
-| 랭킹 | `Ranking.tsx` · 서버 | 게임별/미니게임별/주간/역대/종합 탭 |
-| 모의 게임 | `tools/mock-game/` | **개발 테스트 전용**(운영 번들에 없음): SDK 로 시작→점수→게임 오버/클리어→돌아가기. Sky(단계 포함)·Mini(subGameId 선택) |
-| 테스트 | `gameSdk.test.ts`, `tools/platform-online-e2e.cjs` | SDK↔수신 계약, 브라우저에서 모의 게임 전체 흐름(세션→SDK→결과 화면→업적→온라인 제출→랭킹) |
+| 게임 | 위치 | gameId | 연동 방식 |
+|---|---|---|---|
+| GONA's Sky Adventure | `src/sky/` (앱 안 화면) | `sky-battle` | `SkyGame` 의 `onResult` → `reportInApp` 이 세션·inbox 봉투를 만들고 즉시 소비 |
+| Mini Game Land | `src/mini-game-land/` (`mini-game-land/` 별도 진입점) | `minigame-paradise` + `subGameId`(sort·tower·toyroom·challenge) | `gp-sdk.js` `initGame` → `runStart/runEnd/report`, `?gp=<세션>` 일 때만 활성(없으면 no-op) |
 
-## 실제 게임을 연결하는 절차 (게임이 생겼을 때)
-1. `src/platform/games.ts`: 게임 정보 확정(`status:'live'`, 점수 한도 실측 반영), `src/data/islands.ts` 에 `url` 지정. 서버 `backend/src/games.ts` 도 같은 값으로(`parity` 테스트가 일치 확인).
-2. 게임 저장소의 **별도 브랜치**에서 `gp-sdk.js` 를 복사해 시작/종료 지점에 `runStart`/`runEnd` 호출(게임 규칙·점수·기존 저장 키는 건드리지 않음, `?gp` 없으면 no-op).
-3. Food 와 같은 방식으로 개발 사이트에서 실제 플레이 검증(게임 오버/클리어/새로고침/이어하기·중복) → 승인 후 반영 → `link:'live'`.
-4. Mini Game Land: 미니게임마다 `MINI_GAMES` 에 `{id,name}` 추가 + `runStart({subGameId})`.
-5. 업적/도감/칭호/보상 수치는 `content.ts`·`balance.ts` 만 수정.
+## 연동 내용
+- 결과 계약(`GAME_RESULT_CONTRACT.md`) 그대로 사용. Sky: 스테이지 1개, 클리어 가능. Mini: 클리어 가능, 하위 게임별 기록·랭킹 탭.
+- 보상·업적(Sky: 첫 출격/클리어 등, Mini: 입문 등)·기록·중복 방지(원장)·새로고침 후 재반영 없음은 Food 와 같은 엔진.
+- Mini 홈에 `[data-testid=back-hub]` 링크(세션의 돌아갈 주소). `?gp` 없는 단독 실행은 기록하지 않는다(회귀 테스트).
 
-## 운영 안전장치
-- `VITE_TEST_GAMES` 가 없는 빌드(운영 기본)에서는 두 게임이 `COMING SOON` 이며 모의 게임 주소·미니게임 목록이 번들에 연결되지 않는다.
-- 서버는 `ALLOW_TEST_GAMES=1` 이 아니면 출시 전 게임의 세션/제출을 거부한다.
+## 운영 안전장치 (변경 없음)
+- 운영 기본 빌드에서 Sky·Mini 는 **COMING SOON**. 입장은 개발 게이트(`?dev` · `#sky` · `VITE_SKY_PREVIEW=1` · `VITE_TEST_GAMES`)에서만.
+- 서버는 `ALLOW_TEST_GAMES=1` 이 아니면 출시 전 게임의 세션/제출을 거부.
+- 모의 게임(`tools/mock-game/`)은 개발 테스트 전용이며 운영 번들에 없다.
+
+## 검증 (로컬, Chromium 모바일 에뮬레이션 · 실기기 아님)
+- `tools/sky-e2e.cjs` 28/28 (393×636 · 390×844): 운영 기본 COMING SOON, 실제 Sky 게임 오버·클리어 → 결과 화면, 기록·업적·보상 일관성, 새로고침 중복 없음.
+- `tools/mini-e2e.cjs` 24/24: 실제 Mini 라운드 → 결과 1건 → 게임천국 결과 화면, 원장 1건, 단독 실행 회귀.
+- `tools/platform-online-e2e.cjs` 36/36(크기별 18+18, 크기마다 새 DB): 모의 게임 SDK·서버 세션·온라인 랭킹 UI.
+- 한계: Sky 의 실제 사람 플레이 점수 분포가 없어 `maxScore`/`maxScorePerSec` 은 잠정값(치트 도구로 만든 점수로는 한도 검증 불가).
+
+## 새 게임을 추가하는 절차
+1. `src/platform/games.ts` 등록(+ 서버 `backend/src/games.ts`, parity 테스트가 일치 확인) → `src/data/islands.ts` url.
+2. 게임 브랜치에서 `gp-sdk.js` 호출 추가(게임 규칙·저장 키 불변).
+3. 개발 사이트 실플레이 검증 → 승인 후 `link:'live'`.
