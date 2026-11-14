@@ -84,3 +84,21 @@ export function whiteOf(a: Assets, src: HTMLCanvasElement | HTMLImageElement): H
   }
   return c;
 }
+
+// ───────── 스테이지별 그림 (스테이지 1 = 승인 에셋, 2~6 = 임시 색변환본) ─────────
+import { ART_NAMES, type ArtName, type StageDef } from './stages';
+export type StageArt = Record<ArtName, HTMLImageElement>;
+const stageCache = new Map<string, Promise<StageArt>>();
+export function loadStageArt(key: StageDef['art']): Promise<StageArt> {
+  let p = stageCache.get(key);
+  if (!p) {
+    const dir = key === 'stage1' ? `${BASE}v2/stage1/` : `${BASE}v2/temp/${key}/`;
+    p = Promise.all(ART_NAMES.map((n) => loadUrl(`${dir}${n}.png`, false))).then((list) => {
+      const out = {} as StageArt;
+      ART_NAMES.forEach((n, i) => (out[n] = list[i]!));
+      return out;
+    });
+    stageCache.set(key, p);
+  }
+  return p;
+}

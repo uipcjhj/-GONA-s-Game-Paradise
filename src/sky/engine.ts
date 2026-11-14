@@ -10,7 +10,8 @@
  *   - 파티클·폭발·이펙트 상한, 화면 전체 반투명 덮기 최소화 (배경 어둡게 처리는 미리 구워 둠)
  *   - 소리는 Web Audio 버퍼 재사용 (audio.ts) — HTMLAudio 복제 재생 제거
  */
-import { type Assets, type V2Name, type CutinId, whiteOf } from './assets';
+import { type Assets, type V2Name, type CutinId, type StageArt, whiteOf } from './assets';
+import { STAGES, DIFF, ENEMIES, type StageDef, type Difficulty, type DiffDef, type EnemyName, type Move, type Fire, type ArtName, type BossDef, type Attack, type Step, type Wave } from './stages';
 import { bulletLooks, type BulletLook } from './bullets';
 import { CHARACTERS } from './data/characters';
 import { sfx, stopSfx, playBgm, stopBgm } from './audio';
@@ -24,10 +25,28 @@ export type FamilyId = 'mom' | 'dad' | 'imo' | 'halmeoni' | 'halabeoji' | 'samch
 
 export interface EndInfo {
   won: boolean;
+  /** 최종 스테이지까지 클리어 */
+  final: boolean;
+  stage: number;
   score: number;
   time: number;
   maxCombo: number;
   hp: number;
+  bombs: number;
+  power: number;
+  noMiss: boolean;
+  bonus: { clear: number; hp: number; bomb: number; noMiss: number; total: number };
+}
+
+/** 스테이지 시작 시 이어받는 상태 */
+export interface RunOpts {
+  stage: number;
+  diff: Difficulty;
+  fam: FamilyId;
+  hp: number;
+  bombs: number;
+  power: number;
+  score: number;
 }
 
 export interface HudInfo {
@@ -62,24 +81,34 @@ interface PBullet {
 type EBKind = 'flask' | 'smell' | 'heart' | 'wave' | 'needle' | 'ring' | 'fire';
 interface EBullet {
   x: number; y: number; vx: number; vy: number; r: number; kind: EBKind; age: number; alive: boolean;
+  /** 가감속(초당 배율) · 유도(초당 회전) · 좌우 흔들림 · 수명 */
+  acc: number; hom: number; wob: number; ttl: number;
 }
-type EKind = 'glasses' | 'uncle' | 'boss' | 'orb';
+type EKind = 'small' | 'boss' | 'part';
 interface Enemy {
-  id: number; kind: EKind; pat: string; x: number; y: number; x0: number; vx: number; vy: number;
+  id: number; kind: EKind; type: EnemyName | ''; art: ArtName; k: number; pat: Move | 'boss'; fireKind: Fire;
+  x: number; y: number; x0: number; vx: number; vy: number;
   hp: number; max: number; age: number; flash: number; fire: number; dir: number; hr: number; score: number; dead: boolean; ph: number; burst: number;
+  holdY: number; drop?: Item['kind'];
+  /** 부품: 본체 기준 위치 · 공격 */
+  parent?: Enemy; dx?: number; dy?: number; partFire?: 'aim' | 'ring' | 'needle' | 'homing'; partCd?: number;
 }
+/** 레이저: 경고선(warn) → 발사(life) */
+interface Laser { x: number; y: number; ang: number; len: number; w: number; warn: number; life: number; t: number; rot: number; owner: Enemy | null; alive: boolean }
 interface Item { x: number; y: number; kind: 'cookie' | 'strawberry' | 'banana' | 'star'; age: number; alive: boolean }
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; col: string; size: number; g: number }
 interface Boom { x: number; y: number; age: number; delay: number; scale: number }
 type FxKind = 'spark' | 'metal' | 'weak' | 'ring' | 'puff' | 'smoke';
 interface Fx { kind: FxKind; x: number; y: number; age: number; dur: number; scale: number; vy: number }
-interface Prop { name: V2Name; x: number; y: number; v: number; layer: number; vx: number }
+interface Prop { name: ArtName; x: number; y: number; v: number; layer: number; vx: number }
 interface Float { x: number; y: number; text: string; age: number; col: string }
 interface Beam { follow: boolean; x: number; t: number; max: number; tick: number; wide: boolean }
 
 interface BossState {
-  mode: 'enter' | 'idle' | 'atk' | 'dying';
-  atk: string; at: number; rest: number; last: string; phase: 1 | 2 | 3; n: number; tx: number; sub: number; minion: number; dyingT: number;
+  def: BossDef;
+  mode: 'enter' | 'idle' | 'tele' | 'atk' | 'dying' | 'flee';
+  atk: Attack | ''; at: number; rest: number; last: string; phase: number; n: number; tx: number; sub: number; minion: number; dyingT: number; teleT: number;
+  cycle: number; mask: { w: number; h: number; m: Uint8Array }[]; life: number;
 }
 
 /** 가족 필살기 진행 상태 */
@@ -101,22 +130,14 @@ export const FAMILY_INFO: Record<FamilyId, { name: string; skill: string; desc: 
   mom: CHARACTERS.mom, dad: CHARACTERS.dad, imo: CHARACTERS.imo, halmeoni: CHARACTERS.halmeoni, halabeoji: CHARACTERS.halabeoji, samchon: CHARACTERS.samchon,
 };
 
-/** 스테이지 1 배경 소품 대본: [시각(초, 60초마다 반복), 에셋, 레이어(0 원경 · 1 중경 · 2 근경 구름), 가로 위치(화면 폭 비율), 가로 이동] */
-const STAGE1_PROPS: [number, V2Name, number, number, number][] = [
-  [0, 'stage1/island-castle', 1, 0.08, 0], [2, 'stage1/cloud-small', 0, 0.78, 0], [5, 'stage1/island-small', 0, 0.88, 0], [8, 'stage1/cloud-big', 2, 0.15, 0],
-  [11, 'stage1/island-ruins', 1, 0.95, 0], [16, 'stage1/clocktower', 1, 0.06, 0], [19, 'stage1/cloud-small', 0, 0.25, 0], [23, 'stage1/airship', 1, 1.05, -7],
-  [28, 'stage1/island-tower', 1, -0.02, 0], [31, 'stage1/cloud-big', 2, 0.88, 0], [35, 'stage1/island-small', 0, 0.15, 0], [39, 'stage1/island-castle', 1, 1.0, 0],
-  [44, 'stage1/cloud-big', 2, 0.3, 0], [48, 'stage1/clocktower', 1, 0.98, 0], [52, 'stage1/cloud-small', 0, 0.6, 0], [56, 'stage1/island-ruins', 1, 0.02, 0],
-];
 const LAYER = [{ k: 0.32, v: 14, a: 0.75 }, { k: 0.5, v: 30, a: 1 }, { k: 0.6, v: 70, a: 0.55 }];
 
 const MAX_HP = 5;
-const BOSS_WARN_T = 54;
-const BOSS_T = 57.5;
 const BOMB_T = 1.9;
 const CAP = { parts: 220, booms: 36, fx: 70, floats: 10, eb: 320 };
-/** 보스 약점(유리 돔 조종석): 보스 중심 기준 위치·반지름 */
-const WEAK = { dx: 0, dy: -4, r: 11 };
+const MEDALS = [100, 200, 300, 500, 800, 1000, 1500, 2000, 3000, 5000];
+/** 탄 종류 → 모양 */
+const BOSS_BULLET_R: Record<EBKind, number> = { flask: 3.5, smell: 4.5, heart: 3.5, wave: 3, needle: 2.6, ring: 3.5, fire: 4 };
 /** 필살기 이름 (characters.ts 의 special 대신 이번 기획 이름) */
 export const SPECIAL_NAME: Record<FamilyId | 'gona', string> = {
   gona: '황금 익룡의 포효', mom: '하트 스톰', dad: '스팀 브레이커', imo: '스타 캐논 버스트', halmeoni: '골든 힐링', halabeoji: '가디언 실드', samchon: '메가 인벤션',
@@ -177,6 +198,7 @@ export class SkyEngine {
   private overWon = false;
   private lastAnim = '';
   private hp = MAX_HP;
+  private fam: FamilyId;
   private inv = 0;
   private hurtT = 0;
   private bombs = 3;
@@ -224,18 +246,34 @@ export class SkyEngine {
   private beams: Beam[] = [];
   private boss: Enemy | null = null;
   private bs: BossState | null = null;
-  private bossSpawned = false;
   /** 보스 피격 반응: 번쩍임 쿨타임 · 흔들림 · 체력바 잔상 · 장갑 파손 단계 */
   private bossFlashCd = 0;
   private bossRecoil = 0;
   private bossTrail = 1;
   private bossBarHit = 0;
   private armorStage = 0;
-  private bossMask: { w: number; h: number; m: Uint8Array }[] = [];
   private smokeT = 0;
-  private warned = false;
-  private timeline: Spawn[] = [];
-  private tlIdx = 0;
+  private armorPts: number[][] = [];
+  private partSmoke: number[][] = [];
+
+  // 스테이지 진행
+  private st: StageDef;
+  private dif: DiffDef;
+  private stepIdx = 0;
+  private stepWait = 0;
+  private block: 'none' | 'midboss' | 'warning' | 'boss' = 'none';
+  private warnT = 0;
+  private spawnQ: Spawn[] = [];
+  private midboss: Enemy | null = null;
+  private lasers: Laser[] = [];
+  private medal = 0;
+  private hits = 0;
+  private ambientT = 0;
+  /** 자동 조종(밸런스 검수용 봇) */
+  auto = false;
+  private botT = 0;
+  private botX = W / 2;
+  private botY = H - 80;
 
   // 미리 만든 그림
   private bgBaked: HTMLCanvasElement;
@@ -261,24 +299,30 @@ export class SkyEngine {
   constructor(
     private canvas: HTMLCanvasElement,
     private a: Assets,
-    private fam: FamilyId,
+    private art: StageArt,
+    opts: RunOpts,
     private onEnd: (r: EndInfo) => void,
     private onHud: (h: HudInfo) => void,
   ) {
     this.g = canvas.getContext('2d', { alpha: false })!;
+    this.st = STAGES[Math.max(0, Math.min(STAGES.length - 1, opts.stage - 1))];
+    this.dif = DIFF[opts.diff];
+    this.fam = opts.fam;
+    this.hp = opts.hp;
+    this.bombs = opts.bombs;
+    this.power = opts.power;
+    this.score = opts.score;
     this.resize();
     this.bgBaked = this.bakeBackdrop();
-    this.buildTimeline();
-    this.cCd = fam === 'halmeoni' ? 5 : fam === 'halabeoji' ? 1 : 1.2;
+    this.cCd = this.fam === 'halmeoni' ? 5 : this.fam === 'halabeoji' ? 1 : 1.2;
     canvas.addEventListener('pointerdown', this.onDown);
     canvas.addEventListener('pointermove', this.onMove);
     canvas.addEventListener('pointerup', this.onUp);
     canvas.addEventListener('pointercancel', this.onUp);
     window.addEventListener('keydown', this.onKey);
     window.addEventListener('keyup', this.onKeyUp);
-    this.banner = { text: 'STAGE 1', sub: '황혼의 부유왕국', t: 2.6, col: '#ffe9a8' };
     sfx('start');
-    playBgm('stage1', 0.5);
+    playBgm(this.st.bgm, 0.6);
     this.pushHud();
     this.last = performance.now();
     this.lastFrame = this.last;
@@ -359,23 +403,52 @@ export class SkyEngine {
   /** 디버그·테스트용 상태 (자동 검수 스크립트에서 사용) */
   debug(): Record<string, number | string> {
     return {
-      t: +this.t.toFixed(1), hp: this.hp, score: this.score, enemies: this.en.length, ebullets: this.eb.length, pbullets: this.pb.length, parts: this.parts.length, fx: this.fx.length + this.booms.length,
-      boss: this.boss ? Math.round(this.boss.hp) : -1, phase: this.bs?.phase ?? 0, power: this.power, over: this.over ? 1 : 0, px: Math.round(this.px), py: Math.round(this.py), anim: this.lastAnim,
-      gauge: +this.gauge.toFixed(2), sp: this.sp ? this.sp.id : '', bombs: this.bombs, S: R, fps: this.perf.fps, ft: this.perf.ft, ftMax: this.perf.ftMax, upd: this.perf.upd, drw: this.perf.drw,
+      stage: this.st.id, t: +this.t.toFixed(1), hp: this.hp, score: this.score, enemies: this.en.length, ebullets: this.eb.length, pbullets: this.pb.length, parts: this.parts.length, fx: this.fx.length + this.booms.length,
+      boss: this.boss ? Math.round(this.boss.hp) : -1, bossMax: this.boss ? this.boss.max : 0, phase: this.bs?.phase ?? 0, mid: this.midboss ? Math.round(this.midboss.hp) : -1, block: this.block, step: this.stepIdx,
+      power: this.power, over: this.over ? 1 : 0, won: this.overWon ? 1 : 0, px: Math.round(this.px), py: Math.round(this.py), anim: this.lastAnim, hits: this.hits, lasers: this.lasers.length,
+      cause: JSON.stringify(this.hitLog), gauge: +this.gauge.toFixed(2), sp: this.sp ? this.sp.id : '', bombs: this.bombs, S: R, fps: this.perf.fps, ft: this.perf.ft, ftMax: this.perf.ftMax, upd: this.perf.upd, drw: this.perf.drw,
     };
   }
   cheat(cmd: string): void {
-    if (cmd === 'boss') { this.t = Math.max(this.t, BOSS_WARN_T - 0.2); this.tlIdx = this.timeline.length; this.en = this.en.filter((e) => e.kind === 'boss'); this.eb.length = 0; }
+    if (cmd === 'boss') {
+      // 남은 대본을 건너뛰고 경고 → 보스
+      this.stepIdx = this.st.script.findIndex((q) => 'warning' in q);
+      this.stepWait = 0;
+      this.block = 'none';
+      this.spawnQ.length = 0;
+      for (const e of this.en) if (e.kind !== 'boss') e.dead = true;
+      this.midboss = null;
+      this.eb.length = 0;
+    }
+    if (cmd === 'midboss') {
+      this.stepIdx = this.st.script.findIndex((q) => 'midboss' in q);
+      this.stepWait = 0;
+      this.spawnQ.length = 0;
+    }
     if (cmd === 'power') this.power = 4;
     if (cmd === 'god') this.hp = 99;
     if (cmd === 'hp1') this.hp = 1;
-    if (cmd === 'killboss' && this.boss) this.boss.hp = 1;
+    if (cmd === 'killboss' && this.boss) { this.boss.hp = 1; for (const e of this.en) if (e.kind === 'part') e.dead = true; }
+    if (cmd === 'killmid' && this.midboss) this.midboss.hp = 1;
     if (cmd === 'hurt') { this.inv = 0; this.shield = 0; this.barrier = 0; this.hurtPlayer(); }
     if (cmd === 'bombs') { this.bombs = 5; this.pushHud(); }
     if (cmd === 'gauge') this.addGauge(1);
+    if (cmd === 'auto') this.auto = true;
     if (cmd === 'stress' && this.boss && this.bs) {
-      // 최악 상황: 3단계 + 무한 체력 (탄막 최대 패턴만 반복)
-      this.boss.max = 1e6; this.boss.hp = 2.9e5; this.bs.phase = 3;
+      // 최악 상황: 마지막 단계 + 무한 체력
+      this.boss.max = 1e6; this.boss.hp = 2.9e5; this.bs.phase = this.bs.def.phases.length;
+      for (const e of this.en) if (e.kind === 'part') e.dead = true;
+    }
+  }
+  /** 검수용: 그리기 없이 고정 간격(1/60초)으로 게임을 빠르게 진행 */
+  sim(seconds: number): void {
+    const dt = 1 / 60;
+    const n = Math.round(seconds * 60);
+    for (let i = 0; i < n && !this.over; i++) {
+      if (this.hitstop > 0) { this.hitstop -= dt; continue; }
+      let d = dt;
+      if (this.sp && this.sp.t < this.sp.cut) { this.sp.t += dt; d *= 0.3; }
+      this.update(d);
     }
   }
 
@@ -440,11 +513,18 @@ export class SkyEngine {
     this.pb.push(b);
     return b;
   }
-  private newEB(x: number, y: number, vx: number, vy: number, r: number, kind: EBKind, age = 0): void {
-    if (this.eb.length >= CAP.eb) return;
+  private newEB(x: number, y: number, vx: number, vy: number, r: number, kind: EBKind, age = 0): EBullet | null {
+    if (this.eb.length >= CAP.eb) return null;
     const b = this.ebPool.pop() ?? ({} as EBullet);
     b.x = x; b.y = y; b.vx = vx; b.vy = vy; b.r = r; b.kind = kind; b.age = age; b.alive = true;
+    b.acc = 0; b.hom = 0; b.wob = 0; b.ttl = 12;
     this.eb.push(b);
+    return b;
+  }
+  /** 각도·속도로 적 탄 (난이도 속도 배율 적용) */
+  private shoot(x: number, y: number, ang: number, v: number, kind: EBKind, r = BOSS_BULLET_R[kind], age = 0): EBullet | null {
+    const sp = this.spd(v);
+    return this.newEB(x, y, Math.cos(ang) * sp, Math.sin(ang) * sp, r, kind, age);
   }
   private part(x: number, y: number, vx: number, vy: number, life: number, col: string, size: number, g: number): void {
     if (this.parts.length >= CAP.parts) return;
@@ -457,48 +537,101 @@ export class SkyEngine {
     this.fx.push({ kind, x, y, age: 0, dur, scale, vy });
   }
 
-  // ───────────── 스테이지 타임라인 ─────────────
-  private buildTimeline(): void {
-    const at = (t: number, fn: () => void): void => void this.timeline.push({ t, fn });
-    const row = (t: number, n: number, pat: string, kind: EKind = 'glasses', gap = 0.35, x0 = 30, x1 = 150, dir = 1): void => {
-      for (let i = 0; i < n; i++) at(t + i * gap, () => this.spawn(kind, n === 1 ? (x0 + x1) / 2 : x0 + ((x1 - x0) * i) / (n - 1), -14, pat, dir, i));
-    };
-    row(1.2, 5, 'sine', 'glasses', 0.28, 30, 150);
-    row(4.5, 4, 'strafe', 'glasses', 0.45, 0, 0, 1);
-    row(7.5, 4, 'strafe', 'glasses', 0.45, 0, 0, -1);
-    at(10, () => this.spawn('orb', 40, -16, 'orb', 1, 0));
-    at(10.6, () => this.spawn('orb', 140, -16, 'orb', -1, 1));
-    at(14, () => this.spawn('uncle', 90, -30, 'uncle', 1, 0));
-    for (let i = 0; i < 6; i++) at(17.5 + i * 0.45, () => this.spawn('glasses', i % 2 ? 150 : 30, -14, 'dive', 1, i));
-    row(21, 8, 'swarm', 'glasses', 0.2, 20, 160);
-    at(24, () => this.spawn('uncle', 48, -30, 'uncle', 1, 0));
-    at(24.8, () => this.spawn('uncle', 132, -30, 'uncle', -1, 1));
-    row(28, 7, 'sine', 'glasses', 0.26, 20, 160);
-    at(30, () => this.spawn('orb', 90, -16, 'orb', 1, 2));
-    row(33, 4, 'strafe', 'glasses', 0.4, 0, 0, 1);
-    row(33.2, 4, 'strafe', 'glasses', 0.4, 0, 0, -1);
-    for (let i = 0; i < 5; i++) at(37 + i * 0.45, () => this.spawn('glasses', 20 + i * 35, -14, 'dive', 1, i));
-    at(39.5, () => this.spawn('uncle', 90, -30, 'uncle', 1, 0));
-    at(43, () => this.spawn('orb', 30, -16, 'orb', 1, 3));
-    at(43.4, () => this.spawn('orb', 150, -16, 'orb', -1, 4));
-    row(45, 9, 'swarm', 'glasses', 0.2, 15, 165);
-    row(49, 5, 'strafe', 'glasses', 0.4, 0, 0, 1);
-    row(49.2, 5, 'strafe', 'glasses', 0.4, 0, 0, -1);
-    this.timeline.sort((p, q) => p.t - q.t);
+  // ───────────── 스테이지 대본 실행 ─────────────
+  /** 스테이지가 올라갈수록·난이도에 따라 적 체력·탄 속도 상승 */
+  private ehp(v: number): number {
+    return Math.max(1, Math.round(v * this.dif.ehp * (1 + 0.1 * (this.st.id - 1))));
+  }
+  private spd(v: number): number {
+    return v * this.dif.bspd * (1 + 0.035 * (this.st.id - 1));
+  }
+  private cnt(n: number, odd = false): number {
+    let c = Math.max(1, Math.round(n * this.dif.dens));
+    if (odd && c % 2 === 0) c++;
+    return c;
   }
 
-  private spawn(kind: EKind, x: number, y: number, pat: string, dir: number, idx: number): void {
-    const glasses = kind === 'glasses';
-    const orb = kind === 'orb';
-    let sx = x;
-    let sy = y;
-    if (pat === 'strafe') {
-      sx = dir > 0 ? -14 : W + 14;
-      sy = 34 + idx * 16;
+  private runScript(dt: number): void {
+    for (let i = 0; i < this.spawnQ.length; i++) {
+      const q = this.spawnQ[i];
+      if (q.t <= this.t) {
+        q.fn();
+        this.spawnQ.splice(i--, 1);
+      }
     }
+    if (this.block === 'midboss') {
+      if (!this.midboss || this.midboss.dead) {
+        this.midboss = null;
+        this.block = 'none';
+      }
+      return;
+    }
+    if (this.block === 'warning') {
+      this.warnT -= dt;
+      if (this.warnT <= 0) {
+        this.block = 'none';
+      }
+      return;
+    }
+    if (this.block === 'boss') return;
+    this.stepWait -= dt;
+    const sc = this.st.script;
+    while (this.stepWait <= 0 && this.stepIdx < sc.length && this.block === 'none') {
+      this.execStep(sc[this.stepIdx++]);
+    }
+  }
+
+  private execStep(q: Step): void {
+    if ('wait' in q) this.stepWait += q.wait;
+    else if ('wave' in q) this.spawnWave(q.wave);
+    else if ('banner' in q) {
+      this.banner = { text: q.banner, sub: q.sub, t: 2.8, col: '#ffe9a8' };
+      if (this.st.temp) this.floatText(W / 2, 168, '※ 임시 그래픽', '#cfc4ff');
+    } else if ('item' in q) this.items.push({ x: q.x, y: -10, kind: q.item, age: 0, alive: true });
+    else if ('midboss' in q) {
+      this.block = 'midboss';
+      this.midboss = this.spawnBossEnemy(this.st.midboss);
+    } else if ('warning' in q) {
+      this.block = 'warning';
+      this.warnT = 3.6;
+      sfx('warn');
+      stopBgm(1.6);
+      this.banner = null;
+      // 남은 잡몹은 퇴장
+      for (const e of this.en) if (e.kind === 'small') { e.pat = 'swarm'; e.fire = 99; }
+    } else if ('boss' in q) {
+      this.block = 'boss';
+      this.boss = this.spawnBossEnemy(this.st.boss);
+      playBgm(this.st.bossBgm, 0.2, 0.6);
+    }
+  }
+
+  private spawnWave(w: Wave): void {
+    const n = w.n;
+    const gap = w.gap ?? 0.35;
+    for (let i = 0; i < n; i++) {
+      const x = n === 1 ? (w.x0 ?? 90) : (w.x0 ?? 30) + (((w.x1 ?? 150) - (w.x0 ?? 30)) * i) / (n - 1);
+      const last = i === n - 1;
+      this.spawnQ.push({ t: this.t + i * gap, fn: () => this.spawnEnemy(w.e, x, w.move, w.dir ?? 1, i, w.y ?? 50, w.fire, last ? w.drop : undefined) });
+    }
+  }
+
+  private spawnEnemy(type: EnemyName, x: number, move: Move, dir: number, idx: number, y: number, fire?: Fire, drop?: Item['kind']): void {
+    const d = ENEMIES[type];
+    let sx = x;
+    let sy = -16;
+    if (move === 'strafe' || move === 'snake') {
+      sx = dir > 0 ? -14 : W + 14;
+      sy = move === 'snake' ? y : y + (idx % 3) * 12;
+    } else if (move === 'loop') {
+      sx = dir > 0 ? -14 : W + 14;
+      sy = 30 + (idx % 2) * 8;
+    }
+    const hp = this.ehp(d.hp);
     this.en.push({
-      id: this.nextId++, kind, pat, x: sx, y: sy, x0: x, vx: 0, vy: 0, hp: glasses ? 3 : orb ? 10 : 24, max: glasses ? 3 : orb ? 10 : 24, age: 0, flash: 0, fire: orb ? 1.2 : rand(0.8, 2.2), dir,
-      hr: glasses ? 9 : orb ? 11 : 17, score: glasses ? 100 : orb ? 300 : 800, dead: false, ph: idx * 0.7, burst: 0,
+      id: this.nextId++, kind: 'small', type, art: d.art, k: 0.5, pat: move, fireKind: fire ?? d.fire,
+      x: sx, y: sy, x0: x, vx: 0, vy: 0, hp, max: hp, age: 0, flash: 0, fire: rand(d.cd[0], d.cd[1]) * 0.6 * this.dif.cd, dir, hr: d.hr, score: d.score,
+      dead: false, ph: idx * 0.7, burst: 0, holdY: y, drop,
     });
   }
 
@@ -563,17 +696,12 @@ export class SkyEngine {
       else this.py += 46 * dt;
       this.updateFx(dt);
       this.updateEnemies(dt);
+      this.updateBullets(dt);
       return;
     }
 
-    while (this.tlIdx < this.timeline.length && this.timeline[this.tlIdx].t <= this.t) this.timeline[this.tlIdx++].fn();
-    if (!this.warned && this.t >= BOSS_WARN_T) {
-      this.warned = true;
-      sfx('warn');
-      stopBgm(1.4); // 경고음과 함께 스테이지 곡을 서서히 줄임 → 보스 곡으로 전환
-      this.banner = null;
-    }
-    if (!this.bossSpawned && this.t >= BOSS_T) this.spawnBoss();
+    this.runScript(dt);
+    this.updateLasers(dt);
 
     this.updatePlayer(dt);
     this.updateWeapons(dt);
@@ -601,14 +729,98 @@ export class SkyEngine {
   }
 
   // ───────────── 플레이어 ─────────────
+  /**
+   * 밸런스 검수용 자동 조종 봇 (사람 반응 흉내: 0.1초마다 판단 · 손가락 속도 제한).
+   * 후보 위치마다 앞으로 0.1~0.5초 동안의 탄·레이저·적 몸통 위험도를 계산해 가장 안전한 곳으로 이동.
+   */
+  private botStep(dt: number): void {
+    this.botT -= dt;
+    if (this.botT <= 0) {
+      this.botT = 0.06;
+      let tgtX = W / 2;
+      const focus = this.boss ?? this.midboss ?? this.en.find((e) => e.kind === 'small' && e.y > 10 && e.y < 200) ?? null;
+      if (focus) tgtX = focus.x;
+      /** 위치 (cx,cy) 에 t0 초 뒤에 있을 때의 위험도 */
+      const danger = (cx: number, cy: number, t0 = 0, quick = false): number => {
+        let c = 0;
+        for (const b of this.eb) {
+          if (b.age < -0.05 || Math.abs(b.x - cx) > 80 || Math.abs(b.y - cy) > 120) continue;
+          for (const t of quick ? [0, 0.06] : [0, 0.06, 0.12, 0.2, 0.3, 0.45, 0.65, 0.9]) {
+            const qx = b.x + b.vx * (t + t0);
+            const qy = b.y + b.vy * (t + t0);
+            const d = Math.hypot(qx - cx, qy - cy - 2);
+            const lim = b.r + 2.2 + 3;
+            if (d < lim) c += ((lim - d) * 6) / (t + 0.06);
+          }
+        }
+        for (const l of this.lasers) {
+          if (l.t > l.warn + l.life - 0.05) continue;
+          const dx = cx - l.x;
+          const dy = cy - l.y;
+          for (const ahead of [0, 0.25]) {
+            const ang = l.ang + (l.t + ahead > l.warn ? l.rot * ahead : 0);
+            const along = dx * Math.cos(ang) + dy * Math.sin(ang);
+            const perp = Math.abs(-dx * Math.sin(ang) + dy * Math.cos(ang));
+            if (along > 0 && perp < l.w / 2 + 8) c += 80;
+          }
+        }
+        for (const e of this.en) {
+          if (e.kind === 'boss') {
+            if (this.bossSolid(e, cx, cy + 2) || this.bossSolid(e, cx, cy - 14)) c += 120;
+            const bb = this.bsOf(e);
+            if ((bb.mode === 'atk' || bb.mode === 'tele') && bb.atk === 'dash' && Math.abs(cx - bb.tx) < 42) c += 100;
+            continue;
+          }
+          if (e.kind === 'part') continue;
+          const fx = e.x + e.vx * 0.2;
+          const fy = e.y + e.vy * 0.2;
+          if (Math.hypot(fx - cx, fy - cy) < e.hr + 10) c += 60;
+        }
+        return c;
+      };
+      let best = 1e9;
+      let bx = this.px;
+      let by = this.py;
+      for (let ox = -48; ox <= 48; ox += 8) {
+        for (let oy = -36; oy <= 36; oy += 9) {
+          const cx = clamp(this.px + ox, 14, W - 14);
+          const cy = clamp(this.py + oy, 110, H - 66);
+          // 가는 길 전체도 안전해야 함 (도착 시각에 맞춰 탄 위치 예측)
+          const dist = Math.hypot(cx - this.px, cy - this.py);
+          const travel = dist / 150;
+          let c = danger(cx, cy, travel);
+          for (const f of [0.2, 0.4, 0.6, 0.8]) c += danger(this.px + (cx - this.px) * f, this.py + (cy - this.py) * f, travel * f, true);
+          c += Math.abs(cx - tgtX) * 0.12 + Math.abs(cy - (H - 95)) * 0.025 + (Math.abs(ox) + Math.abs(oy)) * 0.01;
+          if (c < best) { best = c; bx = cx; by = cy; }
+        }
+      }
+      this.botX = bx;
+      this.botY = by;
+      // 위급하면 폭탄 (사람처럼 가끔만)
+      if (best > 40 && this.bombs > 0 && this.bombT <= 0 && !this.sp && Math.random() < 0.3) this.useBomb();
+      if (this.gauge >= 1 && (this.boss || this.midboss || this.eb.length > 40)) this.useFamily();
+    }
+    this.targetX = this.botX;
+    this.targetY = this.botY;
+    this.hasTarget = true;
+  }
+
   private updatePlayer(dt: number): void {
+    if (this.auto) this.botStep(dt);
     const prev = this.px;
     const prevY = this.py;
     const slow = this.charging ? 0.6 : 1;
     if (this.hasTarget) {
       const k = Math.min(1, dt * 22);
-      this.px += (this.targetX - this.px) * k;
-      this.py += (this.targetY - this.py) * k;
+      let mx = (this.targetX - this.px) * k;
+      let my = (this.targetY - this.py) * k;
+      if (this.auto) {
+        const lim = 150 * dt;
+        mx = clamp(mx, -lim, lim);
+        my = clamp(my, -lim, lim);
+      }
+      this.px += mx;
+      this.py += my;
     }
     const kx = (this.keys.has('arrowright') || this.keys.has('d') ? 1 : 0) - (this.keys.has('arrowleft') || this.keys.has('a') ? 1 : 0);
     const ky = (this.keys.has('arrowdown') || this.keys.has('s') ? 1 : 0) - (this.keys.has('arrowup') || this.keys.has('w') ? 1 : 0);
@@ -674,7 +886,8 @@ export class SkyEngine {
     for (let i = 0; i < 10; i++) this.part(this.px, this.py - 18, rand(-70, 70), rand(-90, -20), 0.4, i % 2 ? '#fff8d0' : '#ffe34a', 2, 0);
   }
 
-  private hurtPlayer(): void {
+  hitLog: Record<string, number> = {};
+  private hurtPlayer(cause = '?'): void {
     if (this.inv > 0 || this.bombT > 0 || this.over || this.barrier > 0) return;
     if (this.shield > 0) {
       this.shield = 0;
@@ -685,6 +898,9 @@ export class SkyEngine {
       return;
     }
     this.hp--;
+    this.hits++;
+    const ctx = this.bs && this.boss ? `@${this.bs.atk || this.bs.mode}` : this.midboss ? '@mid' : '';
+    this.hitLog[cause + ctx] = (this.hitLog[cause + ctx] ?? 0) + 1;
     this.inv = 1.8;
     this.hurtT = 0.6;
     this.kick(0.55, 0.06);
@@ -899,43 +1115,69 @@ export class SkyEngine {
   }
 
   // ───────────── 적 ─────────────
-  private spawnBoss(): void {
-    this.bossSpawned = true;
-    const e: Enemy = { id: this.nextId++, kind: 'boss', pat: 'boss', x: W / 2, y: -40, x0: W / 2, vx: 0, vy: 0, hp: 460, max: 460, age: 0, flash: 0, fire: 0, dir: 1, hr: 30, score: 5000, dead: false, ph: 0, burst: 0 };
+  private spawnBossEnemy(def: BossDef): Enemy {
+    const hp = Math.round(def.hp * this.dif.bhp);
+    const e: Enemy = {
+      id: this.nextId++, kind: 'boss', type: '', art: def.art, k: def.k, pat: 'boss', fireKind: 'none', x: W / 2, y: -60, x0: W / 2, vx: 0, vy: 0,
+      hp, max: hp, age: 0, flash: 0, fire: 0, dir: 1, hr: def.hr, score: def.mid ? 8000 : 30000, dead: false, ph: 0, burst: 0, holdY: def.restY,
+    };
     this.en.push(e);
-    this.boss = e;
-    this.bs = { mode: 'enter', atk: '', at: 0, rest: 1, last: '', phase: 1, n: 0, tx: W / 2, sub: 0, minion: 5, dyingT: 0 };
-    playBgm('boss', 0.2, 0.5);
-    this.bossTrail = 1;
-    this.armorStage = 0;
-    if (!this.bossMask.length) this.bossMask = this.buildBossMask();
+    for (const pd of def.parts) {
+      const php = Math.round(pd.hp * this.dif.bhp);
+      this.en.push({
+        id: this.nextId++, kind: 'part', type: '', art: pd.art, k: pd.k, pat: 'boss', fireKind: 'none', x: e.x + pd.dx, y: e.y + pd.dy, x0: 0, vx: 0, vy: 0,
+        hp: php, max: php, age: 0, flash: 0, fire: pd.cd * rand(0.6, 1.2), dir: 1, hr: pd.hr, score: 3000, dead: false, ph: 0, burst: 0, holdY: 0,
+        parent: e, dx: pd.dx, dy: pd.dy, partFire: pd.fire, partCd: pd.cd,
+      });
+    }
+    const bs: BossState = {
+      def, mode: 'enter', atk: '', at: 0, rest: 1, last: '', phase: 1, n: 0, tx: W / 2, sub: 0, minion: 8, dyingT: 0, teleT: 0, cycle: 0,
+      mask: this.buildMask(def.art, def.frames, def.k), life: 0,
+    };
+    (e as Enemy & { bs: BossState }).bs = bs;
+    if (!def.mid) {
+      this.bs = bs;
+      this.bossTrail = 1;
+      this.armorStage = 0;
+      const sc = (this.art[def.art].width / def.frames) * def.k / 110;
+      this.armorPts = [[-30, -18], [30, -8], [-20, 24], [24, 28]].map(([x, y]) => [x * sc, y * sc]);
+    }
+    this.bossSay(def.mid ? `${def.name} 출현!` : `${def.name} 등장!`, def.mid ? '#ffc040' : '#ff9ec0');
+    return e;
+  }
+  private bsOf(e: Enemy): BossState {
+    return (e as Enemy & { bs: BossState }).bs;
   }
 
-  /** 보스 실루엣 마스크 (논리 해상도, 프레임 2개) — 총알이 실제 그림에 닿은 지점에서 맞도록 */
-  private buildBossMask(): { w: number; h: number; m: Uint8Array }[] {
-    const im = this.a.v2['stage1/boss'];
-    const fw = im.width / 2;
+  /** 실루엣 마스크 (논리 해상도) — 총알이 실제 그림에 닿은 지점에서 맞도록 */
+  private buildMask(art: ArtName, frames: number, k: number): { w: number; h: number; m: Uint8Array }[] {
+    const im = this.art[art];
+    const fw = im.width / frames;
     const out: { w: number; h: number; m: Uint8Array }[] = [];
-    for (let f = 0; f < 2; f++) {
-      const w = Math.round(fw / R);
-      const h = Math.round(im.height / R);
-      const [c, g] = this.mkCanvas(w, h);
+    for (let f = 0; f < frames; f++) {
+      const w = Math.max(1, Math.round(fw * k));
+      const h = Math.max(1, Math.round(im.height * k));
+      const [, g] = this.mkCanvas(w, h);
       g.drawImage(im, f * fw, 0, fw, im.height, 0, 0, w, h);
       const d = g.getImageData(0, 0, w, h).data;
       const m = new Uint8Array(w * h);
       for (let i = 0; i < w * h; i++) m[i] = d[i * 4 + 3] > 100 ? 1 : 0;
-      void c;
       out.push({ w, h, m });
     }
     return out;
   }
   private bossSolid(e: Enemy, x: number, y: number): boolean {
-    const mk = this.bossMask[this.bs && this.bs.phase >= 2 ? 1 : 0];
+    const b = this.bsOf(e);
+    const mk = b.mask[b.mask.length > 1 && b.phase >= 2 ? 1 : 0];
     if (!mk) return true;
     const lx = Math.floor(x - (e.x - mk.w / 2));
     const ly = Math.floor(y - (e.y - mk.h / 2));
     if (lx < 0 || ly < 0 || lx >= mk.w || ly >= mk.h) return false;
     return mk.m[ly * mk.w + lx] === 1;
+  }
+
+  private aimAt(x: number, y: number): number {
+    return Math.atan2(this.py - y, this.px - x);
   }
 
   private updateEnemies(dt: number): void {
@@ -946,92 +1188,200 @@ export class SkyEngine {
         this.updateBoss(e, dt);
         continue;
       }
-      switch (e.pat) {
-        case 'sine':
-          e.y += 36 * dt;
-          e.x = e.x0 + Math.sin(e.age * 2.1 + e.ph) * 26;
-          break;
-        case 'strafe':
-          e.x += e.dir * 46 * dt;
-          e.y += Math.sin(e.age * 2.5) * 10 * dt;
-          break;
-        case 'swarm':
-          e.y += 74 * dt;
-          e.x = e.x0 + Math.sin(e.age * 4 + e.ph) * 14;
-          break;
-        case 'dive': {
-          if (e.age < 0.9) {
-            e.y += 40 * dt;
-            e.x += Math.sin(e.age * 6) * 14 * dt;
-          } else {
-            if (e.vy === 0) {
-              const a = Math.atan2(this.py - e.y, this.px - e.x);
-              e.vx = Math.cos(a) * 104;
-              e.vy = Math.sin(a) * 104;
-            }
-            e.x += e.vx * dt;
-            e.y += e.vy * dt;
-          }
-          break;
-        }
-        case 'orb':
-          if (e.age < 7) e.y += (64 + e.dir * 6 - e.y) * Math.min(1, dt * 1.5);
-          else e.y -= 50 * dt;
-          e.x = e.x0 + Math.sin(e.age * 1.2 + e.ph) * 8;
-          break;
-        case 'uncle':
-          if (e.y < 62) e.y += 26 * dt;
-          else {
-            e.y += 3 * dt;
-            e.x += Math.sin(e.age * 0.9) * 22 * dt * e.dir;
-          }
-          if (e.age > 16) e.y -= 60 * dt;
-          break;
-        default:
-          break;
+      if (e.kind === 'part') {
+        this.updatePart(e, dt);
+        continue;
       }
-      if (e.y > 6 && e.y < H - 90 && this.bombT <= 0 && !this.over) {
+      this.moveEnemy(e, dt);
+      if (e.y > 6 && e.y < H - 80 && this.bombT <= 0 && !this.over && e.fire < 90) {
         e.fire -= dt;
-        if (e.fire <= 0) {
-          const aim = Math.atan2(this.py - e.y, this.px - e.x);
-          if (e.kind === 'glasses' && e.pat === 'sine') {
-            for (let i = -1; i <= 1; i++) this.newEB(e.x, e.y + 6, Math.cos(aim + i * 0.22) * 64, Math.sin(aim + i * 0.22) * 64, 3.5, 'flask');
-            e.fire = rand(2.0, 3.0);
-          } else if (e.kind === 'glasses' && e.pat === 'strafe') {
-            for (let k = 0; k < 2; k++) this.newEB(e.x - k * e.dir * 4, e.y + 4, Math.cos(aim) * 96, Math.sin(aim) * 96, 2.6, 'needle', -k * 0.08);
-            e.fire = rand(1.4, 2.0);
-          } else if (e.kind === 'glasses' && e.pat === 'dive') {
-            if (e.burst === 0 && e.age > 0.6) {
-              e.burst = 1;
-              this.newEB(e.x, e.y + 6, Math.cos(aim) * 70, Math.sin(aim) * 70, 4, 'fire');
-            }
-            e.fire = 0.2;
-          } else if (e.kind === 'orb') {
-            e.burst++;
-            const n = 12;
-            for (let i = 0; i < n; i++) {
-              const a = (i / n) * TAU + e.burst * 0.26;
-              this.newEB(e.x, e.y + 2, Math.cos(a) * 46, Math.sin(a) * 46, 3.5, 'ring');
-            }
-            e.fire = e.age < 7 ? 1.6 : 99;
-          } else if (e.kind === 'uncle') {
-            e.burst++;
-            if (e.burst % 2) {
-              const n = 10;
-              for (let i = 0; i < n; i++) {
-                const a = (i / n) * TAU + e.burst * 0.31;
-                this.newEB(e.x, e.y + 4, Math.cos(a) * 40, Math.sin(a) * 40 + 8, 4.5, 'smell');
-              }
-            } else {
-              for (const sd of [-1, 1]) for (let i = -1; i <= 1; i++) this.newEB(e.x + sd * 18, e.y + 6, Math.cos(aim + i * 0.16) * 82, Math.sin(aim + i * 0.16) * 82, 2.6, 'needle');
-            }
-            e.fire = 1.5;
-          } else e.fire = 9;
-        }
+        if (e.fire <= 0) this.enemyFire(e);
       }
-      if (e.x < -40 || e.x > W + 40 || e.y > H + 30 || e.y < -60) e.dead = true;
+      if (e.x < -40 || e.x > W + 40 || e.y > H + 30 || e.y < -70) e.dead = true;
     }
     compact(this.en, (e) => !e.dead);
+  }
+
+  private moveEnemy(e: Enemy, dt: number): void {
+    switch (e.pat) {
+      case 'sine':
+        e.y += 36 * dt;
+        e.x = e.x0 + Math.sin(e.age * 2.1 + e.ph) * 26;
+        break;
+      case 'strafe':
+        e.x += e.dir * 50 * dt;
+        e.y += Math.sin(e.age * 2.5) * 10 * dt;
+        break;
+      case 'swarm':
+        e.y += 78 * dt;
+        e.x = e.x0 + Math.sin(e.age * 4 + e.ph) * 14;
+        break;
+      case 'zig': {
+        e.y += 42 * dt;
+        const seg = Math.floor(e.age / 0.9 + e.ph) % 2;
+        e.x += (seg ? 1 : -1) * 55 * dt;
+        e.x = clamp(e.x, 10, W - 10);
+        break;
+      }
+      case 'dive':
+        if (e.age < 0.9) {
+          e.y += 40 * dt;
+          e.x += Math.sin(e.age * 6) * 14 * dt;
+        } else {
+          if (e.vy === 0) {
+            const a = this.aimAt(e.x, e.y);
+            e.vx = Math.cos(a) * 110;
+            e.vy = Math.sin(a) * 110;
+          }
+          e.x += e.vx * dt;
+          e.y += e.vy * dt;
+        }
+        break;
+      case 'loop': {
+        // 옆에서 들어와 크게 원을 그리고 반대편으로
+        const a = e.age * 1.6;
+        e.vx = e.dir * (70 - Math.sin(a) * 40);
+        e.vy = Math.cos(a) * 60 + 18;
+        e.x += e.vx * dt;
+        e.y += e.vy * dt;
+        break;
+      }
+      case 'snake':
+        e.vx = e.dir * 62;
+        e.vy = Math.cos(e.age * 3 + e.ph) * 32;
+        e.x += e.vx * dt;
+        e.y += e.vy * dt;
+        break;
+      case 'hold':
+        // 정해진 높이까지 내려와 3초 사격 후 위로 퇴장
+        if (e.age < 4.2) e.y += (e.holdY - e.y) * Math.min(1, dt * 2.2);
+        else e.y -= 70 * dt;
+        break;
+      case 'turret':
+        if (e.age < 7.5) e.y += (60 + e.dir * 6 - e.y) * Math.min(1, dt * 1.5);
+        else e.y -= 50 * dt;
+        e.x = e.x0 + Math.sin(e.age * 1.2 + e.ph) * 8;
+        break;
+      case 'heavy':
+        if (e.y < 62) e.y += 28 * dt;
+        else {
+          e.y += 3 * dt;
+          e.x += Math.sin(e.age * 0.9) * 22 * dt * e.dir;
+        }
+        if (e.age > 15) e.y -= 60 * dt;
+        break;
+      default:
+        break;
+    }
+  }
+
+  private enemyFire(e: Enemy): void {
+    const d = e.type ? ENEMIES[e.type] : null;
+    const cd = (d ? rand(d.cd[0], d.cd[1]) : 2) * this.dif.cd;
+    const aim = this.aimAt(e.x, e.y);
+    e.fire = cd;
+    switch (e.fireKind) {
+      case 'aim1':
+        this.shoot(e.x, e.y + 6, aim, 70, 'flask');
+        break;
+      case 'aim3': {
+        const n = this.cnt(3, true);
+        for (let i = 0; i < n; i++) this.shoot(e.x, e.y + 6, aim + (i - (n - 1) / 2) * 0.22, 64, 'flask');
+        break;
+      }
+      case 'needle2':
+        for (let k = 0; k < 2; k++) this.shoot(e.x - k * e.dir * 4, e.y + 4, aim, 90, 'needle', 2.6, -k * 0.1);
+        break;
+      case 'fireball':
+        if (e.burst === 0 && e.age > 0.6) {
+          e.burst = 1;
+          this.shoot(e.x, e.y + 6, aim, 72, 'fire');
+        }
+        e.fire = 0.2;
+        break;
+      case 'ring': {
+        e.burst++;
+        const n = this.cnt(12);
+        for (let i = 0; i < n; i++) this.shoot(e.x, e.y + 2, (i / n) * TAU + e.burst * 0.26, 46, 'ring');
+        if (e.age > 7) e.fire = 99;
+        break;
+      }
+      case 'spiralMini': {
+        // 짧은 간격으로 회전하는 2갈래 탄
+        e.burst++;
+        for (let k = 0; k < 2; k++) this.shoot(e.x, e.y + 2, e.burst * 0.42 + k * Math.PI, 52, 'wave');
+        e.fire = 0.16 * this.dif.cd;
+        if (e.age > 7) e.fire = 99;
+        break;
+      }
+      case 'curtain':
+        // 바로 아래로 떨어지는 줄탄 (옆으로 비키면 피함)
+        for (let k = 0; k < 3; k++) this.shoot(e.x, e.y + 8, Math.PI / 2, 80, 'needle', 2.6, -k * 0.12);
+        e.fire = 1.3 * this.dif.cd;
+        if (e.age > 7) e.fire = 99;
+        break;
+      case 'spread5': {
+        e.burst++;
+        if (e.burst % 2) {
+          const n = this.cnt(10);
+          for (let i = 0; i < n; i++) this.shoot(e.x, e.y + 4, (i / n) * TAU + e.burst * 0.31, 42, 'smell');
+        } else {
+          const n = this.cnt(5, true);
+          for (let i = 0; i < n; i++) this.shoot(e.x, e.y + 8, aim + (i - (n - 1) / 2) * 0.2, 78, 'needle');
+        }
+        break;
+      }
+      case 'snipe':
+        // 빠른 조준탄 1발 (발사 직전 반짝임 = drawEnemy)
+        this.shoot(e.x, e.y + 6, aim, 112, 'needle');
+        e.fire = 99;
+        break;
+      case 'gun': {
+        e.burst++;
+        if (e.burst % 2) {
+          const n = this.cnt(10);
+          for (let i = 0; i < n; i++) this.shoot(e.x, e.y + 4, (i / n) * TAU + e.burst * 0.31, 40, 'smell');
+        } else {
+          for (const sd of [-1, 1]) for (let i = -1; i <= 1; i++) this.shoot(e.x + sd * 18, e.y + 6, this.aimAt(e.x + sd * 18, e.y) + i * 0.16, 82, 'needle');
+        }
+        break;
+      }
+      default:
+        e.fire = 99;
+    }
+  }
+
+  private updatePart(e: Enemy, dt: number): void {
+    const p = e.parent!;
+    if (p.dead) { e.dead = true; return; }
+    e.x = p.x + (e.dx ?? 0);
+    e.y = p.y + (e.dy ?? 0);
+    const b = this.bsOf(p);
+    if (b.mode === 'enter' || b.mode === 'dying' || this.bombT > 0 || this.over) return;
+    // 본체가 레이저·탄벽 같은 큰 패턴을 쓰는 동안 포탑은 쉼 (피할 수 없는 겹침 방지)
+    if (b.mode === 'tele' || (b.mode === 'atk' && /^(laser|curtain|wallGap|gatling)/.test(b.atk))) return;
+    e.fire -= dt;
+    if (e.fire > 0) return;
+    e.fire = (e.partCd ?? 2) * this.dif.cd * rand(0.85, 1.15);
+    const aim = this.aimAt(e.x, e.y);
+    switch (e.partFire) {
+      case 'aim':
+        this.shoot(e.x, e.y + 4, aim, 85, 'needle');
+        break;
+      case 'needle':
+        for (let k = 0; k < 2; k++) this.shoot(e.x, e.y + 4, aim, 95, 'needle', 2.6, -k * 0.1);
+        break;
+      case 'ring': {
+        const n = this.cnt(8);
+        for (let i = 0; i < n; i++) this.shoot(e.x, e.y, (i / n) * TAU + e.age, 44, 'ring');
+        break;
+      }
+      case 'homing': {
+        const q = this.shoot(e.x, e.y + 4, aim, 50, 'flask', 4);
+        if (q) { q.hom = 1.3; q.ttl = 4.5; }
+        break;
+      }
+    }
   }
 
   private bossSay(text: string, col = '#ff9ec0'): void {
@@ -1039,137 +1389,230 @@ export class SkyEngine {
   }
 
   private updateBoss(e: Enemy, dt: number): void {
-    const b = this.bs!;
+    const b = this.bsOf(e);
+    const def = b.def;
+    const main = !def.mid;
     const frac = e.hp / e.max;
-    this.bossFlashCd -= dt;
-    this.bossRecoil = Math.max(0, this.bossRecoil - dt * 12);
-    this.bossBarHit = Math.max(0, this.bossBarHit - dt);
-    // 체력바 잔상: 실제 체력을 0.35초 늦게 따라감
-    this.bossTrail += (Math.max(0, frac) - this.bossTrail) * Math.min(1, dt * (this.bossBarHit > 0 ? 0.6 : 3.2));
-    // 파손된 장갑 자리에서 연기·불꽃
-    this.smokeT -= dt;
-    if (this.smokeT <= 0 && this.armorStage > 0) {
-      this.smokeT = 0.16;
-      for (let i = 0; i < this.armorStage; i++) {
-        const [dx, dy] = SkyEngine.ARMOR_PTS[i];
-        if (Math.random() < 0.7) this.addFx('smoke', e.x + dx + rand(-3, 3), e.y + dy, 0.55, 0.7, -26);
-        if (Math.random() < 0.5) this.part(e.x + dx + rand(-3, 3), e.y + dy, rand(-12, 12), rand(-50, -20), 0.4, Math.random() < 0.5 ? '#ffb040' : '#ff6020', 2, -20);
+    b.life += dt;
+    if (main) {
+      this.bossFlashCd -= dt;
+      this.bossRecoil = Math.max(0, this.bossRecoil - dt * 12);
+      this.bossBarHit = Math.max(0, this.bossBarHit - dt);
+      this.bossTrail += (Math.max(0, frac) - this.bossTrail) * Math.min(1, dt * (this.bossBarHit > 0 ? 0.6 : 3.2));
+      this.smokeT -= dt;
+      if (this.smokeT <= 0 && this.armorStage + this.partSmoke.length > 0) {
+        this.smokeT = 0.16;
+        const pts = this.armorPts.slice(0, this.armorStage).concat(this.partSmoke);
+        for (let i = 0; i < pts.length; i++) {
+          const [dx, dy] = pts[i];
+          if (Math.random() < 0.7) this.addFx('smoke', e.x + dx + rand(-3, 3), e.y + dy, 0.55, 0.7, -26);
+          if (Math.random() < 0.5) this.part(e.x + dx + rand(-3, 3), e.y + dy, rand(-12, 12), rand(-50, -20), 0.4, Math.random() < 0.5 ? '#ffb040' : '#ff6020', 2, -20);
+        }
       }
+    }
+    if (b.mode === 'flee') {
+      e.y -= 70 * dt;
+      if (e.y < -90) { e.dead = true; if (this.midboss === e) this.midboss = null; }
+      return;
     }
     if (b.mode === 'dying') {
       b.dyingT += dt;
-      // 대형 연쇄 폭발: 점점 잦아지고 커짐
+      const big = main ? 1 : 0.6;
+      const span = (this.art[def.art].width / def.frames) * def.k * 0.4;
       const rate = 0.25 + b.dyingT * 0.18;
-      if (Math.random() < rate) this.addBoom(e.x + rand(-42, 42), e.y + rand(-42, 42), rand(0.6, 1.0 + b.dyingT * 0.2), 0);
-      if (Math.random() < 0.18) this.debris(e.x + rand(-30, 30), e.y + rand(-30, 30), 4, ['#c02040', '#d8a040', '#5a5a66']);
-      if (Math.random() < 0.08) this.addFx('ring', e.x + rand(-30, 30), e.y + rand(-30, 30), rand(0.6, 1.1), 0.3);
-      this.shake = Math.max(this.shake, 0.2 * settings.shake);
-      if (b.dyingT > 2.6) {
+      if (Math.random() < rate) this.addBoom(e.x + rand(-span, span), e.y + rand(-span, span), rand(0.6, 1.0 + b.dyingT * 0.2) * big, 0);
+      if (Math.random() < 0.18) this.debris(e.x + rand(-span, span), e.y + rand(-span, span), 4, ['#c02040', '#d8a040', '#5a5a66']);
+      if (Math.random() < 0.08) this.addFx('ring', e.x + rand(-span, span), e.y + rand(-span, span), rand(0.6, 1.1), 0.3);
+      this.shake = Math.max(this.shake, 0.2 * settings.shake * big);
+      const endT = main ? 2.8 : 1.4;
+      if (b.dyingT > endT) {
         e.dead = true;
-        this.boss = null;
-        this.score += 5000;
-        for (let i = 0; i < 40; i++) {
+        this.score += e.score;
+        this.floatText(e.x, e.y, `${e.score}`, '#ffe34a');
+        for (let i = 0; i < 40 * big; i++) {
           const a = (i / 40) * TAU;
           this.part(e.x, e.y, Math.cos(a) * rand(60, 200), Math.sin(a) * rand(60, 200), 1.2, i % 3 ? '#ffb040' : '#fff8d0', 3, 0);
         }
-        this.flashWhite = 1;
-        this.kick(1, 0.14);
-        for (let i = 0; i < 8; i++) this.addBoom(e.x + rand(-48, 48), e.y + rand(-48, 48), rand(1.1, 1.7), i * 0.06);
-        // 최종 대폭발: 중심 초대형 3겹
-        this.addBoom(e.x, e.y, 2.6, 0.05);
-        this.addBoom(e.x - 20, e.y + 10, 2.0, 0.18);
-        this.addBoom(e.x + 22, e.y - 8, 2.2, 0.3);
-        this.addFx('ring', e.x, e.y, 2.6, 0.5);
-        this.addFx('ring', e.x, e.y, 1.6, 0.4);
-        this.debris(e.x, e.y, 40, ['#c02040', '#d8a040', '#5a5a66', '#ff9ec0']);
-        sfx('boomL');
-        buzz([90, 40, 140], 0);
-        for (let i = 0; i < 8; i++) this.items.push({ x: e.x + rand(-30, 30), y: e.y + rand(-20, 10), kind: i % 3 === 0 ? 'strawberry' : 'cookie', age: 0, alive: true });
-        this.finish(true);
+        this.flashWhite = main ? 1 : 0.4;
+        this.kick(main ? 1 : 0.6, main ? 0.14 : 0.08);
+        for (let i = 0; i < 8 * big; i++) this.addBoom(e.x + rand(-span, span), e.y + rand(-span, span), rand(1.1, 1.7) * big, i * 0.06);
+        this.addBoom(e.x, e.y, 2.6 * big, 0.05);
+        if (main) {
+          this.addBoom(e.x - 20, e.y + 10, 2.0, 0.18);
+          this.addBoom(e.x + 22, e.y - 8, 2.2, 0.3);
+          this.addFx('ring', e.x, e.y, 1.6, 0.4);
+        }
+        this.addFx('ring', e.x, e.y, 2.6 * big, 0.5);
+        this.debris(e.x, e.y, main ? 40 : 20, ['#c02040', '#d8a040', '#5a5a66', '#ff9ec0']);
+        sfx(main ? 'boomL' : 'boomM');
+        buzz(main ? [90, 40, 140] : 50, 0);
+        if (main) {
+          for (let i = 0; i < 8; i++) this.items.push({ x: e.x + rand(-30, 30), y: e.y + rand(-20, 10), kind: 'cookie', age: 0, alive: true });
+          this.boss = null;
+          this.finish(true);
+        } else {
+          this.items.push({ x: e.x - 10, y: e.y, kind: 'star', age: 0, alive: true });
+          this.items.push({ x: e.x + 10, y: e.y, kind: 'cookie', age: 0, alive: true });
+          if (this.midboss === e) this.midboss = null;
+        }
       }
       return;
     }
-    const phase: 1 | 2 | 3 = frac > 0.66 ? 1 : frac > 0.33 ? 2 : 3;
+    // 단계 전환
+    const np = def.phases.length;
+    let phase = 1;
+    for (let i = 1; i < np; i++) if (frac <= 1 - i / np) phase = i + 1;
     if (phase > b.phase && b.mode !== 'enter') {
       b.phase = phase;
       b.mode = 'idle';
-      b.rest = 1.4;
+      b.rest = 1.5;
       b.atk = '';
+      b.cycle = 0;
       for (const q of this.eb) { this.starFrom(q.x, q.y); q.alive = false; }
-      sfx('warn');
-      sfx('boomM');
+      for (const l of this.lasers) if (l.owner === e) l.alive = false;
+      sfx('armorBreak');
+      sfx('warn', 0.6);
       this.kick(0.6, 0.09);
       this.addFx('ring', e.x, e.y, 1.8, 0.4);
-      for (let i = 0; i < 4; i++) this.addBoom(e.x + rand(-30, 30), e.y + rand(-20, 30), 0.8, i * 0.08);
-      this.bossSay(phase === 2 ? '뽀뽀괴물이 화났다!' : '뽀뽀괴물 폭주!!', '#ff7a8a');
+      for (let i = 0; i < 6; i++) this.addBoom(e.x + rand(-30, 30), e.y + rand(-20, 30), 0.8, i * 0.08);
+      this.debris(e.x, e.y, 18, ['#c02040', '#d8a040', '#5a5a66']);
+      this.bossSay(phase === np ? `${def.name} 최종 형태!` : `장갑 파손! ${def.name} 분노`, '#ff7a8a');
     }
-    const fast = b.phase === 3 ? 1.25 : 1;
     if (b.mode === 'enter') {
-      e.y += (88 - e.y) * Math.min(1, dt * 1.6) + 10 * dt;
-      if (e.y > 84) {
+      e.y += (def.restY - e.y) * Math.min(1, dt * 1.6) + 10 * dt;
+      if (e.y > def.restY - 4) {
         b.mode = 'idle';
-        b.rest = 1;
-        this.bossSay('뽀뽀괴물 등장!', '#ff9ec0');
+        b.rest = 0.8;
       }
       return;
     }
-    if (b.mode === 'idle') {
-      e.x = W / 2 + Math.sin(e.age * 0.9) * 50;
-      e.y += (88 + Math.sin(e.age * 1.7) * 5 - e.y) * Math.min(1, dt * 4);
-      b.rest -= dt;
-      if (b.minion > 0) b.minion -= dt;
-      if (b.phase >= 2 && b.minion <= 0) {
-        b.minion = 9;
-        this.spawn('glasses', 0, 0, 'strafe', 1, 3);
-        this.spawn('glasses', 0, 0, 'strafe', -1, 4);
+    // 중간보스는 오래 버티면 도망 (보상 없음)
+    if (def.mid && b.life > 48) {
+      b.mode = 'flee';
+      this.bossSay(`${def.name} 도주!`, '#cfc4ff');
+      return;
+    }
+    const fast = b.phase === np && np >= 3 ? 1.15 : 1;
+    // 이동 (공격 중에도 천천히)
+    const mv = b.mode === 'atk' && b.atk === 'dash' ? 0 : b.mode === 'atk' ? 0.4 : 1;
+    if (mv > 0) {
+      let tx = W / 2;
+      let ty = def.restY;
+      if (def.move === 'sway') tx = W / 2 + Math.sin(b.life * 0.9) * 46;
+      else if (def.move === 'drift') { tx = W / 2 + Math.sin(b.life * 0.6) * 40; ty += Math.sin(b.life * 1.1) * 8; }
+      else if (def.move === 'figure8') { tx = W / 2 + Math.sin(b.life * 0.7) * 50; ty += Math.sin(b.life * 1.4) * 12; }
+      else tx = W / 2 + Math.sin(b.life * 0.4) * 10;
+      e.x += (tx - e.x) * Math.min(1, dt * 2.2 * mv);
+      e.y += (ty - e.y) * Math.min(1, dt * 2.2 * mv);
+    }
+    // 2단계부터 잡몹 호위 (메인 보스)
+    if (main && b.phase >= 2) {
+      b.minion -= dt;
+      if (b.minion <= 0) {
+        b.minion = 11;
+        this.spawnEnemy('fighter', 0, 'strafe', 1, 0, 40, 'needle2');
+        this.spawnEnemy('fighter', 0, 'strafe', -1, 1, 52, 'needle2');
       }
+    }
+    if (b.mode === 'idle') {
+      b.rest -= dt;
       if (b.rest <= 0) {
-        const pool = b.phase === 1 ? ['fan', 'spiral', 'dash'] : ['fan', 'spiral', 'dash', 'rain', 'ring'];
-        const cand = pool.filter((p) => p !== b.last);
-        b.atk = cand[Math.floor(Math.random() * cand.length)];
-        b.last = b.atk;
-        b.mode = 'atk';
+        const pool = def.phases[b.phase - 1];
+        // 순서대로 돌되 같은 공격 연속 금지 · 매 바퀴 시작점 변화
+        let atk = pool[(b.cycle + Math.floor(b.life)) % pool.length];
+        if (atk === b.last) atk = pool[(pool.indexOf(atk) + 1) % pool.length];
+        if (atk === 'dash' && def.art !== 'boss') atk = 'fan';
+        b.cycle++;
+        b.atk = atk;
+        b.last = atk;
         b.at = 0;
         b.n = 0;
         b.sub = 0;
         b.tx = this.px;
+        // 공격 전조: 레이저는 경고선이 전조이므로 짧게
+        b.mode = 'tele';
+        b.teleT = atk.startsWith('laser') ? 0.25 : 0.6;
+        sfx('gaugeFull', 0.35, 0.6);
       }
       return;
     }
+    if (b.mode === 'tele') {
+      b.teleT -= dt;
+      if (b.teleT <= 0) b.mode = 'atk';
+      return;
+    }
     b.at += dt * fast;
-    const aim = (): number => Math.atan2(this.py - e.y, this.px - e.x);
-    const done = (rest: number): void => {
+    if (this.runAttack(e, b, dt)) {
       b.mode = 'idle';
-      b.rest = rest / fast;
+      const base = def.mid ? 1.0 : 0.85;
+      b.rest = (base - (b.phase - 1) * 0.12) * this.dif.cd;
+    }
+  }
+
+  /** 보스 공격 1회 진행. 끝나면 true */
+  private runAttack(e: Enemy, b: BossState, dt: number): boolean {
+    const kind = b.def.bullet;
+    const my = e.y + 10;
+    const ph = b.phase;
+    const every = (sec: number): boolean => {
+      b.sub -= dt;
+      if (b.sub <= 0) { b.sub += sec * this.dif.cd; return true; }
+      return false;
     };
     switch (b.atk) {
       case 'fan': {
-        e.x += Math.sin(e.age * 1.5) * 12 * dt;
-        const nShots = b.phase === 1 ? 3 : 4;
-        if (b.at >= b.n * 0.5 && b.n < nShots) {
+        const shots = 2 + ph;
+        if (b.at >= b.n * 0.5 && b.n < shots) {
           b.n++;
-          const cnt = b.phase === 1 ? 5 : 7;
-          const a0 = aim();
-          for (let i = 0; i < cnt; i++) {
-            const a = a0 + (i - (cnt - 1) / 2) * 0.26;
-            this.newEB(e.x, e.y + 10, Math.cos(a) * 66, Math.sin(a) * 66, 3.5, 'heart');
-          }
+          const c = Math.min(7, this.cnt(3 + ph * 2, true));
+          const a0 = this.aimAt(e.x, my);
+          for (let i = 0; i < c; i++) this.shoot(e.x, my, a0 + (i - (c - 1) / 2) * 0.24, 66, kind);
         }
-        if (b.at > nShots * 0.5 + 0.7) done(b.phase === 1 ? 1.0 : 0.6);
-        break;
+        return b.at > shots * 0.5 + 0.6;
       }
-      case 'spiral': {
-        const arms = b.phase === 1 ? 2 : b.phase === 2 ? 3 : 4;
-        b.sub -= dt;
-        if (b.sub <= 0) {
-          b.sub = 0.09;
-          for (let k = 0; k < arms; k++) {
-            const a = b.at * 2.6 + (k / arms) * TAU;
-            this.newEB(e.x, e.y + 4, Math.cos(a) * 50, Math.sin(a) * 50, 3, 'wave');
+      case 'aimBurst': {
+        if (b.at < 2.2 && (b.at < 0.7 || b.at > 1.4) && every(0.12)) this.shoot(e.x, my, this.aimAt(e.x, my) + rand(-0.04, 0.04), 105, 'needle');
+        return b.at > 2.6;
+      }
+      case 'gatling': {
+        if (b.at < 2.4 && every(0.1)) this.shoot(e.x, my, this.aimAt(e.x, my) + Math.sin(b.at * 7) * 0.14, 96, 'needle');
+        return b.at > 3;
+      }
+      case 'ringPulse': case 'ring': {
+        const nR = b.atk === 'ring' ? 3 : 4;
+        if (b.at >= b.n * 0.7 && b.n < nR) {
+          const c = this.cnt(b.atk === 'ring' ? 20 : 16);
+          for (let i = 0; i < c; i++) this.shoot(e.x, my, (i / c) * TAU + b.n * 0.2, (b.atk === 'ring' ? 40 : 46) + b.n * 8, kind);
+          b.n++;
+        }
+        return b.at > nR * 0.7 + 0.8;
+      }
+      case 'spiral2': case 'spiral3': case 'spiral4': {
+        const arms = b.atk === 'spiral2' ? 2 : b.atk === 'spiral3' ? 3 : 4;
+        if (b.at < 3.4 && every(0.09)) for (let k = 0; k < arms; k++) this.shoot(e.x, my - 4, b.at * 2.6 + (k / arms) * TAU, 52, 'wave');
+        return b.at > 3.8;
+      }
+      case 'crossSpiral': {
+        if (b.at < 3.6 && every(0.11)) {
+          for (let k = 0; k < 2; k++) {
+            this.shoot(e.x, my - 4, b.at * 2.2 + k * Math.PI, 50, 'wave');
+            this.shoot(e.x, my - 4, -b.at * 2.2 + k * Math.PI + 0.5, 50, kind);
           }
         }
-        if (b.at > 3.4) done(1.0);
-        break;
+        return b.at > 4;
+      }
+      case 'flower': case 'flowerFast': {
+        const fastF = b.atk === 'flowerFast';
+        if (b.at < 3.2 && every(fastF ? 0.36 : 0.5)) {
+          b.n++;
+          const c = this.cnt(fastF ? 14 : 12);
+          for (let i = 0; i < c; i++) {
+            const a = (i / c) * TAU + (b.n % 2 ? 0.13 : -0.13) * b.n;
+            this.shoot(e.x, my, a, fastF ? 58 : 42, kind);
+            this.shoot(e.x, my, a + Math.PI / c, fastF ? 82 : 62, 'wave');
+          }
+        }
+        return b.at > 3.6;
       }
       case 'dash': {
         if (b.at < 0.9) {
@@ -1178,50 +1621,153 @@ export class SkyEngine {
           b.tx = this.px;
         } else if (b.at < 1.5) {
           e.y += 270 * dt * (b.at < 1.3 ? 1 : 0);
-          if (e.y > H - 80) e.y = H - 80;
+          if (e.y > H - 90) e.y = H - 90;
         } else if (b.at < 2.6) {
           if (b.n === 0) {
             b.n = 1;
             this.kick(0.5);
             sfx('bossHit', 1.2, 0.7);
-            for (let i = 0; i < 14; i++) {
-              const a = (i / 14) * TAU;
-              this.newEB(e.x, e.y, Math.cos(a) * 58, Math.sin(a) * 58 - 14, 3.5, 'heart');
-            }
           }
-          e.y += (88 - e.y) * Math.min(1, dt * 2.4);
-        } else {
-          e.y = 88;
-          done(0.8);
-        }
-        break;
+          // 착지 0.3초 뒤 위로 퍼지는 고리탄 (바로 옆에서 터지지 않게)
+          if (b.n === 1 && b.at > 1.8) {
+            b.n = 2;
+            const c = this.cnt(10);
+            for (let i = 0; i < c; i++) this.shoot(e.x, e.y - 10, Math.PI + (i / (c - 1)) * Math.PI, 50, kind);
+          }
+          e.y += (b.def.restY - e.y) * Math.min(1, dt * 2.4);
+        } else return true;
+        return false;
       }
       case 'rain': {
-        b.sub -= dt;
-        if (b.sub <= 0) {
-          b.sub = 0.16;
-          this.newEB(rand(8, W - 8), -4, rand(-6, 6), rand(60, 85), 3.5, 'heart');
-          this.newEB(e.x, e.y + 12, rand(-30, 30), 52, 3.5, 'heart');
+        if (b.at < 3.4 && every(0.16)) {
+          this.newEB(rand(8, W - 8), -4, rand(-6, 6), this.spd(rand(58, 80)), BOSS_BULLET_R[kind], kind);
+          this.shoot(e.x, my, Math.PI / 2 + rand(-0.5, 0.5), 52, kind);
         }
-        if (b.at > 3.4) done(0.8);
-        break;
+        return b.at > 3.8;
       }
-      case 'ring': {
-        if (b.at >= b.n * 0.7 && b.n < 4) {
-          const cnt = 16;
-          const off = b.n * 0.2;
-          for (let i = 0; i < cnt; i++) {
-            const a = (i / cnt) * TAU + off;
-            this.newEB(e.x, e.y + 6, Math.cos(a) * (46 + b.n * 8), Math.sin(a) * (46 + b.n * 8), 3.5, 'heart');
-          }
-          b.n++;
+      case 'sporeRain': {
+        if (b.at < 3.4 && every(0.12)) {
+          const q = this.newEB(rand(8, W - 8), -4, 0, this.spd(rand(34, 48)), 4, 'smell');
+          if (q) q.wob = 24;
         }
-        if (b.at > 3.2) done(0.9);
-        break;
+        if (b.at < 3.4 && b.n < Math.floor(b.at / 1.1) + 1) {
+          b.n++;
+          const a0 = this.aimAt(e.x, my);
+          for (let i = -1; i <= 1; i++) this.shoot(e.x, my, a0 + i * 0.2, 70, 'flask');
+        }
+        return b.at > 3.8;
+      }
+      case 'wallGap': {
+        // 위에서 내려오는 탄의 벽 4줄 — 한 칸씩 빈 틈이 있음
+        if (b.n < 4 && b.at >= b.n * 0.85) {
+          b.n++;
+          const gapW = 40 / Math.sqrt(this.dif.dens);
+          const gx = clamp(this.px + rand(-30, 30), 24, W - 24);
+          for (let x = 6; x < W; x += 11) if (Math.abs(x - gx) > gapW / 2) this.newEB(x, 28, 0, this.spd(58), 3, 'needle');
+        }
+        return b.at > 4.2;
+      }
+      case 'curtain': {
+        // 고정된 세로 줄 탄 — 줄 사이 빈 통로(폭 약 15px)나 바깥쪽에 있으면 안전
+        if (b.n === 0) { b.n = 1; b.tx = e.x; }
+        if (b.at < 3 && every(0.3)) {
+          for (let x = -60; x <= 60; x += 24) this.shoot(b.tx + x, my, Math.PI / 2, 70, 'needle');
+        }
+        return b.at > 3.4;
+      }
+      case 'snipeRain': {
+        if (b.at < 3.2 && every(0.22)) this.newEB(rand(8, W - 8), -4, 0, this.spd(rand(55, 75)), 3, kind);
+        if (b.at < 3.2 && b.n < Math.floor(b.at / 0.6) + 1) {
+          b.n++;
+          this.shoot(e.x, my, this.aimAt(e.x, my), 125, 'needle');
+        }
+        return b.at > 3.6;
+      }
+      case 'homing': {
+        if (b.n < 2 && b.at >= b.n * 1.2) {
+          b.n++;
+          const c = this.cnt(6);
+          for (let i = 0; i < c; i++) {
+            const q = this.shoot(e.x, my, Math.PI / 2 + (i - (c - 1) / 2) * 0.45, 46, 'flask', 4);
+            if (q) { q.hom = 1.1; q.ttl = 5; }
+          }
+        }
+        return b.at > 3.2;
+      }
+      case 'bubbleRings': {
+        if (b.n < 3 && b.at >= b.n * 0.9) {
+          b.n++;
+          const c = this.cnt(14);
+          for (let i = 0; i < c; i++) {
+            const q = this.shoot(e.x, my, (i / c) * TAU + b.n * 0.3, 80, 'ring', 4.5);
+            if (q) q.acc = -0.55;
+          }
+        }
+        return b.at > 3.4;
+      }
+      case 'waveCurtain': {
+        if (b.at < 3.4 && every(0.18)) {
+          for (const sd of [-1, 1]) {
+            const q = this.shoot(e.x + sd * 30, my, Math.PI / 2, 52, kind);
+            if (q) q.wob = 36 * sd;
+          }
+        }
+        return b.at > 3.8;
+      }
+      case 'laserAim': {
+        const n = ph >= 3 ? 3 : 2;
+        if (b.n < n && b.at >= b.n * 1.05) {
+          b.n++;
+          this.addLaser(e.x, my, this.aimAt(e.x, my), 0.75, 0.45, 9, 0, e);
+        }
+        return b.at > n * 1.05 + 0.9;
+      }
+      case 'laserSweep': {
+        if (b.n === 0) {
+          b.n = 1;
+          // 바깥 → 안쪽으로 쓸어오는 두 줄기 (가운데 아래·화면 가장자리 위쪽이 안전)
+          this.addLaser(e.x, my, Math.PI / 2 + 1.05, 0.9, 1.9, 8, -0.42, e);
+          this.addLaser(e.x, my, Math.PI / 2 - 1.05, 0.9, 1.9, 8, 0.42, e);
+        }
+        if (b.at > 1 && b.at < 2.8 && every(0.4)) this.shoot(e.x, my, this.aimAt(e.x, my), 70, kind);
+        return b.at > 3.2;
+      }
+      case 'laserCross': {
+        if (b.n === 0) {
+          b.n = 1;
+          const dirn = Math.random() < 0.5 ? 1 : -1;
+          for (let k = 0; k < 4; k++) this.addLaser(e.x, e.y, Math.PI / 4 + (k * Math.PI) / 2, 1.0, 2.3, 7, 0.3 * dirn, e);
+        }
+        return b.at > 3.6;
       }
       default:
-        done(0.5);
+        return true;
     }
+  }
+
+  private addLaser(x: number, y: number, ang: number, warn: number, life: number, w: number, rot: number, owner: Enemy | null): void {
+    this.lasers.push({ x, y, ang, len: 420, w, warn, life, t: 0, rot, owner, alive: true });
+  }
+  private updateLasers(dt: number): void {
+    for (const l of this.lasers) {
+      l.t += dt;
+      if (l.owner && !l.owner.dead) { l.x = l.owner.x; l.y = l.owner.y + 10; }
+      if (l.owner && (l.owner.dead || this.bsOf(l.owner).mode === 'dying')) l.alive = false;
+      if (l.t > l.warn) {
+        l.ang += l.rot * dt;
+        if (l.t - l.warn < 0.05 && l.w > 0) sfx('beam', 0.5, 1.3);
+        // 판정: 고나 중심점과 광선 사이 거리
+        const dx = this.px - l.x;
+        const dy = this.py + 2 - l.y;
+        const along = dx * Math.cos(l.ang) + dy * Math.sin(l.ang);
+        const perp = Math.abs(-dx * Math.sin(l.ang) + dy * Math.cos(l.ang));
+        if (along > 0 && perp < l.w / 2 + 1 && !this.over) {
+          if (this.barrier > 0 || (this.sp && this.sp.id === 'halabeoji' && this.sp.t >= this.sp.cut)) { /* 방어 */ } else this.hurtPlayer('레이저');
+        }
+      }
+      if (l.t > l.warn + l.life) l.alive = false;
+    }
+    compact(this.lasers, (l) => l.alive);
   }
 
   // ───────────── 탄 · 아이템 · 효과 ─────────────
@@ -1270,10 +1816,27 @@ export class SkyEngine {
     const gx = this.px;
     const gy = this.py - 6;
     for (const b of this.eb) {
-      b.x += b.vx * dt;
+      // 연사 대기 중인 탄(age<0)은 포구에서 기다렸다가 나감 — 보이지 않는 채로 미리 날아가지 않게
+      if (b.age < 0) { b.age += dt; continue; }
+      if (b.acc) {
+        const f = 1 + b.acc * dt;
+        const sp = Math.hypot(b.vx, b.vy);
+        if (sp * f > 22 && sp * f < 160) { b.vx *= f; b.vy *= f; }
+      }
+      if (b.hom && b.age > 0.2 && b.age < 2.6) {
+        const cur = Math.atan2(b.vy, b.vx);
+        let d = Math.atan2(this.py - b.y, this.px - b.x) - cur;
+        while (d > Math.PI) d -= TAU;
+        while (d < -Math.PI) d += TAU;
+        const na = cur + clamp(d, -b.hom * dt, b.hom * dt);
+        const sp = Math.hypot(b.vx, b.vy);
+        b.vx = Math.cos(na) * sp;
+        b.vy = Math.sin(na) * sp;
+      }
+      b.x += b.vx * dt + (b.wob ? Math.cos(b.age * 3) * b.wob * dt : 0);
       b.y += b.vy * dt;
       b.age += dt;
-      if (b.x < -20 || b.x > W + 20 || b.y < -24 || b.y > H + 20) b.alive = false;
+      if (b.age > b.ttl || b.x < -20 || b.x > W + 20 || b.y < -24 || b.y > H + 20) b.alive = false;
       else if (guard) {
         const d2 = (b.x - gx) ** 2 + (b.y - gy) ** 2;
         if (d2 < 34 * 34 && b.y < gy + 4) {
@@ -1316,8 +1879,12 @@ export class SkyEngine {
         it.alive = false;
         this.addGauge(0.04);
         if (it.kind === 'cookie') {
-          sfx('item');
-          this.addScore(300, it.x, it.y);
+          // 점수 메달: 놓치지 않고 연속으로 먹을수록 값이 오름
+          sfx('item', 1, 1 + this.medal * 0.04);
+          const v = MEDALS[Math.min(this.medal, MEDALS.length - 1)];
+          this.medal++;
+          this.score += v;
+          this.floatText(it.x, it.y - 6, `${v}`, '#ffe34a');
         } else if (it.kind === 'strawberry') {
           sfx('heal');
           if (this.hp < MAX_HP) {
@@ -1338,7 +1905,10 @@ export class SkyEngine {
           } else this.addScore(1000, this.px, this.py - 20);
         }
       }
-      if (it.y > H + 12) it.alive = false;
+      if (it.y > H + 12) {
+        if (it.alive && it.kind === 'cookie') this.medal = 0; // 메달을 놓치면 단가 초기화
+        it.alive = false;
+      }
     }
     compact(this.items, (i) => i.alive);
   }
@@ -1394,12 +1964,11 @@ export class SkyEngine {
   }
 
   /** 장갑 파손: 체력 80·60·40·20% 마다 큰 파열 + 그 자리에서 계속 연기·불꽃 */
-  private static ARMOR_PTS = [[-30, -18], [30, -8], [-20, 24], [24, 28]];
   private checkArmor(e: Enemy): void {
     const frac = e.hp / e.max;
     const next = this.armorStage < 4 && frac <= 0.8 - this.armorStage * 0.2;
-    if (!next || !this.bs || this.bs.mode === 'dying') return;
-    const [dx, dy] = SkyEngine.ARMOR_PTS[this.armorStage];
+    if (!next || !this.bs || this.bs.mode === 'dying' || e !== this.boss) return;
+    const [dx, dy] = this.armorPts[this.armorStage] ?? [0, 0];
     this.armorStage++;
     const x = e.x + dx;
     const y = e.y + dy;
@@ -1416,61 +1985,78 @@ export class SkyEngine {
   private damage(e: Enemy, dmg: number, src: PKind | 'bomb' | 'beam' | 'body', hx: number, hy: number): void {
     if (e.dead || e.y < -6) return;
     const strong = src === 'charge' || src === 'drill';
+    const special = !!this.sp && src !== 'shot' && src !== 'wave' && src !== 'charge';
     if (e.kind === 'boss') {
-      const b = this.bs!;
-      if (b.mode === 'enter' || b.mode === 'dying') return;
-      const weak = (hx - e.x - WEAK.dx) ** 2 + (hy - e.y - WEAK.dy) ** 2 < WEAK.r * WEAK.r;
+      const b = this.bsOf(e);
+      if (b.mode === 'enter' || b.mode === 'dying' || b.mode === 'flee') return;
+      // 필살기·폭탄은 보스에게 절반 (보스를 순식간에 녹이지 않도록)
+      if (special || src === 'bomb') dmg *= 0.5;
+      // 부품(포탑)이 남아 있으면 본체는 장갑으로 덜 받음
+      if (b.def.shielded && this.en.some((p) => p.kind === 'part' && p.parent === e && !p.dead)) dmg *= b.def.shielded;
+      const wk = b.def.weak;
+      const weak = !!wk && (hx - e.x - wk.dx) ** 2 + (hy - e.y - wk.dy) ** 2 < wk.r * wk.r;
       if (src !== 'beam' && src !== 'bomb') {
         if (weak) {
           dmg *= 1.5;
-          // 약점: 분홍 충격파 + 결정 파편
           this.addFx('weak', hx, hy, strong ? 1.6 : 1.15, 0.24);
           if (Math.random() < 0.35) this.addFx('ring', hx, hy, 0.55, 0.2);
           for (let i = 0; i < 2; i++) this.part(hx, hy, rand(-70, 70), rand(-90, -10), 0.35, i ? '#ffb8d8' : '#ffffff', 2, 160);
           sfx('bossWeak');
         } else {
-          // 장갑: 금속 섬광 + 주황 불티 · 회색 파편
           this.addFx('metal', hx, hy, strong ? 1.7 : 1.25, 0.24);
           this.part(hx, hy, rand(-80, 80), rand(-100, -30), 0.3, '#ffc040', 1, 220);
           if (Math.random() < 0.5) this.part(hx, hy, rand(-60, 60), rand(-70, -10), 0.5, '#9aa4b4', 2, 260);
-          sfx('bossHit', 1, weak ? 1 : rand(0.92, 1.08));
+          sfx('bossHit', 1, rand(0.92, 1.08));
         }
       } else if (Math.random() < 0.3) this.addFx('metal', hx, hy, 1.1, 0.2);
-      // 피격 번쩍임: 짧게, 연속 사격 중에도 깜박이듯 (항상 하얗게 덮이지 않도록 쿨타임)
-      if (this.bossFlashCd <= 0) {
-        e.flash = strong ? 0.07 : 0.035;
-        this.bossFlashCd = strong ? 0.1 : 0.2;
-      }
-      this.bossRecoil = Math.min(1.6, this.bossRecoil + (strong ? 1.6 : 0.5));
-      this.bossBarHit = 0.12;
+      if (e === this.boss) {
+        if (this.bossFlashCd <= 0) {
+          e.flash = strong ? 0.07 : 0.035;
+          this.bossFlashCd = strong ? 0.1 : 0.2;
+        }
+        this.bossRecoil = Math.min(1.6, this.bossRecoil + (strong ? 1.6 : 0.5));
+        this.bossBarHit = 0.12;
+      } else if (e.flash <= 0 && Math.random() < 0.3) e.flash = 0.035;
       if (strong) {
         this.kick(0.38, 0.07);
         this.addFx('ring', hx, hy, 1.2, 0.3);
         buzz(30);
       }
     } else if (src !== 'bomb') {
-      this.addFx('spark', hx, hy, strong ? 1.4 : 0.8, 0.18);
-      sfx('enemyHit');
+      if (e.kind === 'part' && (special)) dmg *= 0.6;
+      this.addFx(e.kind === 'part' ? 'metal' : 'spark', hx, hy, strong ? 1.4 : 0.8, 0.18);
+      sfx(e.kind === 'part' ? 'bossHit' : 'enemyHit', e.kind === 'part' ? 0.6 : 1);
       if (strong) this.kick(0.2, 0.04);
     }
     e.hp -= dmg;
     if (e.kind !== 'boss') e.flash = 0.06;
-    else this.checkArmor(e);
-    this.addGauge(dmg * (e.kind === 'boss' ? 0.0022 : 0.003));
+    else if (e === this.boss) this.checkArmor(e);
+    this.addGauge(dmg * (e.kind === 'boss' ? 0.0016 : 0.0026));
     if (e.hp > 0) return;
     if (e.kind === 'boss') {
-      if (this.bs!.mode !== 'dying') {
+      const b = this.bsOf(e);
+      if (b.mode !== 'dying') {
         e.hp = 0;
-        this.bs!.mode = 'dying';
-        this.bs!.dyingT = 0;
+        b.mode = 'dying';
+        b.dyingT = 0;
         for (const q of this.eb) { this.starFrom(q.x, q.y); q.alive = false; }
-        sfx('bossBreak');
-        stopBgm(1.0);
-        this.bossSay('뽀뽀괴물을 물리쳤다!', '#ffe34a');
+        for (const l of this.lasers) l.alive = false;
+        for (const p of this.en) if (p.kind === 'part' && p.parent === e) this.killPart(p, false);
+        if (!b.def.mid) {
+          sfx('bossBreak');
+          stopBgm(1.0);
+          this.flashWhite = 0.6;
+          // 남은 잡몹도 함께 폭발
+          for (const o of this.en) if (o.kind === 'small') this.damage(o, 999, 'bomb', o.x, o.y);
+        } else sfx('boomL', 0.8);
+        this.bossSay(`${b.def.name} 격파!`, '#ffe34a');
         this.kick(1, 0.12);
-        this.flashWhite = 0.6;
         buzz([60, 40, 60], 0);
       }
+      return;
+    }
+    if (e.kind === 'part') {
+      this.killPart(e, true);
       return;
     }
     e.dead = true;
@@ -1478,8 +2064,8 @@ export class SkyEngine {
     this.comboT = 2.2;
     this.maxCombo = Math.max(this.maxCombo, this.combo);
     this.addScore(e.score, e.x, e.y - 8);
-    this.addGauge(e.kind === 'uncle' ? 0.06 : 0.02);
-    if (e.kind === 'uncle') {
+    this.addGauge(e.type === 'gunship' ? 0.05 : 0.016);
+    if (e.type === 'gunship') {
       for (let i = 0; i < 5; i++) this.addBoom(e.x + rand(-18, 18), e.y + rand(-14, 14), rand(0.5, 0.8), i * 0.09);
       this.addBoom(e.x, e.y, 1.0, 0.45);
       this.addFx('ring', e.x, e.y, 1.1, 0.32);
@@ -1487,7 +2073,7 @@ export class SkyEngine {
       this.kick(0.4, 0.05);
       sfx('boomM');
       buzz(35);
-    } else if (e.kind === 'orb') {
+    } else if (e.type === 'orb') {
       this.addBoom(e.x, e.y, 0.7, 0);
       this.addBoom(e.x + rand(-6, 6), e.y + rand(-6, 6), 0.5, 0.12);
       this.debris(e.x, e.y, 10, ['#c080ff', '#d8a040', '#5a3a8a']);
@@ -1498,14 +2084,32 @@ export class SkyEngine {
       this.debris(e.x, e.y, 5, ['#d8a040', '#5a5a66']);
       sfx('boomS');
     }
-    const r = Math.random();
     const drop = (kind: Item['kind'], dx = 0): void => void this.items.push({ x: e.x + dx, y: e.y, kind, age: 0, alive: true });
-    if (e.kind === 'uncle') {
-      drop('star');
-      if (r < 0.5) drop('strawberry', 8);
-    } else if (r < 0.1) drop('star');
-    else if (r < 0.2) drop('cookie');
-    else if (r < 0.24) drop('banana');
+    if (e.drop) drop(e.drop);
+    else {
+      const r = Math.random();
+      if (e.type === 'gunship') { drop(r < 0.5 ? 'star' : 'cookie'); if (r < 0.35) drop('strawberry', 10); }
+      else if (r < 0.05) drop('star');
+      else if (r < 0.17) drop('cookie');
+      else if (r < 0.19) drop('banana');
+    }
+  }
+
+  private killPart(p: Enemy, reward: boolean): void {
+    if (p.dead) return;
+    p.dead = true;
+    for (let i = 0; i < 4; i++) this.addBoom(p.x + rand(-8, 8), p.y + rand(-8, 8), rand(0.6, 0.9), i * 0.07);
+    this.addFx('ring', p.x, p.y, 0.9, 0.3);
+    this.debris(p.x, p.y, 12, ['#d8a040', '#5a5a66', '#3a2a2a']);
+    if (!reward) return;
+    sfx('armorBreak');
+    this.kick(0.4, 0.05);
+    this.score += p.score;
+    this.floatText(p.x, p.y - 8, `${p.score}`, '#ffc040');
+    this.items.push({ x: p.x, y: p.y, kind: 'cookie', age: 0, alive: true });
+    // 부품 자리에 계속 연기
+    if (p.parent === this.boss) this.partSmoke.push([p.dx ?? 0, p.dy ?? 0]);
+    this.addGauge(0.08);
   }
 
   // ───────────── 충돌 ─────────────
@@ -1520,7 +2124,7 @@ export class SkyEngine {
         let hy = b.y;
         if (e.kind === 'boss' && b.kind !== 'drill') {
           // 보스: 그림 실루엣에 닿은 정확한 지점 (탄 머리 → 몸통 순으로 검사)
-          hit = Math.abs(b.x - e.x) < 60 && Math.abs(b.y - e.y) < 64 && (this.bossSolid(e, b.x, b.y - 4) || this.bossSolid(e, b.x, b.y) || (b.r > 5 && this.bossSolid(e, b.x, b.y - b.r)));
+          hit = Math.abs(b.x - e.x) < 90 && Math.abs(b.y - e.y) < 90 && (this.bossSolid(e, b.x, b.y - 4) || this.bossSolid(e, b.x, b.y) || (b.r > 5 && this.bossSolid(e, b.x, b.y - b.r)));
           if (hit && b.kind === 'charge') { hx = b.x; hy = b.y - b.r * 0.6; }
           else if (hit) hy = this.bossSolid(e, b.x, b.y - 4) ? b.y - 4 : b.y;
         } else {
@@ -1557,15 +2161,22 @@ export class SkyEngine {
       if (q.alive && q.age >= 0 && (q.x - hx) ** 2 + (q.y - hy) ** 2 < (q.r + 2.2) ** 2) {
         q.alive = false;
         if (this.barrier > 0) this.starFrom(q.x, q.y);
-        else this.hurtPlayer();
+        else this.hurtPlayer(`탄:${q.kind}`);
       }
     }
     for (const e of this.en) {
       if (e.dead || e.y < 0) continue;
-      if (e.kind === 'boss' && this.bs && (this.bs.mode === 'dying' || this.bs.mode === 'enter')) continue;
+      if (e.kind === 'boss') {
+        const bm = this.bsOf(e).mode;
+        if (bm === 'dying' || bm === 'enter' || bm === 'flee') continue;
+        // 보스 몸통 접촉도 실루엣 기준
+        if (this.bossSolid(e, hx, hy)) this.hurtPlayer('보스몸통');
+        continue;
+      }
+      if (e.kind === 'part') continue;
       if ((e.x - hx) ** 2 + (e.y - hy) ** 2 < (e.hr * 0.8 + 3) ** 2) {
-        this.hurtPlayer();
-        if (e.kind !== 'boss') this.damage(e, 99, 'body', e.x, e.y);
+        this.hurtPlayer(`몸통:${e.type}`);
+        this.damage(e, 99, 'body', e.x, e.y);
       }
     }
   }
@@ -1576,17 +2187,30 @@ export class SkyEngine {
     this.overWon = won;
     this.setCharging(false);
     this.endT = 0;
+    const final = won && this.st.id === STAGES.length;
+    const bonus = { clear: 0, hp: 0, bomb: 0, noMiss: 0, total: 0 };
     if (!won) {
       playBgm('over', 0.3);
       this.banner = { text: 'GAME OVER', t: 9, col: '#ff7a8a' };
       this.kick(0.8);
     } else {
       playBgm('clear', 0.3);
-      this.banner = { text: 'STAGE CLEAR!', t: 9, col: '#ffe34a' };
+      bonus.clear = 10000 * this.st.id;
+      bonus.hp = Math.max(0, Math.min(this.hp, MAX_HP)) * 2000;
+      bonus.bomb = this.bombs * 1000;
+      bonus.noMiss = this.hits === 0 ? 20000 * this.st.id : 0;
+      bonus.total = bonus.clear + bonus.hp + bonus.bomb + bonus.noMiss;
+      this.score += bonus.total;
+      this.banner = { text: final ? 'ALL CLEAR!' : 'STAGE CLEAR!', t: 9, col: '#ffe34a' };
     }
-    const info: EndInfo = { won, score: this.score, time: this.t, maxCombo: this.maxCombo, hp: Math.max(0, this.hp) };
-    window.setTimeout(() => this.alive && this.onEnd(info), won ? 3000 : 1800);
+    const info: EndInfo = {
+      won, final, stage: this.st.id, score: this.score, time: this.t, maxCombo: this.maxCombo, hp: Math.max(0, Math.min(this.hp, MAX_HP)), bombs: this.bombs, power: this.power,
+      noMiss: this.hits === 0, bonus,
+    };
+    this.endInfo = info;
+    window.setTimeout(() => this.alive && this.onEnd(info), won ? 3200 : 1800);
   }
+  endInfo: EndInfo | null = null;
 
   // ═════════════ 미리 굽기 ═════════════
   private mkCanvas(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
@@ -1600,7 +2224,7 @@ export class SkyEngine {
   /** 배경: 원경 대기색 + 탄막 가독성용 어둡게를 미리 합성 (예전엔 매 프레임 화면 전체 반투명 2장) */
   private bakeBackdrop(): HTMLCanvasElement {
     const [c, g] = this.mkCanvas(W * R, H * R);
-    g.drawImage(this.a.v2['stage1/bg-backdrop'], 0, 0, W * R, H * R);
+    g.drawImage(this.art['bg-backdrop'], 0, 0, W * R, H * R);
     g.fillStyle = 'rgba(40, 20, 70, 0.28)';
     g.fillRect(0, 0, c.width, c.height);
     g.fillStyle = 'rgba(16, 8, 34, 0.22)';
@@ -1608,11 +2232,11 @@ export class SkyEngine {
     return c;
   }
   /** 배경 소품: 레이어 배율로 줄이고 같은 덮개 색을 미리 입힘 (알파는 그릴 때) */
-  private propImg(name: V2Name, layer: number): HTMLCanvasElement {
+  private propImg(name: ArtName, layer: number): HTMLCanvasElement {
     const key = `${name}|${layer}`;
     let c = this.propBaked.get(key);
     if (c) return c;
-    const im = this.a.v2[name];
+    const im = this.art[name];
     const L = LAYER[layer];
     const [cc, g] = this.mkCanvas(im.width * L.k * R, im.height * L.k * R);
     g.imageSmoothingEnabled = true;
@@ -1707,7 +2331,8 @@ export class SkyEngine {
 
     this.drawStage1();
     for (const it of this.items) this.drawItem(it.kind, it.x, it.y + Math.round(Math.sin(it.age * 6)), it.age);
-    for (const e of this.en) this.drawEnemy(e);
+    for (const e of this.en) if (e.kind !== 'part') this.drawEnemy(e);
+    for (const e of this.en) if (e.kind === 'part') this.drawEnemy(e);
     this.drawBeams();
     this.drawSpecialUnder();
 
@@ -1737,7 +2362,8 @@ export class SkyEngine {
     }
     g.globalAlpha = 1;
 
-    // 적 탄 — 맨 위 (고나·동료·이펙트에 가려지지 않게)
+    // 레이저 · 적 탄 — 맨 위 (고나·동료·이펙트에 가려지지 않게)
+    this.drawLasers();
     for (const b of this.eb) this.drawEBullet(b);
     this.drawHitDot();
     for (const f of this.floats) {
@@ -1771,25 +2397,56 @@ export class SkyEngine {
     if (settings.perf) this.drawPerf();
   }
 
-  // ───────────── 스테이지 1 배경 ─────────────
-  private spawnProp(entry: [number, V2Name, number, number, number], y?: number): void {
+  // ───────────── 스테이지 배경 ─────────────
+  private spawnProp(entry: [number, ArtName, number, number, number], y?: number): void {
     const [, name, layer, fx, vx] = entry;
     const im = this.propImg(name, layer);
     const L = LAYER[layer];
     this.props.push({ name, x: fx * W, y: y ?? -im.height / R / 2 - 4, v: L.v, layer, vx });
   }
   private updateProps(dt: number): void {
+    const P = this.st.props;
     if (this.propIdx === 0 && this.propLoop === 0 && this.props.length === 0) {
-      this.spawnProp(STAGE1_PROPS[0], 70);
-      this.spawnProp(STAGE1_PROPS[1], 20);
-      this.spawnProp([0, 'stage1/island-small', 0, 0.82, 0], 190);
-      this.spawnProp([0, 'stage1/cloud-big', 2, 0.9, 0], 250);
+      this.spawnProp(P[0], 70);
+      this.spawnProp(P[1], 20);
+      this.spawnProp([0, 'island-small', 0, 0.82, 0], 190);
+      this.spawnProp([0, 'cloud-big', 2, 0.9, 0], 250);
     }
     const tt = this.t - this.propLoop * 60;
-    while (this.propIdx < STAGE1_PROPS.length && STAGE1_PROPS[this.propIdx][0] <= tt) this.spawnProp(STAGE1_PROPS[this.propIdx++]);
+    while (this.propIdx < P.length && P[this.propIdx][0] <= tt) this.spawnProp(P[this.propIdx++]);
     if (tt >= 60) { this.propLoop++; this.propIdx = 0; }
     for (const p of this.props) { p.y += p.v * dt; p.x += p.vx * dt; }
     compact(this.props, (p) => p.y < H + 120);
+    // 스테이지 분위기 입자 (단순 이펙트)
+    this.ambientT -= dt;
+    if (this.ambientT <= 0) {
+      switch (this.st.fx) {
+        case 'spores':
+          this.ambientT = 0.18;
+          this.part(rand(0, W), H + 4, rand(-8, 8), rand(-30, -14), 6, Math.random() < 0.5 ? '#a6f070' : '#e8ffb0', 1, 0);
+          break;
+        case 'steam':
+          this.ambientT = 0.5;
+          this.addFx('puff', Math.random() < 0.5 ? rand(0, 30) : rand(W - 30, W), rand(20, H), 0.7, 0.9, 18);
+          if (Math.random() < 0.5) this.part(rand(0, W), -4, rand(-20, 20), rand(40, 80), 3, '#ffb040', 1, 0);
+          break;
+        case 'bubbles':
+          this.ambientT = 0.14;
+          this.part(rand(0, W), H + 4, rand(-6, 6), rand(-40, -20), 8, Math.random() < 0.6 ? '#9cf0ff' : '#e0ffff', Math.random() < 0.3 ? 2 : 1, 0);
+          break;
+        case 'embers':
+          this.ambientT = 0.12;
+          this.part(rand(0, W), H + 4, rand(-12, 12), rand(-45, -20), 7, Math.random() < 0.5 ? '#ff6040' : '#ffb060', 1, 0);
+          break;
+        case 'storm':
+          this.ambientT = 0.15;
+          this.part(rand(0, W), -4, rand(-30, -10), rand(90, 140), 3, '#a080e0', 1, 0);
+          if (Math.random() < 0.012 && !this.boss) this.flashWhite = Math.max(this.flashWhite, 0.18);
+          break;
+        default:
+          this.ambientT = 9;
+      }
+    }
   }
   private drawStage1(): void {
     const g = this.g;
@@ -1806,10 +2463,41 @@ export class SkyEngine {
     g.globalAlpha = 1;
   }
 
-  private drawWarning(): void {
-    if (this.over || this.t < BOSS_WARN_T || this.t > BOSS_T + 0.6) return;
+  /** 레이저: 경고선(깜박이는 가는 선) → 굵은 광선 (단순 이펙트) */
+  private drawLasers(): void {
     const g = this.g;
-    const k = Math.sin((this.t - BOSS_WARN_T) * 9) * 0.5 + 0.5;
+    for (const l of this.lasers) {
+      const ex = l.x + Math.cos(l.ang) * l.len;
+      const ey = l.y + Math.sin(l.ang) * l.len;
+      g.beginPath();
+      g.moveTo(l.x, l.y);
+      g.lineTo(ex, ey);
+      if (l.t < l.warn) {
+        g.globalAlpha = Math.floor(l.t * 14) % 2 ? 0.9 : 0.45;
+        g.strokeStyle = '#ff4060';
+        g.lineWidth = 1;
+        g.stroke();
+      } else {
+        const k = Math.min(1, (l.t - l.warn) * 8, (l.warn + l.life - l.t) * 6);
+        g.globalAlpha = 0.85;
+        g.strokeStyle = '#c0103a';
+        g.lineWidth = l.w * k + 2;
+        g.stroke();
+        g.strokeStyle = '#ff90a8';
+        g.lineWidth = l.w * k * 0.6;
+        g.stroke();
+        g.strokeStyle = '#ffffff';
+        g.lineWidth = Math.max(1, l.w * k * 0.25);
+        g.stroke();
+      }
+      g.globalAlpha = 1;
+    }
+  }
+
+  private drawWarning(): void {
+    if (this.over || this.block !== 'warning') return;
+    const g = this.g;
+    const k = Math.sin(this.warnT * 9) * 0.5 + 0.5;
     g.globalAlpha = 0.12 + k * 0.12;
     g.fillStyle = '#c81432';
     g.fillRect(0, 0, W, H);
@@ -1821,7 +2509,7 @@ export class SkyEngine {
       for (let x = -16 + ((this.t * 60) % 16); x < W; x += 16) { g.beginPath(); g.moveTo(x, y + 16); g.lineTo(x + 8, y); g.lineTo(x + 14, y); g.lineTo(x + 6, y + 16); g.fill(); }
     }
     this.text('WARNING', W / 2, 150, k > 0.5 ? '#ff4060' : '#ffe0e8', 'center', 22);
-    this.text('거대 비행요새 접근 중', W / 2, 176, '#ffe0e8', 'center', 11);
+    this.text(`${this.st.boss.name} 접근 중`, W / 2, 176, '#ffe0e8', 'center', 11);
   }
 
   /** 필살기 컷인: 원화 띠가 오른쪽에서 들어와 멈췄다 왼쪽으로 빠짐 + 이름 */
@@ -1964,10 +2652,10 @@ export class SkyEngine {
   }
 
   /** v2 스프라이트(2배 격자)를 0.5배로 — 회전·피격 번쩍 포함 */
-  private drawV2(im: HTMLImageElement, cx: number, cy: number, white: boolean, rot = 0, sx = 0, sw = im.width): void {
+  private drawV2(im: HTMLImageElement, cx: number, cy: number, white: boolean, rot = 0, sx = 0, sw = im.width, k = 0.5): void {
     const g = this.g;
-    const w = sw / R;
-    const h = im.height / R;
+    const w = sw * k;
+    const h = im.height * k;
     if (rot) {
       g.save();
       g.translate(cx, cy);
@@ -1989,34 +2677,58 @@ export class SkyEngine {
 
   private drawEnemy(e: Enemy): void {
     const white = e.flash > 0;
-    const v = this.a.v2;
-    if (e.kind === 'glasses' || e.kind === 'orb') {
-      const name: V2Name = e.kind === 'orb' ? 'stage1/enemy-orb' : e.pat === 'strafe' ? 'stage1/enemy-fighter' : e.pat === 'dive' ? 'stage1/enemy-wyvern' : 'stage1/enemy-drone';
+    const im = this.art[e.art];
+    if (e.kind === 'small') {
       let rot = 0;
       if (e.pat === 'strafe') rot = (-e.dir * Math.PI) / 2;
-      else if (e.pat === 'dive' && e.vy !== 0) rot = Math.atan2(e.vy, e.vx) - Math.PI / 2;
-      const bob = e.pat === 'sine' || e.pat === 'swarm' ? Math.sin(e.age * 8) * 1.2 : 0;
-      this.drawV2(v[name], e.x, e.y + bob, white, rot);
-      if (e.kind === 'orb' && e.fire < 0.35 && e.age < 7) {
-        const g = this.g;
-        g.globalAlpha = 0.6; g.fillStyle = '#d8b8ff'; g.beginPath(); g.arc(e.x, e.y, 5 + (0.35 - e.fire) * 14, 0, TAU); g.fill(); g.globalAlpha = 1;
-      }
-      return;
-    }
-    if (e.kind === 'uncle') {
-      this.drawV2(v['stage1/enemy-gunship'], e.x, e.y, white);
-      this.hpBar(e.x - 14, e.y + 30, 28, e.hp / e.max);
-      return;
-    }
-    const b = this.bs!;
-    const im = v['stage1/boss'];
-    const fw = im.width / 2;
-    const shakeX = b.mode === 'dying' ? Math.sin(e.age * 60) * 1.5 : 0;
-    this.drawV2(im, e.x + shakeX, e.y - Math.round(this.bossRecoil), white, 0, b.phase >= 2 || b.mode === 'dying' ? fw : 0, fw);
-    if (b.mode === 'atk' && b.atk === 'dash' && b.at < 0.9) {
+      else if ((e.pat === 'dive' && e.vy !== 0) || e.pat === 'loop' || e.pat === 'snake') rot = Math.atan2(e.vy, e.vx) - Math.PI / 2;
+      const bob = e.pat === 'sine' || e.pat === 'swarm' || e.pat === 'zig' ? Math.sin(e.age * 8) * 1.2 : 0;
+      this.drawV2(im, e.x, e.y + bob, white, rot);
       const g = this.g;
+      // 발사 전조: 포탑 발광 · 저격 반짝임
+      if ((e.type === 'orb' && e.fire < 0.35 && e.age < 7.5) || (e.fireKind === 'snipe' && e.fire < 0.4 && e.fire > 0)) {
+        g.globalAlpha = 0.6; g.fillStyle = e.fireKind === 'snipe' ? '#ffe0f0' : '#d8b8ff'; g.beginPath(); g.arc(e.x, e.y + 4, 3 + (0.4 - e.fire) * 12, 0, TAU); g.fill(); g.globalAlpha = 1;
+      }
+      if (e.type === 'gunship') this.hpBar(e.x - 14, e.y + 30, 28, e.hp / e.max);
+      return;
+    }
+    if (e.kind === 'part') {
+      this.drawV2(im, e.x, e.y, white, 0, 0, im.width, e.k);
+      if (e.hp < e.max) this.hpBar(e.x - 8, e.y + 9, 16, e.hp / e.max);
+      return;
+    }
+    const b = this.bsOf(e);
+    const def = b.def;
+    const fw = im.width / def.frames;
+    const shakeX = b.mode === 'dying' ? Math.sin(e.age * 60) * 1.5 : b.mode === 'tele' ? Math.sin(e.age * 70) * 0.7 : 0;
+    const recoil = e === this.boss ? Math.round(this.bossRecoil) : 0;
+    const sx = def.frames > 1 && (b.phase >= 2 || b.mode === 'dying') ? fw : 0;
+    this.drawV2(im, e.x + shakeX, e.y - recoil, white, 0, sx, fw, def.k);
+    if (def.core) {
+      // 최종 보스: 성채 위의 심장 코어 (부품이 남아 있으면 어둡게 봉인)
+      const cim = this.art[def.core.art];
+      const cfw = cim.width / 2;
+      const sealed = this.en.some((p) => p.kind === 'part' && p.parent === e && !p.dead);
+      this.g.globalAlpha = sealed ? 0.55 : 1;
+      this.drawV2(cim, e.x + shakeX, e.y + def.core.dy - recoil, white, 0, b.phase >= 3 ? cfw : 0, cfw, def.core.k);
+      this.g.globalAlpha = 1;
+    }
+    const g = this.g;
+    // 공격 전조: 포구에 에너지가 모임
+    if (b.mode === 'tele') {
+      const k = 1 - b.teleT / 0.6;
+      this.frame(this.a.v2['fx/charge-orb'], Math.min(3, Math.floor(k * 4)), 4, e.x, e.y + 10, 1 + k * 0.6);
+      if (Math.floor(e.age * 20) % 2) this.frame(this.a.v2['fx/ring'], Math.min(3, Math.floor((1 - k) * 4)), 4, e.x, e.y + 10, 0.9);
+    }
+    if (b.mode === 'atk' && b.atk === 'dash' && b.at < 0.9) {
       g.fillStyle = Math.floor(b.at * 10) % 2 ? '#ff4f86' : '#fff';
       g.fillRect(Math.floor(b.tx - 1), Math.floor(e.y + 50), 3, H - Math.floor(e.y) - 90);
+    }
+    // 중간보스 체력바
+    if (def.mid && b.mode !== 'dying') {
+      const w = 44;
+      g.fillStyle = '#120a26'; g.fillRect(Math.floor(e.x - w / 2) - 1, Math.floor(e.y - 40), w + 2, 5);
+      g.fillStyle = '#ffc040'; g.fillRect(Math.floor(e.x - w / 2), Math.floor(e.y - 39), Math.round(w * clamp(e.hp / e.max, 0, 1)), 3);
     }
   }
 
@@ -2187,6 +2899,8 @@ export class SkyEngine {
       if (this.bossBarHit > 0.06) { g.fillStyle = '#ffffff'; g.fillRect(46, 31, Math.round((W - 60) * f), 1); g.fillRect(45 + Math.round((W - 60) * f), 30, 2, 7); }
       g.fillStyle = '#120a26'; for (const q of [1 / 3, 2 / 3]) g.fillRect(46 + Math.round((W - 60) * q), 31, 1, 5);
       this.text('BOSS', 12, 28, '#ff9ec0', 'left', 11);
+      // 단계 표시
+      for (let i = 0; i < this.bs.def.phases.length; i++) { g.fillStyle = i < this.bs.phase ? '#ff4f86' : '#3a1028'; g.fillRect(W - 12 - i * 5, 40, 3, 3); }
     }
   }
 

@@ -15,13 +15,20 @@
  */
 import LOOPS from './audioLoops';
 
-export type BgmName = 'title' | 'select' | 'stage1' | 'boss' | 'clear' | 'over';
+export type BgmName = 'title' | 'select' | 'stage1' | 'stage2' | 'stage3' | 'stage4' | 'stage5' | 'final' | 'boss' | 'lastboss' | 'ending' | 'clear' | 'over';
 
 const BGM: Record<BgmName, { vol: number; loop?: number[] }> = {
   title: { vol: 0.6, ...LOOPS.title },
   select: { vol: 0.5, ...LOOPS.select },
   stage1: { vol: 0.52, ...LOOPS.stage1 },
+  stage2: { vol: 0.52, ...LOOPS.stage2 },
+  stage3: { vol: 0.52, ...LOOPS.stage3 },
+  stage4: { vol: 0.52, ...LOOPS.stage4 },
+  stage5: { vol: 0.52, ...LOOPS.stage5 },
+  final: { vol: 0.54, ...LOOPS.final },
   boss: { vol: 0.56, ...LOOPS.boss },
+  lastboss: { vol: 0.58, ...LOOPS.lastboss },
+  ending: { vol: 0.6, ...LOOPS.ending },
   clear: { vol: 0.66 },
   over: { vol: 0.66 },
 };
@@ -297,15 +304,24 @@ function decode(file: string): Promise<AudioBuffer | null> {
   return p;
 }
 
-/** 미리 불러 두기 */
+/** 미리 불러 두기 (BGM 은 디코딩하면 곡당 수십 MB → 필요한 곡만: prepareBgm) */
 export function preloadAudio(which: 'menu' | 'game'): Promise<void> {
   const list =
     which === 'menu'
       ? ['bgm-title', 'bgm-select', 'sfx-menuMove', 'sfx-menuOk', 'sfx-start']
-      : [...BGM_NAMES.map((b) => `bgm-${b}`), ...SFX_NAMES.map((s) => `sfx-${s}`)];
+      : ['bgm-clear', 'bgm-over', ...SFX_NAMES.map((s) => `sfx-${s}`)];
   return Promise.all(list.map((f) => (mode === 'webaudio' ? decode(f) : getBytes(f)))).then(() => {
     if (mode === 'webaudio' && decodeFails >= 3 && buffers.size === 0) switchToHtml('디코딩 실패');
   });
+}
+
+/** 이번 화면에 필요한 BGM 만 디코딩해 두고, 나머지 BGM 버퍼는 메모리에서 해제 (iPhone 메모리 보호) */
+export function prepareBgm(names: BgmName[]): Promise<void> {
+  const keep = new Set<string>([...names, 'clear', 'over'].map((n) => `bgm-${n}`));
+  if (curName) keep.add(`bgm-${curName}`);
+  for (const k of [...buffers.keys()]) if (k.startsWith('bgm-') && !keep.has(k)) { buffers.delete(k); decoding.delete(k); }
+  for (const k of [...blobUrls.keys()]) if (k.startsWith('bgm-') && !keep.has(k)) { URL.revokeObjectURL(blobUrls.get(k)!); blobUrls.delete(k); }
+  return Promise.all(names.map((n) => (mode === 'webaudio' ? decode(`bgm-${n}`) : blobUrl(`bgm-${n}`)))).then(() => undefined);
 }
 
 // ───────── HTML5 대체 경로 ─────────
@@ -346,7 +362,7 @@ function switchToHtml(why: string): void {
   note(`HTML5 오디오 사용 (${why})`);
   const w = wanted;
   cur = null;
-  for (const n of [...BGM_NAMES.map((x) => `bgm-${x}`), ...SFX_NAMES.map((x) => `sfx-${x}`)]) void blobUrl(n);
+  for (const n of SFX_NAMES.map((x) => `sfx-${x}`)) void blobUrl(n);
   if (w) {
     wanted = null;
     playBgm(w);

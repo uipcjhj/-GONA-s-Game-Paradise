@@ -20,6 +20,8 @@ CH = {
     'Gm': ['G', 'Bb', 'D'], 'F': ['F', 'A', 'C'], 'D': ['D', 'F#', 'A'], 'Bm': ['B', 'D', 'F#'], 'G': ['G', 'B', 'D'],
     'F#m': ['F#', 'A', 'C#'], 'Cm': ['C', 'Eb', 'G'], 'Ab': ['Ab', 'C', 'Eb'], 'Db': ['Db', 'F', 'Ab'], 'Fm': ['F', 'Ab', 'C'],
     'G7': ['G', 'B', 'F'], 'Asus': ['A', 'D', 'E'], 'Eb': ['Eb', 'G', 'Bb'],
+    'Em': ['E', 'G', 'B'], 'E': ['E', 'G#', 'B'], 'B': ['B', 'D#', 'F#'], 'C#': ['C#', 'E#', 'G#'], 'Gb': ['Gb', 'Bb', 'Db'],
+    'Bbm': ['Bb', 'Db', 'F'], 'Ebm': ['Eb', 'Gb', 'Bb'], 'Cm7': ['C', 'Eb', 'G'],
 }
 
 
@@ -283,12 +285,187 @@ def over():
     return s
 
 
+# ═════════ 공용 편곡기 (스테이지 2~최종, 엔딩) ═════════
+def arrange(s, prog, mels, style, lead=None, counter=None):
+    """style: forest | machine | sea | moon | final | lastboss | ending"""
+    for b, ch in enumerate(prog):
+        st = s.st
+        sec = (b // 8) % 4
+        last = b % 8 == 7
+        if style == 'forest':
+            for k in (0, 6, 10):
+                s.add(d_kick(0.7), st(b, k), rev=0.05)
+            for k in (4, 12):
+                s.add(d_snare(0.5), st(b, k), rev=0.35)
+            for k in range(0, 16, 2):
+                s.add(d_hat(0.55), st(b, k), pan=0.3, rev=0.1)
+            if last:
+                for k in (8, 10, 12, 14):
+                    s.add(d_tom(54 - k // 2, 0.7), st(b, k), rev=0.3)
+            bass_rock(s, b, ch, pattern='bounce', v=0.75)
+            for k in range(0, 16, 4):
+                for m in tones(ch, 4):
+                    s.add(i_chip(m, s.step * 0.8, 0.28, duty=0.5), st(b, k + 2), pan=-0.3, rev=0.35)
+            arp(s, b, ch, i_bell, 5, v=0.45, rate=2, pan=0.35)
+            pad(s, b, ch, i_choir, 4, v=0.55)
+        elif style == 'machine':
+            for k in range(16):
+                if k % 4 == 0 or k in (7, 10):
+                    s.add(d_kick(0.95), st(b, k), rev=0.03)
+                if k in (4, 12):
+                    s.add(d_snare(1.0), st(b, k), rev=0.2)
+                s.add(d_hat(0.75 if k % 2 == 0 else 0.45), st(b, k), pan=0.4, rev=0.03)
+            if b % 4 == 0:
+                s.add(d_crash(0.7), st(b), rev=0.3)
+            if last:
+                for k in range(8, 16):
+                    s.add(d_snare(0.5 + (k - 8) * 0.06), st(b, k), rev=0.2)
+            bass_rock(s, b, ch, octv=2, pattern='16th', v=1.0)
+            guitar_chug(s, b, ch, v=1.0, accents=(0, 3, 6, 8, 11, 14))
+            if sec % 2:
+                arp(s, b, ch, i_chip, 5, v=0.3, rate=1, pan=-0.3)
+        elif style == 'sea':
+            s.add(d_kick(0.55), st(b, 0), rev=0.2)
+            s.add(d_kick(0.4), st(b, 10), rev=0.2)
+            s.add(d_snare(0.3), st(b, 8), rev=0.6)
+            for k in range(2, 16, 4):
+                s.add(d_hat(0.35, open_=True), st(b, k), pan=0.4, rev=0.4)
+            s.add(i_bass(root(ch, 1), s.step * 15, 0.9), st(b), rev=0.2)
+            pad(s, b, ch, i_choir, 4, v=0.9)
+            pad(s, b, ch, i_strings, 3, v=0.6)
+            arp(s, b, ch, i_bell, 5, v=0.5, rate=1, pan=0.3)
+        elif style == 'moon':
+            for k in range(16):
+                if k in (0, 3, 8, 11):
+                    s.add(d_kick(0.95), st(b, k), rev=0.04)
+                if k in (4, 12):
+                    s.add(d_snare(0.95), st(b, k), rev=0.4)
+                if k % 2 == 0:
+                    s.add(d_hat(0.6), st(b, k), pan=0.3, rev=0.1)
+            if b % 8 == 0:
+                s.add(d_crash(0.8), st(b), rev=0.4)
+                s.add(d_timpani(root(ch, 2), 0.9), st(b), rev=0.5)
+            bass_rock(s, b, ch, octv=1 if ch in ('Gb', 'F', 'Ebm') else 2, pattern='8th', v=1.0)
+            pad(s, b, ch, i_organ, 3, v=0.6)
+            pad(s, b, ch, i_choir, 4, v=0.8)
+            if sec % 2:
+                guitar_chug(s, b, ch, v=0.8, accents=(0, 6, 12))
+        elif style in ('final', 'lastboss'):
+            for k in range(16):
+                if k % 4 == 0 or (style == 'lastboss' and k % 4 == 2) or k in (7, 10):
+                    s.add(d_kick(1.0), st(b, k), rev=0.03)
+                if k in (4, 12):
+                    s.add(d_snare(1.0), st(b, k), rev=0.25)
+                s.add(d_hat(0.8 if k % 2 == 0 else 0.5), st(b, k), pan=0.35, rev=0.04)
+            if b % 4 == 0:
+                s.add(d_crash(0.9), st(b), pan=0.2, rev=0.3)
+                s.add(d_timpani(root(ch, 2), 1.0), st(b), rev=0.4)
+            if last:
+                for k in range(8, 16):
+                    s.add(d_tom(52 - k, 0.9) if k % 2 == 0 else d_snare(0.7), st(b, k), rev=0.2)
+            bass_rock(s, b, ch, octv=1 if ch in ('Bb', 'Ab', 'A', 'Eb') else 2, pattern='16th', v=1.05)
+            guitar_chug(s, b, ch, v=1.0, accents=(0, 3, 6, 10, 12) if style == 'lastboss' else (0, 6, 12))
+            pad(s, b, ch, i_strings, 4, v=1.0)
+            pad(s, b, ch, i_choir, 4, v=0.7)
+            if style == 'lastboss' or sec == 1:
+                arp(s, b, ch, i_chip, 5, v=0.28, rate=1, pan=-0.3)
+        elif style == 'ending':
+            s.add(d_kick(0.6), st(b, 0), rev=0.15)
+            s.add(d_kick(0.45), st(b, 8), rev=0.15)
+            s.add(d_snare(0.45), st(b, 4), rev=0.5)
+            s.add(d_snare(0.45), st(b, 12), rev=0.5)
+            for k in range(0, 16, 2):
+                s.add(d_hat(0.4), st(b, k), pan=0.3, rev=0.2)
+            if b % 4 == 0:
+                s.add(d_crash(0.55), st(b), rev=0.5)
+            s.add(i_bass(root(ch, 2), s.step * 7.5, 0.8), st(b), rev=0.2)
+            s.add(i_bass(root(ch, 2) + 7, s.step * 7.5, 0.6), st(b, 8), rev=0.2)
+            pad(s, b, ch, i_strings, 4, v=1.0)
+            arp(s, b, ch, i_bell, 5, v=0.35, rate=2, pan=0.3)
+    for i, m in enumerate(mels):
+        if m:
+            s.melody(lead or i_brass, i, m, gain=0.95, pan=0.05, rev=0.35)
+            if counter and i >= len(mels) // 2:
+                s.melody(counter, i, m, octave=-12, gain=0.5, pan=-0.15, rev=0.35)
+
+
+def stage2():
+    A = ['Em', 'D', 'C', 'D', 'Em', 'D', 'C', 'B']
+    B = ['Am', 'Em', 'C', 'B', 'Am', 'Em', 'C', 'B']
+    mA = ['E5:4 G5:2 A5:2 B5:4 A5:2 G5:2', 'F#5:4 A5:4 D5:8', 'E5:2 G5:2 C6:4 B5:4 A5:4', 'A5:6 G5:2 F#5:8', 'E5:4 G5:2 A5:2 B5:4 D6:4', 'C#6:4 B5:2 A5:2 F#5:8', 'G5:4 E5:4 C5:4 E5:4', 'D#5:8 F#5:4 B5:4']
+    mB = ['C6:8 B5:4 A5:4', 'G5:8 E5:8', 'E5:4 G5:4 C6:4 E6:4', 'D#6:8 B5:8', 'A5:4 C6:4 E6:4 C6:4', 'B5:8 G5:4 E5:4', 'C6:4 B5:4 A5:4 G5:4', 'F#5:8 D#5:8']
+    s = Song(138, 24)
+    arrange(s, A + B + A, mA + mB + mA, 'forest', lead=i_lead, counter=i_strings)
+    return s
+
+
+def stage3():
+    A = ['Am', 'F', 'G', 'Em', 'Am', 'F', 'G', 'E']
+    B = ['Dm', 'Am', 'F', 'E', 'Dm', 'Am', 'Bb', 'E']
+    mA = ['A4:2 C5:2 E5:2 A5:6 G5:2 E5:2', 'F5:4 E5:2 D5:2 C5:4 A4:4', 'B4:2 D5:2 G5:4 F5:2 E5:2 D5:4', 'E5:12 r:4', 'A5:2 A5:2 G5:2 A5:2 C6:4 B5:4', 'A5:4 F5:4 C5:4 F5:4', 'G5:4 B5:4 D6:4 B5:4', 'G#5:8 E5:8']
+    mB = ['D6:6 C6:2 A5:4 F5:4', 'E5:6 C5:2 A4:8', 'F5:4 A5:4 C6:4 A5:4', 'G#5:4 B5:4 E6:8', 'D6:4 F6:4 E6:4 D6:4', 'C6:8 A5:8', 'Bb5:4 D6:4 F6:4 D6:4', 'E6:4 D6:2 B5:2 G#5:8']
+    s = Song(168, 32)
+    arrange(s, A + B + A + B, mA + mB + mA + mB, 'machine', lead=i_lead, counter=i_brass)
+    return s
+
+
+def stage4():
+    P = ['F#m', 'D', 'A', 'E', 'Bm', 'F#m', 'D', 'C#', 'F#m', 'D', 'A', 'E', 'Bm', 'D', 'C#', 'C#']
+    M = ['C#5:8 E5:8', 'F#5:12 A5:4', 'E5:8 C#5:8', 'B4:16', 'D5:8 F#5:8', 'C#5:8 A4:8', 'B4:8 D5:4 F#5:4', 'E#5:16',
+         'C#6:8 B5:8', 'A5:12 F#5:4', 'E5:8 A5:8', 'G#5:16', 'F#5:8 B5:8', 'A5:4 F#5:4 D5:8', 'C#5:8 E#5:8', 'G#5:16']
+    s = Song(116, 16)
+    arrange(s, P, M, 'sea', lead=i_bell, counter=i_strings)
+    for i, m in enumerate(M):
+        s.melody(i_strings, i, m, gain=0.6, pan=-0.1, rev=0.5)
+    return s
+
+
+def stage5():
+    A = ['Bbm', 'Gb', 'Ab', 'F', 'Bbm', 'Gb', 'Ebm', 'F']
+    B = ['Ebm', 'Bbm', 'Gb', 'F', 'Ebm', 'Bbm', 'Gb', 'F']
+    mA = ['Bb4:4 Db5:4 F5:4 Gb5:2 F5:2', 'Eb5:8 Db5:4 Bb4:4', 'C5:4 Eb5:4 Ab5:4 Gb5:4', 'F5:12 r:4', 'Bb5:4 Ab5:4 F5:4 Db5:4', 'Gb5:6 F5:2 Eb5:8', 'Eb5:4 Gb5:4 Bb5:4 Gb5:4', 'A5:8 F5:8']
+    mB = ['Gb5:8 Bb5:8', 'F5:8 Db5:8', 'Db6:4 Bb5:4 Gb5:8', 'C6:8 A5:8', 'Eb6:4 Db6:4 Bb5:4 Gb5:4', 'F5:4 Db5:4 Bb4:8', 'Gb5:4 Bb5:4 Db6:4 Bb5:4', 'A5:4 C6:4 F6:8']
+    s = Song(150, 24)
+    arrange(s, A + B + A, mA + mB + mA, 'moon', lead=i_brass, counter=i_organ)
+    return s
+
+
+def final():
+    A = ['Dm', 'Bb', 'Gm', 'A', 'Dm', 'F', 'C', 'A']
+    B = ['Bb', 'C', 'Dm', 'Dm', 'Gm', 'A', 'Dm', 'A']
+    mA = ['D5:4 A5:4 F5:2 E5:2 D5:4', 'Bb4:4 D5:4 F5:4 Bb5:4', 'G5:4 F5:2 E5:2 D5:4 Bb4:4', 'A4:4 C#5:4 E5:4 A5:4', 'D6:6 C6:2 A5:4 F5:4', 'C6:4 A5:4 F5:4 A5:4', 'G5:4 E5:4 C5:4 E5:4', 'E5:4 C#5:4 A4:8']
+    mB = ['F5:8 Bb5:8', 'G5:8 C6:8', 'A5:4 D6:4 F6:4 E6:4', 'D6:16', 'Bb5:4 A5:4 G5:4 D5:4', 'C#5:4 E5:4 A5:4 C#6:4', 'D6:4 F6:4 A6:4 F6:4', 'E6:8 C#6:8']
+    s = Song(172, 32)
+    arrange(s, A + B + A + B, mA + mB + mA + mB, 'final', lead=i_brass, counter=i_lead)
+    return s
+
+
+def lastboss():
+    A = ['Gm', 'Eb', 'Cm', 'D', 'Gm', 'Ab', 'F', 'D']
+    B = ['Cm', 'Gm', 'Eb', 'D', 'Cm', 'Gm', 'Eb', 'D']
+    mA = ['G5:3 G5:3 Bb5:2 A5:4 G5:4', 'Eb5:3 F5:3 G5:2 Bb5:8', 'C6:4 Bb5:2 A5:2 G5:4 Eb5:4', 'F#5:8 D5:4 A5:4', 'G5:2 A5:2 Bb5:2 D6:2 C6:4 Bb5:4', 'Ab5:4 G5:4 F5:4 Eb5:4', 'F5:4 A5:4 C6:4 F6:4', 'F#6:8 D6:8']
+    mB = ['Eb6:8 C6:8', 'D6:8 Bb5:8', 'G5:4 Bb5:4 Eb6:4 G6:4', 'F#6:4 D6:4 A5:4 F#5:4', 'Eb6:4 D6:4 C6:4 Bb5:4', 'Bb5:4 A5:4 G5:8', 'G5:4 Bb5:4 Eb6:4 Bb5:4', 'A5:4 C6:4 F#6:8']
+    s = Song(184, 24)
+    arrange(s, A + B + A, mA + mB + mA, 'lastboss', lead=i_lead, counter=i_brass)
+    return s
+
+
+def ending():
+    P = ['Bb', 'F', 'Gm', 'Eb', 'Bb', 'F', 'Eb', 'F', 'Gm', 'Eb', 'Bb', 'F', 'Eb', 'F', 'Bb', 'Bb']
+    M = ['F5:6 D5:2 Bb4:8', 'C5:6 D5:2 F5:8', 'G5:6 F5:2 D5:8', 'Eb5:12 r:4', 'F5:6 D5:2 Bb5:8', 'A5:6 G5:2 F5:8', 'G5:4 Bb5:4 Eb6:4 D6:4', 'C6:16',
+         'Bb5:6 A5:2 G5:8', 'G5:6 F5:2 Eb5:8', 'D5:4 F5:4 Bb5:4 D6:4', 'C6:12 r:4', 'Eb6:6 D6:2 C6:8', 'C6:4 D6:4 Eb6:4 F6:4', 'D6:16', 'Bb5:16']
+    s = Song(104, 16)
+    arrange(s, P, M, 'ending', lead=i_brass, counter=i_strings)
+    return s
+
+
 if __name__ == '__main__':
     import sys
     only = sys.argv[1:]
     meta = {}
     ir = make_ir(1.9, 0.5)
-    for name, fn in [('stage1', stage1), ('boss', boss), ('title', title), ('select', select), ('clear', clear), ('over', over)]:
+    for name, fn in [('stage1', stage1), ('boss', boss), ('title', title), ('select', select), ('clear', clear), ('over', over),
+                     ('stage2', stage2), ('stage3', stage3), ('stage4', stage4), ('stage5', stage5), ('final', final), ('lastboss', lastboss), ('ending', ending)]:
         if only and name not in only:
             continue
         s = fn()
