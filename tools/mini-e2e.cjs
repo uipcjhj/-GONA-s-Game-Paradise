@@ -67,7 +67,7 @@ async function drain(page) {
     // 자유 플레이 → 편가르기 → 라운드 끝까지(시간 초과)
     await page.locator('[data-testid=go-free]').tap();
     await page.locator('[data-testid=pick-sort]').tap();
-    await page.locator('[data-testid=start], [data-testid=start-level]').first().tap();
+    await page.locator('[data-testid=start]').first().tap();
     await page.waitForSelector('[data-testid=result]', { timeout: 150000 });
     await shot(page, `mini-result_${tag}`);
     ok(`[${tag}] 실제 미니게임 라운드 종료(결과 화면 표시)`, true);
