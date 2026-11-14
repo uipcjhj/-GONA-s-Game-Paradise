@@ -29,7 +29,7 @@ export default function Ranking() {
   const g = games.find((x) => x.id === game)!;
   const def = getGame(game);
   const playable = def?.status === 'live';
-  const subs = game === 'minigame-paradise' ? MINI_GAMES : [];
+  const subs = game === 'minigame-paradise' && playable ? MINI_GAMES : [];
 
   const fetchBoard = useCallback(async () => {
     if (!online.enabled || !playable && game !== 'overall') return;

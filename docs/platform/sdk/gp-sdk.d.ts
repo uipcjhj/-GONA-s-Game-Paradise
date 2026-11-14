@@ -22,6 +22,7 @@ export interface GameSdk {
   runPause(): void;
   runResume(): void;
   runEnd(r: RunResult): string | null | undefined;
+  report(r: RunResult & { subGameId?: string; durationMs: number }): string | null;
   flush(): void;
 }
 export function initGame(opts: InitOptions): GameSdk;

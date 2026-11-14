@@ -1,0 +1,25 @@
+/* 아슬아슬 탑 — 기반 레이아웃·동작. 모양은 스킨 슬롯이 그림. */
+:root {
+  /* 탑 레이아웃 토큰(스킨 tokens 로 덮어쓰기 가능) */
+  --tw-controls-pad: 6px 10px 2px; --tw-controls-gap: 8px; --tw-btn-min-w: 88px;
+}
+.tw { height: 100%; display: flex; flex-direction: column; }
+.tw-metabox, .tw-controls { flex: none; }
+.tw-stage { position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; touch-action: none; cursor: grab; }
+.tw-bg { position: absolute; inset: 0; pointer-events: none; }
+.tw-world { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; will-change: transform; }
+.tw-world > * { position: absolute; left: 0; top: 0; }
+.tw-plate { }
+.tw-piece, .tw-aim { width: 0; height: 0; will-change: transform; }
+.tw-aim { z-index: 3; }
+.tw-piece { z-index: 2; }
+.tw-goal { height: 0; pointer-events: none; z-index: 1; }
+.tw-guide { z-index: 1; pointer-events: none; }
+.tw-com { z-index: 4; width: 0; height: 0; pointer-events: none; }
+.tw-band { z-index: 1; pointer-events: none; }
+.tw-fb-wrap { position: absolute; left: 0; right: 0; top: 8px; display: flex; justify-content: center; pointer-events: none; z-index: 6; }
+.tw-notice { position: absolute; right: 8px; top: 8px; pointer-events: none; z-index: 5; }
+.tw-controls { display: flex; align-items: center; justify-content: space-between; gap: var(--tw-controls-gap); padding: var(--tw-controls-pad); }
+.tw-controls .mgl-hit { min-width: var(--tw-btn-min-w); }
+.tw-shake { animation: tw-shake var(--mgl-fx-tower-shake, 140ms) steps(3); }
+@keyframes tw-shake { 0% { transform: translate(0, 0); } 33% { transform: translate(-2px, 2px); } 66% { transform: translate(2px, -1px); } 100% { transform: translate(0, 0); } }

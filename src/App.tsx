@@ -50,7 +50,12 @@ export default function App() {
   const mapBox = useRef<HTMLDivElement>(null);
   const found = ISLANDS.find((i) => i.id === selectedId) ?? null;
   // Sky Adventure: 개발판(SKY_DEV)에서만 입장 가능. 정식 배포 화면은 COMING SOON
-  const selected = found && found.id === 'sky-battle' && SKY_DEV ? { ...found, status: 'open' as const, gameTitle: "GONA's Sky Adventure", tagline: '건버드 스타일 세로 슈팅 · 개발판(테스트)' } : found;
+  const selected =
+    found && found.id === 'sky-battle' && SKY_DEV
+      ? { ...found, status: 'open' as const, gameTitle: "GONA's Sky Adventure", tagline: '건버드 스타일 세로 슈팅 · 개발판(테스트)' }
+      : found && found.id === 'minigame-paradise' && SKY_DEV && !found.url
+        ? { ...found, status: 'open' as const, url: './mini-game-land/', tagline: '편가르기 · 탑 · 장난감방 · 랜덤 챌린지 · 개발판(테스트)' }
+        : found;
   const exitSky = () => setScreen('map');
 
   useEffect(() => {

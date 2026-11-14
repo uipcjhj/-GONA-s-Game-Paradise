@@ -76,15 +76,21 @@ export const GAMES: GameDef[] = [
     gameId: 'minigame-paradise',
     name: 'GONA Mini Game Land',
     short: 'Mini',
-    rules: { higherIsBetter: true, maxScore: 1_000_000, maxScorePerSec: 1000, hasClear: false, scoreSchemaVersion: 1, referenceScore: 10000, weight: 1 },
-    status: TEST_GAMES ? 'live' : 'soon',
-    link: TEST_GAMES ? 'live' : 'pending',
+    rules: { higherIsBetter: true, maxScore: 1_000_000, maxScorePerSec: 1000, hasClear: true, scoreSchemaVersion: 1, referenceScore: 10000, weight: 1 },
+    status: TEST_GAMES || SKY_DEV ? 'live' : 'soon',
+    link: TEST_GAMES || SKY_DEV ? 'live' : 'pending',
   },
 ];
 
 /** Mini Game Land 의 개별 미니게임 목록(subGameId). 실제 미니게임이 생기면 여기에 등록한다 — 지금은 비어 있음(임의 제작 없음) */
 export interface MiniGameDef { id: string; name: string }
-export const MINI_GAMES: MiniGameDef[] = TEST_GAMES ? [{ id: 'cat-jump', name: '캣 점프' }, { id: 'fish-catch', name: '물고기 잡기' }] : [];
+export const MINI_GAMES: MiniGameDef[] = [
+  { id: 'sort', name: '편가르기' },
+  { id: 'tower', name: '아슬아슬 탑' },
+  { id: 'toyroom', name: '장난감방' },
+  { id: 'challenge', name: '랜덤 챌린지' },
+  ...(TEST_GAMES ? [{ id: 'cat-jump', name: '캣 점프(모의)' }, { id: 'fish-catch', name: '물고기 잡기(모의)' }] : []),
+];
 
 export const getGame = (id: string): GameDef | undefined => GAMES.find((g) => g.gameId === id);
 

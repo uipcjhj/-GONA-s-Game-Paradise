@@ -33,7 +33,7 @@ function readSession(storage, sid, gameId, now, origin) {
 const rnd = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`);
 
 export function initGame(opts) {
-  const noop = { active: false, returnUrl: null, runStart() {}, runPause() {}, runResume() {}, runEnd() {}, flush() {} };
+  const noop = { active: false, returnUrl: null, runStart() {}, runPause() {}, runResume() {}, runEnd() {}, report() { return null; }, flush() {} };
   const storage = opts.storage !== undefined ? opts.storage : (() => { try { return window.localStorage; } catch { return null; } })();
   const search = opts.search ?? (typeof window !== 'undefined' ? window.location.search : '');
   const origin = opts.origin ?? (typeof window !== 'undefined' ? window.location.origin : '');
@@ -76,6 +76,26 @@ export function initGame(opts) {
         outcome: r.outcome === 'cleared' ? 'cleared' : 'failed', score: Math.max(0, Math.floor(r.score)),
         ...(r.stage !== undefined ? { stage: r.stage } : {}), ...(r.stageLabel ? { stageLabel: r.stageLabel } : {}),
         startedAt: new Date(run.startedAt).toISOString(), endedAt: new Date(end).toISOString(), durationMs: Math.max(0, end - run.startedAt - paused),
+        ...(r.extra ? { extra: r.extra } : {}),
+      };
+      pending.push([INBOX_PREFIX + resultId, JSON.stringify({ kind: 'gp-result', v: 1, sdk: 'gp-sdk/1', result })]);
+      flush();
+      return resultId;
+    },
+    /**
+     * 시작/종료를 따로 부르지 않는 게임용: 이미 끝난 한 판을 한 번에 보고(durationMs 는 게임이 잰 플레이 시간).
+     * 한 판당 한 번만 호출할 것(게임 쪽 라운드 종료 지점).
+     */
+    report(r) {
+      const end = now();
+      const dur = Math.max(0, Math.round(r.durationMs || 0));
+      const resultId = uuid();
+      const result = {
+        resultId, sessionId: session.sessionId, gameId: opts.gameId, ...(r.subGameId ? { subGameId: r.subGameId } : {}),
+        gameVersion: opts.gameVersion || '1.0.0', scoreSchemaVersion: opts.scoreSchemaVersion || 1,
+        outcome: r.outcome === 'cleared' ? 'cleared' : 'failed', score: Math.max(0, Math.floor(r.score)),
+        ...(r.stage !== undefined ? { stage: r.stage } : {}), ...(r.stageLabel ? { stageLabel: r.stageLabel } : {}),
+        startedAt: new Date(end - dur).toISOString(), endedAt: new Date(end).toISOString(), durationMs: dur,
         ...(r.extra ? { extra: r.extra } : {}),
       };
       pending.push([INBOX_PREFIX + resultId, JSON.stringify({ kind: 'gp-result', v: 1, sdk: 'gp-sdk/1', result })]);

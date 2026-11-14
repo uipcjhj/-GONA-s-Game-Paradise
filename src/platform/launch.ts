@@ -11,7 +11,7 @@ export function buildLaunchUrl(kv: KV | null, gameId: string, baseUrl: string, p
   if (!kv || !g || g.link !== 'live') return { url: baseUrl, linked: false };
   try {
     const s = createSession(kv, gameId, player, returnUrl, now, serverSessionId);
-    const u = new URL(baseUrl);
+    const u = new URL(baseUrl, typeof location !== 'undefined' ? location.href : undefined); // 같은 사이트의 상대 주소(./mini-game-land/)도 허용
     u.searchParams.set('gp', s.sessionId);
     return { url: u.toString(), linked: true };
   } catch {
