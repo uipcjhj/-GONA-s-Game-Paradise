@@ -9,6 +9,7 @@ import { gameName } from '../platform/registry';
 import { usePlayer } from '../platform/PlayerContext';
 import { getItem } from '../platform/shop';
 import { fmtDuration, fmtScore } from '../ui/format';
+import Avatar from '../ui/Avatar';
 import PixelButton from '../ui/PixelButton';
 import PixelPanel from '../ui/PixelPanel';
 
@@ -61,6 +62,12 @@ export default function Result({ outcomes, onClose, onProfile }: { outcomes: Res
         <div className="p-ribbon">RESULT</div>
         <PixelPanel>
           <div className="p-resultcard">
+            {player && (
+              <span className="p-react" data-mood={cleared || newBest ? 'happy' : 'sad'} aria-hidden="true">
+                <Avatar id={player.avatarId} size={52} />
+                <i>{cleared || newBest ? '♪' : '…'}</i>
+              </span>
+            )}
             <p className="p-muted" data-testid="result-game">
               {gameName(r.gameId, r.subGameId)}
             </p>

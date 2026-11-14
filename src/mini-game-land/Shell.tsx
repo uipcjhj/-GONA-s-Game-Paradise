@@ -5,9 +5,10 @@ import { fxCssVars } from './core/fx';
 import { Background } from './skin/components';
 import { SkinProvider, useSkin } from './skin/context';
 import { resolveSkinId } from './skin/skins';
+import { bgm } from '../audio/bgm';
 import Home, { type Screen } from './ui/Home';
 import Records from './ui/Records';
-import { audio } from './services';
+import { audio, store } from './services';
 
 /** 스킨 토큰(CSS 변수)을 문서에 적용 — 바깥 여백(body)까지 스킨이 정할 수 있게 root 에 둠 */
 function useSkinTokens() {
@@ -27,8 +28,13 @@ function Frame() {
   useSkinTokens();
   const [screen, setScreen] = useState<Screen>('home');
   const home = () => setScreen('home');
+  // 메뉴 곡(게임 중에는 Round 가 'play' 곡으로 바꿈). 소리 끄기 설정을 따름
+  useEffect(() => {
+    bgm.setEnabled(!store.get().settings.muted);
+    bgm.play('mini');
+  }, [screen]);
   return (
-    <div className="mgl-frame" onPointerDown={() => audio.unlock()} data-screen={screen} data-skin={skin.id}>
+    <div className="mgl-frame" onPointerDown={() => { audio.unlock(); bgm.unlock(); }} data-screen={screen} data-skin={skin.id}>
       <Background scene={screen === 'home' || screen === 'records' ? 'menu' : 'play'} />
       {screen === 'home' && <Home go={setScreen} />}
       {screen === 'free' && <FreePlay exit={home} />}

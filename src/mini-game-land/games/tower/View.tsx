@@ -43,7 +43,7 @@ export default function TowerView({ params, seed, ctx }: GameViewProps<TowerPara
   const els = useRef(new Map<number, HTMLDivElement>());
   const size = useRef({ w: 0, h: 0 });
   const cam = useRef<number | null>(null);
-  const drag = useRef<{ id: number; x: number } | null>(null);
+  const drag = useRef<{ id: number; x: number; armed: boolean; left: number } | null>(null);
   /** 화면에 닿아 있는 손가락들 / 두 번째 손가락으로 회전한 제스처는 놓아도 낙하하지 않음 */
   const pointers = useRef(new Set<number>());
   const suppress = useRef(false);
@@ -172,7 +172,8 @@ export default function TowerView({ params, seed, ctx }: GameViewProps<TowerPara
       return;
     }
     if (!ctx.isPlaying() || drag.current) return;
-    drag.current = { id: e.pointerId, x: e.clientX };
+    // armed: 누른 순간 이미 조준 중이던 조각만 손을 떼면 떨어짐(앞 조각이 가라앉는 동안 누른 손이 새 조각을 바로 떨어뜨리지 않게)
+    drag.current = { id: e.pointerId, x: e.clientX, armed: game.canAim, left: game.piecesLeft };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onMove = (e: RPointerEvent) => {
@@ -187,7 +188,7 @@ export default function TowerView({ params, seed, ctx }: GameViewProps<TowerPara
     const d = drag.current;
     if (d && d.id === e.pointerId) {
       drag.current = null;
-      if (!cancelled && !suppress.current && ctx.isPlaying() && game.release()) bump();
+      if (!cancelled && !suppress.current && d.armed && d.left === game.piecesLeft && ctx.isPlaying() && game.release()) bump();
     }
     if (pointers.current.size === 0) suppress.current = false;
   };

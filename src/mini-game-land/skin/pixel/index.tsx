@@ -5,7 +5,7 @@
  */
 import type { Skin, UiSlots } from '../types';
 import type { SortSlots } from '../../games/sort/slots';
-import type { TowerSlots, TowerPieceView } from '../../games/tower/slots';
+import type { TowerSlots } from '../../games/tower/slots';
 import type { ToyRoomSlots } from '../../games/toyroom/slots';
 import red from './art/friend-red.png';
 import blue from './art/friend-blue.png';
@@ -32,6 +32,7 @@ import tStar from './art/toy-star.png';
 import tLock from './art/toy-lock.png';
 import tPin from './art/toy-pin.png';
 import spark from './art/spark.png';
+import { SnackArt } from './snacks';
 import './pixel.css';
 
 const BODY: Record<string, string> = { red, blue, green, yellow };
@@ -124,47 +125,8 @@ const StageFrame: SortSlots['StageFrame'] = ({ reversed }) => (
   </div>
 );
 
-// ─────────────────────────── 아슬아슬 탑: 충돌 모양(points) 그대로 그리고, 도트 느낌의 윗면·부스러기만 더함
-const SNACK: Record<string, { fill: string; edge: string; top: string; dot: string }> = {
-  toast: { fill: '#f0c987', edge: '#7a4a24', top: '#fbe3b0', dot: '#c9944f' },
-  macaron: { fill: '#ff9fb8', edge: '#8a3456', top: '#ffd0dc', dot: '#fff4d6' },
-  pudding: { fill: '#f9e49a', edge: '#7a5a1a', top: '#b8642e', dot: '#fff4b0' },
-  cake: { fill: '#ffe9d0', edge: '#7a3a24', top: '#ef6a5b', dot: '#ef6a5b' },
-  banana: { fill: '#ffd84a', edge: '#7a5a10', top: '#fff0a0', dot: '#a8841a' },
-  cone: { fill: '#e7b56a', edge: '#6b4020', top: '#fff4d6', dot: '#b57b4e' },
-  slice: { fill: '#fff1d0', edge: '#7a3a24', top: '#ff9fb8', dot: '#ef6a5b' },
-  donut: { fill: '#e98fb0', edge: '#7a2a54', top: '#ffd0e0', dot: '#4aa3f0' },
-};
-const PieceArt: TowerSlots['PieceArt'] = ({ piece, ghost }: { piece: TowerPieceView; ghost?: boolean }) => {
-  const c = SNACK[piece.kind] ?? SNACK.toast;
-  const { x0, y0, x1, y1 } = piece.bbox;
-  const pts = piece.points.map(([x, y]) => `${x},${y}`).join(' ');
-  const w = x1 - x0, h = y1 - y0;
-  const id = `px-${piece.kind}`;
-  const sprinkles = [0.22, 0.48, 0.74].map((f, i) => ({ x: Math.round(x0 + w * f) - 1, y: Math.round(y0 + h * (i % 2 ? 0.55 : 0.4)) - 1 }));
-  return (
-    <svg className={`tw-art px-piece${ghost ? ' ghost' : ''}`} width={w} height={h} viewBox={`${x0} ${y0} ${w} ${h}`} style={{ left: x0, top: y0 }} aria-label={piece.label} shapeRendering="crispEdges">
-      <defs>
-        <clipPath id={id + (ghost ? 'g' : '')}>
-          <polygon points={pts} />
-        </clipPath>
-      </defs>
-      <polygon points={pts} fill={c.fill} />
-      <g clipPath={`url(#${id}${ghost ? 'g' : ''})`}>
-        <rect x={x0} y={y0} width={w} height={Math.max(3, Math.round(h * 0.28))} fill={c.top} />
-        <rect x={x0} y={y1 - 3} width={w} height={3} fill={c.edge} opacity={0.35} />
-        {sprinkles.map((s, i) => (
-          <rect key={i} x={s.x} y={s.y} width={2} height={2} fill={c.dot} />
-        ))}
-        <rect x={x0 + 2} y={y0 + 2} width={Math.max(2, Math.round(w * 0.2))} height={2} fill="#ffffff" opacity={0.7} />
-      </g>
-      <polygon points={pts} fill="none" stroke={c.edge} strokeWidth={2} strokeLinejoin="miter" />
-      {Array.from({ length: piece.weight }, (_, i) => (
-        <rect key={i} x={-((piece.weight * 4 - 1) / 2) + i * 4} y={-1} width={3} height={3} fill={c.edge} />
-      ))}
-    </svg>
-  );
-};
+// ─────────────────────────── 아슬아슬 탑: 종류별 도트 간식(snacks.tsx) — 충돌 모양은 물리 소유
+const PieceArt: TowerSlots['PieceArt'] = SnackArt;
 const TowerBackdrop: TowerSlots['Backdrop'] = () => (
   <div className="px-tw-sky">
     <i className="px-cloud c1" />

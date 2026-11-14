@@ -6,7 +6,8 @@ import IslandPanel from './components/IslandPanel';
 import WorldMap from './components/WorldMap';
 import Title from './components/Title';
 import { getMission } from './platform/missions';
-import { playUi } from './sfx';
+import { muted, playUi } from './sfx';
+import { bgm } from './audio/bgm';
 import { usePlayer } from './platform/PlayerContext';
 import { useBackLayer } from './platform/useBackLayer';
 import Achievements from './screens/Achievements';
@@ -42,6 +43,11 @@ export default function App() {
     window.clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(null), 1800);
   }, []);
+  // 배경음: 타이틀(자체 효과음) 이후 화면에서만 홈 곡. 음소거·BGM 끄기·결과 화면(팡파레)에서는 정지
+  useEffect(() => {
+    bgm.setEnabled(!!player?.settings.bgm && !muted());
+    bgm.play(screen !== 'title' && results.length === 0 ? 'home' : null);
+  }, [screen, player?.settings.bgm, results.length]);
   // 설정: 움직임 줄이기
   useEffect(() => {
     document.documentElement.dataset.reduceMotion = player?.settings.reduceMotion ? '1' : '0';
@@ -146,7 +152,7 @@ export default function App() {
     playUi(el.getAttribute('role') === 'tab' || el.classList.contains('nav-btn') ? 'tab' : 'tap');
   };
   return (
-    <div className="frame" style={{ width: frameW }} onClickCapture={onTapSound}>
+    <div className="frame" style={{ width: frameW }} onClickCapture={onTapSound} onPointerDown={() => bgm.unlock()}>
       <header className="top hud">
         <PlayerButton player={player} onClick={() => goTab('profile')} />
         <div className="logo">

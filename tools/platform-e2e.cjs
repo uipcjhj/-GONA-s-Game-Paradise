@@ -176,7 +176,14 @@ async function register(page, w, h, nick = '고나짱', avatarName = '엄마') {
     ok(`[${tag}] 효과음 끄기 → gona.mute=1`, (await ls(page, 'gona.mute')) === '1');
     await page.getByRole('switch', { name: '효과음' }).tap();
     ok(`[${tag}] 효과음 켜기 → gona.mute 제거`, (await ls(page, 'gona.mute')) === null);
-    ok(`[${tag}] BGM 토글 비활성(준비 중)`, await page.getByRole('switch', { name: /배경음/ }).isDisabled());
+    {
+      const sw = page.getByRole('switch', { name: /배경음/ });
+      const before = await sw.getAttribute('aria-checked');
+      await sw.tap(); await page.waitForTimeout(150);
+      const mid = JSON.parse(await page.evaluate(() => localStorage.getItem('gp.v1.player'))).settings.bgm;
+      await sw.tap(); await page.waitForTimeout(150);
+      ok(`[${tag}] BGM 토글: 켜기/끄기 저장`, !(await sw.isDisabled()) && String(!mid) === before && (await sw.getAttribute('aria-checked')) === before);
+    }
     // 백업
     const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: '파일로 백업' }).tap()]);
     const bpath = path.join(out, `backup_${tag}.json`); await dl.saveAs(bpath);

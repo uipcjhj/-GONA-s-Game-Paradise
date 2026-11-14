@@ -4,6 +4,7 @@ import { BACKUP_ERROR_MESSAGES, BACKUP_MAX_BYTES, parseBackup } from '../platfor
 import { usePlayer } from '../platform/PlayerContext';
 import type { PlayerData } from '../platform/types';
 import { muted, setMuted } from '../sfx';
+import { bgm } from '../audio/bgm';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import PixelButton from '../ui/PixelButton';
 import PixelPanel from '../ui/PixelPanel';
@@ -65,15 +66,15 @@ export default function Settings({ onBack, onToast, onReset }: { onBack: () => v
         <PixelPanel title="소리">
           <div className="p-setrow">
             <span>효과음</span>
-            <button type="button" className={`p-toggle${sfxOff ? '' : ' on'}`} role="switch" aria-checked={!sfxOff} aria-label="효과음" onClick={() => { setMuted(!sfxOff); setSfxOff(!sfxOff); }} />
+            <button type="button" className={`p-toggle${sfxOff ? '' : ' on'}`} role="switch" aria-checked={!sfxOff} aria-label="효과음" onClick={() => { setMuted(!sfxOff); setSfxOff(!sfxOff); bgm.setEnabled(sfxOff && player.settings.bgm); }} />
           </div>
           <div className="p-setrow">
             <span>
-              BGM <span className="p-chip soon">준비 중</span>
+              배경음(BGM)
             </span>
-            <button type="button" className={`p-toggle${player.settings.bgm ? ' on' : ''}`} role="switch" aria-checked={player.settings.bgm} aria-label="배경음 (준비 중)" disabled />
+            <button type="button" className={`p-toggle${player.settings.bgm ? ' on' : ''}`} role="switch" aria-checked={player.settings.bgm} aria-label="배경음" data-testid="set-bgm" onClick={() => { updateSettings({ bgm: !player.settings.bgm }); bgm.setEnabled(!player.settings.bgm && !muted()); }} />
           </div>
-          <p className="p-muted">iPhone Safari는 화면을 한 번 터치한 뒤에 소리가 나요. 배경음은 아직 없어서 나중에 켜져요.</p>
+          <p className="p-muted">iPhone Safari는 화면을 한 번 터치한 뒤에 소리가 나요. 효과음을 끄면 배경음도 함께 꺼져요.</p>
         </PixelPanel>
         <PixelPanel title="화면 · 조작">
           <div className="p-setrow">

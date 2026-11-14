@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button, Caption, LinkButton, Logo, Mascot } from '../skin/components';
 import { audio, gp, store } from '../services';
+import { bgm } from '../../audio/bgm';
 
 export type Screen = 'home' | 'free' | 'challenge' | 'records';
 
@@ -10,6 +11,7 @@ export default function Home({ go }: { go: (s: Screen) => void }) {
     const next = !muted;
     setMuted(next);
     audio.setMuted(next);
+    bgm.setEnabled(!next);
     store.set({ ...store.get(), settings: { ...store.get().settings, muted: next } });
   };
   return (

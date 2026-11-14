@@ -164,3 +164,15 @@
 .px-burst { position: absolute; left: 50%; top: 50%; width: 24px; height: 24px; margin: -12px; pointer-events: none; animation: px-burst 0.7s steps(6) forwards; }
 @keyframes px-burst { 0% { transform: rotate(var(--a)) translateY(0) scale(0.4); opacity: 1; } 100% { transform: rotate(var(--a)) translateY(-120px) scale(1); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .px-burst { display: none; } }
+
+/* ── 2차 폴리싱: 화면 전환·로딩·감정 */
+.mgl-frame[data-skin='pixel'] .mgl-screen { animation: px-enter 0.2s steps(3) both; }
+@keyframes px-enter { from { opacity: 0.25; } to { opacity: 1; } }
+.mgl-frame[data-skin='pixel'] .tf-cap-loading { color: #fff; font-weight: 700; font-size: 16px; text-shadow: 0 2px var(--navy), 2px 0 var(--navy), -2px 0 var(--navy); }
+.mgl-frame[data-skin='pixel'] .tf-cap-loading::after { content: ''; display: block; width: 36px; height: 8px; margin: 10px auto 0; background: radial-gradient(circle at 4px 4px, var(--gold) 3px, transparent 4px) 0 0 / 14px 8px repeat-x; animation: px-load 0.6s steps(3) infinite; }
+@keyframes px-load { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.mgl-frame[data-skin='pixel'] .tf-mascot[data-pose='happy'] { animation: px-hop 0.45s steps(3) 2; }
+.mgl-frame[data-skin='pixel'] .tf-mascot[data-pose='oops'] { animation: px-oops 0.35s steps(4); filter: saturate(0.8); }
+@keyframes px-hop { 50% { transform: translateY(-8px); } }
+@keyframes px-oops { 25% { transform: translateX(-4px) rotate(-6deg); } 75% { transform: translateX(4px) rotate(6deg); } }
+@media (prefers-reduced-motion: reduce) { .mgl-frame[data-skin='pixel'] .mgl-screen, .mgl-frame[data-skin='pixel'] .tf-mascot, .mgl-frame[data-skin='pixel'] .tf-cap-loading::after { animation: none !important; } }

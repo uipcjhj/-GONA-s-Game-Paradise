@@ -4,6 +4,7 @@ import { FX } from '../core/fx';
 import { RoundEngine, type RoundSummary } from '../core/engine';
 import type { MiniGameModule, Mode } from '../core/types';
 import { audio } from '../services';
+import { bgm } from '../../audio/bgm';
 import { Button, Callout, Caption, Panel } from '../skin/components';
 import { useSkin } from '../skin/context';
 import { scoreboardView, type HudInfo } from '../skin/viewmodel';
@@ -41,6 +42,11 @@ export default function Round({ game, level, seed, mode, timeScale = 1, hud, onE
   const snap = useSyncExternalStore(engine.subscribe, engine.getSnapshot);
 
   useEffect(() => engine.attach(), [engine]);
+  // 게임 중 곡(멜로디 없는 반주) → 끝나면 메뉴 곡
+  useEffect(() => {
+    bgm.play('play');
+    return () => bgm.play('mini');
+  }, []);
 
   // 종료 연출 후 부모에게 전달 (quit 은 즉시)
   useEffect(() => {

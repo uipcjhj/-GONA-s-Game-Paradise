@@ -244,3 +244,17 @@
 /* 버튼 아래 그림자(4px)만큼 띄워 다음 글과 겹치지 않게 */
 .p-panel .p-btn, .p-scroll > .p-btn, .p-scroll > .p-row { margin-bottom: 4px; }
 .p-panel .p-btn + .p-muted, .p-panel .p-row + .p-muted, .p-panel input + .p-muted { margin-top: 8px; }
+
+/* ═══ 2차 폴리싱: 화면 전환 · 감정 표현 (움직임 줄이기 존중) ═══ */
+.p-screen { animation: p-enter 0.18s steps(3) both; }
+@keyframes p-enter { from { opacity: 0.35; } to { opacity: 1; } }
+.p-react { position: relative; display: inline-block; margin-bottom: 2px; }
+.p-react .p-av { box-shadow: 0 0 0 3px #ffc21a; }
+.p-react i { position: absolute; right: -16px; top: -6px; font-style: normal; font-weight: 700; font-size: 16px; color: var(--ink); }
+.p-react[data-mood='happy'] { animation: p-joy 0.5s steps(2) 4; }
+.p-react[data-mood='sad'] { animation: p-sad 0.6s steps(3) 1 both; }
+.p-react[data-mood='sad'] .p-av { filter: saturate(0.6); box-shadow: 0 0 0 3px #9fb3d8; }
+@keyframes p-joy { 50% { transform: translateY(-8px); } }
+@keyframes p-sad { 0% { transform: rotate(0); } 50% { transform: rotate(-8deg) translateY(2px); } 100% { transform: rotate(-4deg) translateY(2px); } }
+[data-reduce-motion='1'] .p-screen, [data-reduce-motion='1'] .p-react { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .p-screen, .p-react { animation: none !important; } }
