@@ -1183,7 +1183,7 @@ export class SkyEngine {
   private updateEnemies(dt: number): void {
     for (const e of this.en) {
       e.age += dt;
-      if (e.flash > 0) e.flash -= dt;
+      if (e.flash > -1) e.flash -= dt;
       if (e.kind === 'boss') {
         this.updateBoss(e, dt);
         continue;
@@ -1950,7 +1950,9 @@ export class SkyEngine {
   }
   private floatText(x: number, y: number, text: string, col: string): void {
     if (this.floats.length >= CAP.floats) this.floats.shift();
-    this.floats.push({ x, y, text, age: 0, col });
+    // 화면 밖으로 잘리지 않게 (글자 폭 대략 계산)
+    const half = Math.min(W / 2 - 2, text.length * 3.4);
+    this.floats.push({ x: clamp(x, half + 2, W - half - 2), y, text, age: 0, col });
   }
   private starFrom(x: number, y: number): void {
     this.addScore(10, x, y, true);
@@ -2016,7 +2018,7 @@ export class SkyEngine {
         }
         this.bossRecoil = Math.min(1.6, this.bossRecoil + (strong ? 1.6 : 0.5));
         this.bossBarHit = 0.12;
-      } else if (e.flash <= 0 && Math.random() < 0.3) e.flash = 0.035;
+      } else if (e.flash <= -0.15) e.flash = 0.035; // 중간보스: 0.18초에 한 번만 짧게 번쩍
       if (strong) {
         this.kick(0.38, 0.07);
         this.addFx('ring', hx, hy, 1.2, 0.3);

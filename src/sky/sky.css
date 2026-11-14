@@ -182,3 +182,14 @@
 .cred-line { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
 .cred-line small { font-size: 10px; color: #ff9ec0; } .cred-line b { font-size: 13px; color: #fff4d6; }
 .cred-btns { position: relative; padding-bottom: env(safe-area-inset-bottom); }
+/* 짧은 화면(393×636 인앱 브라우저 등): 출격 버튼까지 스크롤 없이 */
+.sel-art { height: clamp(210px, calc(100vh - 372px), 440px); }
+@media (max-height: 720px) {
+  .sel { gap: 4px; padding-top: calc(env(safe-area-inset-top) + 4px); }
+  .sel-sub, .sel-stage { display: none; }
+  .sel-head h1 { font-size: 20px; margin: 0; }
+  .sel-info { padding: 4px 6px; }
+  .sel-preview { width: 84px; height: 52px; }
+  .sel-opts button { min-height: 30px; }
+  .sel-btns .sky-btn { min-height: 40px; }
+}
