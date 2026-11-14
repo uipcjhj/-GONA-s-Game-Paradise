@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { BACKUP_ERROR_MESSAGES, BACKUP_MAX_BYTES, parseBackup } from '../platform/backup';
 import { AVATARS, DEFAULT_AVATAR_ID, getAvatar, isKnownAvatar } from '../platform/avatars';
 import { KEYS } from '../platform/keys';
 import { checkNickname } from '../platform/nickname';
@@ -38,7 +39,18 @@ const Steps = ({ n }: { n: number }) => (
 
 /** 첫 방문 플레이어 등록 3단계: 이름 → 캐릭터 선택 → 환영. 새로고침해도 초안(sessionStorage)으로 이어짐 */
 export default function Register({ onEnter }: { onEnter: () => void }) {
-  const { player, register, persistent } = usePlayer();
+  const { player, register, restore, persistent } = usePlayer();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [restoreErr, setRestoreErr] = useState<string | null>(null);
+  // 기기 변경·초기화 뒤 백업 파일로 복원 (복원되면 플레이어가 생겨 바로 월드맵으로 이어짐)
+  const onBackupFile = async (f: File | undefined) => {
+    if (!f) return;
+    if (f.size > BACKUP_MAX_BYTES) return setRestoreErr(BACKUP_ERROR_MESSAGES['too-large']);
+    const r = parseBackup(await f.text());
+    if (!r.ok) return setRestoreErr(BACKUP_ERROR_MESSAGES[r.error]);
+    restore(r.player);
+    onEnter();
+  };
   const [draft, setDraft] = useState<Draft>(readDraft);
   const [done, setDone] = useState(false); // 3단계(환영)
   const { step, nick, av } = draft;
@@ -120,6 +132,11 @@ export default function Register({ onEnter }: { onEnter: () => void }) {
             <PixelButton big block disabled={!checkNickname(nick).ok} onClick={next}>
               다음 ▶
             </PixelButton>
+            {restoreErr && <div className="p-notice">{restoreErr}</div>}
+            <PixelButton variant="sub" block onClick={() => fileRef.current?.click()} data-testid="reg-restore">
+              백업 파일로 복원
+            </PixelButton>
+            <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={(e) => { void onBackupFile(e.target.files?.[0]); e.target.value = ''; }} />
           </>
         ) : (
           <>
