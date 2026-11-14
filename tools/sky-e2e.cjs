@@ -103,9 +103,10 @@ async function openSky(page) {
     await page.evaluate(() => { window.__sky.cheat('god'); window.__sky.cheat('boss'); });
     await page.waitForFunction(() => window.__sky.debug().boss > 0, null, { timeout: 30000 });
     await page.evaluate(() => window.__sky.cheat('killboss'));
-    await page.waitForSelector('text=SCORE', { timeout: 40000 });
+    await page.waitForSelector('text=STAGE CLEAR!', { timeout: 40000 });
+    await page.waitForTimeout(800);
     await page.getByRole('button', { name: '월드맵으로' }).last().tap();
-    await page.waitForSelector('text=RESULT', { timeout: 15000 });
+    await page.waitForSelector('text=ADVENTURE CLEAR', { timeout: 15000 });
     const rt2 = await page.locator('.p-screen').first().innerText();
     ok(`[${tag}] Sky 클리어 → 결과 화면(ADVENTURE CLEAR · 클리어 1회)`, rt2.includes('CLEAR') && rt2.includes('1회'), rt2.replace(/\n+/g, ' | ').slice(0, 150));
     await shot(page, `sky-result-clear_${tag}`);

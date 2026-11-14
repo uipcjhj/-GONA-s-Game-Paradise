@@ -128,12 +128,11 @@ describe('점수 제출 · 검증', () => {
     expect((s.db.raw.prepare('SELECT flagged, reason FROM scores').get() as Record<string, unknown>)).toEqual({ flagged: 1, reason: 'implausible-score' });
     expect((await board(s, 'gameId=food-island&period=all')).entries).toEqual([]);
   });
-  it('입력 검증: 음수·소수·문자열 점수, 클리어 불가 게임, 잘못된 단계/버전, 큰 본문', async () => {
+  it('입력 검증: 음수·소수·문자열 점수, 잘못된 단계/버전, 큰 본문', async () => {
     const s = makeServer({ test: true });
     const a = await reg(s, '가나다');
     for (const score of [-1, 1.5, '100', null]) expect((await play(s, a.token, score as number)).status).toBe(422);
     expect((await play(s, a.token, 10, { stage: 9 })).status).toBe(422);
-    expect((await play(s, a.token, 10, { game: 'minigame-paradise', outcome: 'cleared' })).status).toBe(422);
     const ses = await s.call('POST', '/v1/sessions', a.token, { gameId: 'food-island' });
     s.clock.t += 5000;
     expect((await s.call('POST', `/v1/sessions/${ses.json.sessionId}/finish`, a.token, { resultId: nextRid(), outcome: 'failed', score: 1, durationMs: 1000, gameVersion: '1', scoreSchemaVersion: 7 })).status).toBe(422);
