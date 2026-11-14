@@ -5,11 +5,12 @@ import { SkyEngine, SPECIAL_NAME, type EndInfo, type FamilyId, type RunOpts } fr
 import { STAGES, DIFF, type Difficulty } from './stages';
 import { CHARACTERS } from './data/characters';
 import { settings, saveSettings, canVibrate } from './settings';
+import { NS, BETA } from './ns';
 import './sky.css';
 
 const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
 const FAMILY: FamilyId[] = ['mom', 'dad', 'imo', 'halmeoni', 'halabeoji', 'samchon'];
-const REC_KEY = 'gona.sky.records';
+const REC_KEY = `${NS}.records`;
 const DIFFS: Difficulty[] = ['easy', 'normal', 'hard'];
 const DEV = /[?&](dev|skytest)/.test(location.search);
 interface Rec { score: number; reach: number; clear: boolean }
@@ -60,7 +61,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
   const [assets, setAssets] = useState<Assets | null>(null);
   const [fam, setFam] = useState<FamilyId>(() => {
     try {
-      const f = localStorage.getItem('gona.sky.fam') as FamilyId | null;
+      const f = localStorage.getItem(`${NS}.fam`) as FamilyId | null;
       return f && FAMILY.includes(f) ? f : 'mom';
     } catch {
       return 'mom';
@@ -72,7 +73,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
   const [records, setRecords] = useState(loadRecords);
   const [diff, setDiff] = useState<Difficulty>(() => {
     try {
-      const d = localStorage.getItem('gona.sky.diff') as Difficulty | null;
+      const d = localStorage.getItem(`${NS}.diff`) as Difficulty | null;
       return d && DIFFS.includes(d) ? d : 'normal';
     } catch {
       return 'normal';
@@ -255,8 +256,8 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
   const start = useCallback((f: FamilyId, d: Difficulty, stage: number) => {
     setFam(f);
     try {
-      localStorage.setItem('gona.sky.fam', f);
-      localStorage.setItem('gona.sky.diff', d);
+      localStorage.setItem(`${NS}.fam`, f);
+      localStorage.setItem(`${NS}.diff`, d);
     } catch {
       /* 무시 */
     }
@@ -393,7 +394,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
             <button type="button" className="ttl-map" onClick={() => { sfx('menuMove'); onExit(); }}>월드맵</button>
           </div>
           {!soundOn && <p className="ttl-hint">♪ 화면을 터치하면 음악이 켜져요</p>}
-          <p className="ttl-copy">{best > 0 && <b>HI-SCORE {String(best).padStart(8, '0')}</b>} 6 STAGES · 개발판</p>
+          <p className="ttl-copy">{best > 0 && <b>HI-SCORE {String(best).padStart(8, '0')}</b>} 6 STAGES · {BETA ? '공개 테스트판' : '개발판'}</p>
         </div>
         <div className="ttl-wipe" aria-hidden />
       </div>

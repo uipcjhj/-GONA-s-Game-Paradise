@@ -5,13 +5,15 @@
  *    iPhone Safari 는 이 API 를 제공하지 않으므로 자동으로 꺼지고(오류 없음), 화면 흔들림·히트스톱·사운드로 타격감을 대신함.
  *  - 성능 표시: FPS · 프레임 시간 · 객체 수 (실기기 측정용)
  */
+import { NS } from './ns';
+
 export interface SkySettings {
   shake: number;
   vibrate: boolean;
   perf: boolean;
 }
 
-const KEY = 'gona.sky.settings';
+const KEY = `${NS}.settings`;
 
 export const canVibrate: boolean = typeof navigator !== 'undefined' && typeof (navigator as Navigator & { vibrate?: unknown }).vibrate === 'function';
 

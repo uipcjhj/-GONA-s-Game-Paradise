@@ -193,3 +193,22 @@
   .sel-opts button { min-height: 30px; }
   .sel-btns .sky-btn { min-height: 40px; }
 }
+
+/* 공개 테스트판 표시 (VITE_SKY_BETA=1 빌드에서만) — 조작을 막지 않도록 터치 통과 */
+.beta-badge {
+  position: fixed;
+  left: env(safe-area-inset-left, 0px);
+  top: 50%;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+  z-index: 9999;
+  pointer-events: none;
+  padding: 5px 1px;
+  font: 700 8px/1 'Galmuri11', monospace;
+  letter-spacing: 1px;
+  color: #ffd75a;
+  background: #141a3acc;
+  border: 1px solid #ffd75a;
+  border-left: 0;
+  opacity: 0.85;
+}

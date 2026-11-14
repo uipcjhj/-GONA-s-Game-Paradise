@@ -8,6 +8,7 @@ import WorldMap from './components/WorldMap';
 import PixelLeaf from './components/PixelLeaf';
 import Title from './components/Title';
 import SkyGame from './sky/SkyGame';
+import { BETA } from './sky/ns';
 
 /** 슈팅게임은 개발판 전용: 정식 배포 화면에서는 입장 버튼이 열리지 않음 (개발 서버 · ?dev · #sky 에서만) */
 /** 미리보기 전용 빌드(VITE_SKY_PREVIEW=1): 열자마자 슈팅게임이 시작 */
@@ -69,7 +70,13 @@ export default function App() {
 
   const onArrive = useCallback((id: string | null) => setSelectedId(id), []);
 
-  if (screen === 'sky') return <SkyGame onExit={exitSky} />;
+  if (screen === 'sky')
+    return (
+      <>
+        <SkyGame onExit={exitSky} />
+        {BETA && <div className="beta-badge" aria-label="공개 테스트판">BETA TEST</div>}
+      </>
+    );
   if (screen === 'title') return <Title onStart={() => setScreen('map')} />;
 
   return (
