@@ -34,7 +34,8 @@ description: GONA GONE WILD!(고나 게임천국)의 UI/아트 디자인 작업 
 - 승인된 이미지(`gona-world-map.png`, `gona.png`)는 **원본 그대로** 사용. 다시 그리거나 CSS/Canvas 로 흉내 내지 않는다.
 - 새 UI 조각(버튼 프레임, 팝업 틀, 아이콘, 로고, 별/반짝이 등)이 필요하면 **PNG 에셋**으로 만든다:
   1. 방향 확정(참고: 월드맵의 색·선·도트 크기) → 사용자에게 시안 확인
-  2. 이미지 생성은 연결된 Higgsfield MCP(`generate_image`) 등을 **사용자가 요청했을 때만** 사용 (비용·크레딧 발생 가능)
+  2. 이미지 생성: **Higgsfield 사용 중단**. 1순위 ChatGPT 이미지 생성 · 2순위 Google Nano Banana(무료 범위) — 연결 여부부터 확인.
+     연결이 없으면 직접 그리지 말고 `docs/sky-art/asset-requests.md` 형식의 요청서를 사용자에게 전달 (유료 도구는 사용자 승인 필수)
   3. 후처리(PIL): 최근접 이웃(NEAREST) 리사이즈, 팔레트 정리, 투명 배경, 정수 배율의 스프라이트 시트로 저장
   4. `public/assets/` 에 넣고 `image-rendering: pixelated`, 정수 배율 또는 이미지 좌표계(`src/data/world.ts`)로 배치
 - 9-slice(테두리 늘어나는 틀)·스프라이트 시트 사용 시 코너 픽셀이 뭉개지지 않게 정수 배율만 사용.
