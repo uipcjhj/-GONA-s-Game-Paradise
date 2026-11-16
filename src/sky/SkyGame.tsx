@@ -460,7 +460,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
           </div>
           <dl>
             <dt className="sel-name">{c.name}</dt><dd className="sel-job">{familyText(fam)?.job ?? c.job}</dd>
-            <dt>일반</dt><dd>{c.attack}</dd>
+            <dt>일반</dt><dd>{familyText(fam)?.attack ?? c.attack}</dd>
             <dt>필살기</dt><dd><b>{familyText(fam)?.special ?? SPECIAL_NAME[fam]}</b> — {familyText(fam)?.specialDesc || SP_DESC[fam]}</dd>
           </dl>
         </div>

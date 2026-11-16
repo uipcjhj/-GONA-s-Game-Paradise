@@ -2632,7 +2632,14 @@ export class SkyEngine {
     if (ci) g.drawImage(ci, x, y, W, h);
     const name = s.id === 'gona' ? '고나' : CHARACTERS[s.id].name;
     this.text(name, 6 + x * 0.6, y + 4, '#ffffff', 'left', 11);
-    this.text((familyText(s.id)?.special ?? SPECIAL_NAME[s.id]) + '!', W / 2 - x * 0.6, y + h + 6, SP_CUT_COL[s.id], 'center', 16);
+    // 필살기 이름: 이미 '!' 로 끝나면 덧붙이지 않음 · 화면(180px)에 안 들어가는 긴 이름은 '!' 뒤에서 두 줄로 나눠 작게
+    const spName = familyText(s.id)?.special ?? SPECIAL_NAME[s.id];
+    const full = spName.endsWith('!') ? spName : spName + '!';
+    const cut = full.indexOf('! ');
+    if (full.length > 11 && cut > 0) {
+      this.text(full.slice(0, cut + 1), W / 2 - x * 0.6, y + h + 4, SP_CUT_COL[s.id], 'center', 13);
+      this.text(full.slice(cut + 2), W / 2 - x * 0.6, y + h + 19, SP_CUT_COL[s.id], 'center', 13);
+    } else this.text(full, W / 2 - x * 0.6, y + h + 6, SP_CUT_COL[s.id], 'center', full.length > 11 ? 12 : 16);
   }
 
   /** 필살기 이펙트 (캐릭터 아래 층) */

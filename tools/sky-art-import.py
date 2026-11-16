@@ -44,7 +44,11 @@ def die(msg):
 def load(path):
     im = Image.open(path)
     im.load()
-    return im.convert('RGBA')
+    a = np.array(im.convert('RGBA'))
+    # AI 생성 PNG 는 '불투명'을 252~254, '빈칸'을 0~1 로 저장하는 경우가 많음 → 게임에서 살짝 비치거나 테두리 먼지가 생기므로 정리
+    al = a[..., 3]
+    a[..., 3] = np.where(al >= 250, 255, np.where(al <= 2, 0, al))
+    return Image.fromarray(a, 'RGBA')
 
 
 def remove_bg(im, tol=40):
@@ -79,6 +83,36 @@ def crop_box(im, box):
         v = [v[0] * im.width, v[1] * im.height, v[2] * im.width, v[3] * im.height]
     x, y, w, h = [round(t) for t in v]
     return im.crop((x, y, x + w, y + h))
+
+
+def compose_cutin(im, color):
+    """필살기 컷인 720×360: 대각선 집중선(단순 이펙트) + 확정 원화 상반신을 크게 (얼굴이 잘리지 않게 위쪽 기준)"""
+    from PIL import ImageDraw
+    import math
+    tw, th = 720, 360
+    c = tuple(int(color.lstrip('#')[i:i + 2], 16) for i in (0, 2, 4))
+    dark = tuple(max(0, v // 4) for v in c)
+    bg = Image.new('RGBA', (tw, th), dark + (255,))
+    lines = Image.new('RGBA', (tw, th), (0, 0, 0, 0))  # 반투명 선은 따로 그려서 섞음 (바로 그리면 배경 알파가 뚫림)
+    d = ImageDraw.Draw(lines)
+    cx, cy = -60, th * 0.55  # 왼쪽에서 퍼지는 집중선
+    for i in range(46):
+        a0 = -0.95 + i * 0.043
+        a1 = a0 + 0.018
+        r = 1400
+        col = c if i % 2 else tuple(min(255, v + 60) for v in c)
+        d.polygon([(cx, cy), (cx + r * math.cos(a0), cy + r * math.sin(a0)), (cx + r * math.cos(a1), cy + r * math.sin(a1))], fill=col + (90 if i % 3 else 150,))
+    bg.alpha_composite(lines)
+    t = trim(im)
+    top = t.crop((0, 0, t.width, round(t.height * 0.58)))  # 상반신 (머리·얼굴·무기 위쪽)
+    k = 400 / top.height
+    body = top.resize((round(top.width * k), 400), Image.LANCZOS)
+    x = tw - body.width + round(body.width * 0.08)
+    bg.alpha_composite(body, (max(tw - body.width - 10, min(x, tw - body.width // 2)), 6))
+    d = ImageDraw.Draw(bg)
+    d.rectangle([0, 0, tw - 1, 4], fill=(255, 227, 74, 255))
+    d.rectangle([0, th - 5, tw - 1, th - 1], fill=(255, 227, 74, 255))
+    return bg
 
 
 def has_alpha(im):
@@ -145,8 +179,10 @@ def save(im, rel, args, meta, orig):
         im.convert('RGB').save(out, quality=90)
     else:
         im.save(out, optimize=True)
-    os.makedirs(os.path.join(SRC, os.path.dirname(rel)), exist_ok=True)
-    shutil.copyfile(orig, os.path.join(SRC, rel.rsplit('.', 1)[0] + '.orig.png'))
+    # 원본 보관 (이미 art-src/sky-poop/ 안에 보관된 마스터를 쓴 경우에는 중복 복사하지 않음)
+    if not os.path.abspath(orig).startswith(os.path.abspath(SRC) + os.sep):
+        os.makedirs(os.path.join(SRC, os.path.dirname(rel)), exist_ok=True)
+        shutil.copyfile(orig, os.path.join(SRC, rel.rsplit('.', 1)[0] + '.orig.png'))
     mpath = os.path.join(PACK, 'manifest.json')
     m = json.load(open(mpath, encoding='utf-8')) if os.path.exists(mpath) else {'version': 1, 'files': {}}
     if args.final:
@@ -171,6 +207,8 @@ def main():
     ap.add_argument('--remove-bg', action='store_true')
     ap.add_argument('--bg-tol', type=int, default=40)
     ap.add_argument('--box')
+    ap.add_argument('--compose', action='store_true', help='cutin: 확정 원화(상반신)를 집중선 배경 위에 배치해 720×360 컷인 합성')
+    ap.add_argument('--color', default='#8a3fd1', help='cutin --compose 집중선 색')
     args = ap.parse_args()
     im = load(args.src)
     if args.remove_bg:
@@ -202,6 +240,9 @@ def main():
         im = im.crop(((im.width - s) // 2, 0, (im.width - s) // 2 + s, s))
         out = im.resize((160, 160), Image.LANCZOS)
         rel = f'chars/{args.id}/face.png'
+    elif k == 'cutin' and args.compose:
+        out = compose_cutin(im, args.color)
+        rel = f'chars/{args.id}/cutin.png'
     elif k == 'cutin':
         tw, th = 720, 360
         kk = max(tw / im.width, th / im.height)
