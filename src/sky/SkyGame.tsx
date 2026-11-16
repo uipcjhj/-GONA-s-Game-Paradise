@@ -6,6 +6,7 @@ import { STAGES, DIFF, type Difficulty } from './stages';
 import { CHARACTERS } from './data/characters';
 import { settings, saveSettings, canVibrate } from './settings';
 import { NS, BETA } from './ns';
+import { THEME } from './theme';
 import './sky.css';
 
 const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
@@ -32,18 +33,9 @@ function saveRecords(r: Records): void {
     /* 무시 */
   }
 }
-const ENDING = [
-  { img: 'v2/title/keyart.jpg', text: '마왕성의 심장이 부서지자, 하늘을 뒤덮던 어둠이 걷혔다.' },
-  { img: 'v2/chars/gona/illust.png', text: '고나: "아부부부!" — 작은 날개로 끝까지 날아낸 고나.' },
-  { img: 'family', text: '엄마 · 아빠 · 이모 · 할머니 · 할아버지 · 삼촌. 온 가족이 함께였기에 가능했던 비행.' },
-  { img: 'v2/title/keyart.jpg', text: '부유왕국에 다시 노을빛이 돌아오고, 고나네 가족은 집으로 향한다.' },
-  { img: 'v2/chars/gona/illust.png', text: '그리고 고나의 다음 모험은… 게임천국 어딘가에서 계속된다!' },
-];
-const CREDITS = [
-  ["GONA's Sky Adventure", ''], ['기획 · 원작', '고나네 가족'], ['캐릭터', '고나 · 엄마 · 아빠 · 이모 · 할머니 · 할아버지 · 안경쟁이 삼촌'],
-  ['게임 프로그래밍 · 사운드 합성', 'Claude Code'], ['음악 · 효과음', '오리지널 합성 (tools/sky-audio)'], ['원화 · 스프라이트', '승인 원화 + 스테이지 2~6 임시 그래픽'],
-  ['스페셜 땡스', '게임천국에 놀러 와 준 모든 친구들'], ['', 'THANK YOU FOR PLAYING!'],
-];
+const ENDING = THEME.ending;
+const CREDITS = THEME.credits;
+const OPENED_KEY = `${NS}.opened`;
 const SP_DESC: Record<FamilyId, string> = {
   mom: '거대한 하트 마법진 + 유도 하트 파상 공격',
   dad: '적 탄을 지우는 초고압 증기 레이저',
@@ -53,7 +45,7 @@ const SP_DESC: Record<FamilyId, string> = {
   samchon: '거대 발명 메카의 미사일 연사 + 드릴 돌진',
 };
 
-type Phase = 'loading' | 'title' | 'select' | 'prep' | 'play' | 'tally' | 'continue' | 'gameover' | 'ending' | 'credits';
+type Phase = 'loading' | 'title' | 'opening' | 'select' | 'prep' | 'play' | 'tally' | 'continue' | 'gameover' | 'ending' | 'credits';
 
 /** GONA's Sky Adventure 화면 전체 (타이틀 → 동료 선택 → 플레이 → 결과). 월드맵과는 onExit 한 줄로만 연결됨 */
 export default function SkyGame({ onExit }: { onExit: () => void }) {
@@ -86,6 +78,12 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
   const [practice, setPractice] = useState(false);
   const [count, setCount] = useState(9);
   const [slide, setSlide] = useState(0);
+  /** 오프닝 종료: 다음부터는 자동 재생하지 않음 (타이틀의 '오프닝'으로 다시 볼 수 있음) */
+  const finishOpening = (): void => {
+    try { localStorage.setItem(OPENED_KEY, '1'); } catch { /* 무시 */ }
+    setSlide(0);
+    setPhase('select');
+  };
   const best = Math.max(records.easy.score, records.normal.score, records.hard.score);
   const [mute, setMute] = useState(isMuted);
   const [gauge, setGauge] = useState(0);
@@ -233,6 +231,13 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
     return () => window.clearTimeout(id);
   }, [phase, count]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 오프닝 슬라이드 자동 넘김 (터치하면 바로 넘어감)
+  useEffect(() => {
+    if (phase !== 'opening') return;
+    const id = window.setTimeout(() => (slide < THEME.opening.length - 1 ? setSlide(slide + 1) : finishOpening()), 5200);
+    return () => window.clearTimeout(id);
+  }, [phase, slide]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 엔딩 슬라이드 자동 넘김
   useEffect(() => {
     if (phase !== 'ending') return;
@@ -312,6 +317,24 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
     );
   }
 
+  if (phase === 'opening') {
+    const sl = THEME.opening[Math.min(slide, THEME.opening.length - 1)];
+    const next = () => (slide < THEME.opening.length - 1 ? setSlide(slide + 1) : finishOpening());
+    return (
+      <div className="sky end opening" onClick={next}>
+        <div className="end-pic" key={`o${slide}`}>
+          {sl.img === 'family' ? (
+            <div className="end-family">{FAMILY.map((f) => <img key={f} src={`${BASE}v2/chars/${f}/illust.png`} alt={CHARACTERS[f].name} />)}</div>
+          ) : (
+            <img src={`${BASE}${sl.img}`} alt="" />
+          )}
+        </div>
+        <p className="end-text" key={`ot${slide}`}>{sl.text}</p>
+        <button type="button" className="end-skip opening-skip" onClick={(e) => { e.stopPropagation(); finishOpening(); }}>건너뛰기 ▶ ({slide + 1}/{THEME.opening.length})</button>
+      </div>
+    );
+  }
+
   if (phase === 'ending' || phase === 'credits') {
     const sl = ENDING[Math.min(slide, ENDING.length - 1)];
     if (phase === 'ending') {
@@ -361,7 +384,10 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
       setLeaving(true);
       window.setTimeout(() => {
         setLeaving(false);
-        setPhase('select');
+        // 응가 대탈출 팩은 첫 플레이 때 오프닝을 자동으로 보여 줌 (스킵 가능 · 타이틀의 '오프닝'으로 다시 보기)
+        let seen = true;
+        try { seen = localStorage.getItem(OPENED_KEY) === '1'; } catch { /* 무시 */ }
+        if (THEME.opening.length && !seen) { setSlide(0); setPhase('opening'); } else setPhase('select');
       }, 520);
     };
     // 타이틀 전용 구도: 로고(위) · 캐릭터 띠(가운데, 원화의 인물 영역 33%~100%를 통째로) · 메뉴(아래, 별도 영역)
@@ -391,10 +417,12 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
         <div className="ttl-menu" style={{ height: menuH }}>
           <div className="ttl-row">
             <button type="button" className="ttl-start" onClick={go}>PRESS START</button>
+            {THEME.opening.length > 0 && <button type="button" className="ttl-map" onClick={() => { sfx('menuMove'); setSlide(0); setPhase('opening'); }}>오프닝</button>}
             <button type="button" className="ttl-map" onClick={() => { sfx('menuMove'); onExit(); }}>월드맵</button>
           </div>
           {!soundOn && <p className="ttl-hint">♪ 화면을 터치하면 음악이 켜져요</p>}
-          <p className="ttl-copy">{best > 0 && <b>HI-SCORE {String(best).padStart(8, '0')}</b>} 6 STAGES · {BETA ? '공개 테스트판' : '개발판'}</p>
+          {THEME.titleLine && <p className="ttl-sub">{THEME.titleLine}</p>}
+          <p className="ttl-copy">{best > 0 && <b>HI-SCORE {String(best).padStart(8, '0')}</b>} {THEME.copy} · {BETA ? '공개 테스트판' : '개발판'}</p>
         </div>
         <div className="ttl-wipe" aria-hidden />
       </div>

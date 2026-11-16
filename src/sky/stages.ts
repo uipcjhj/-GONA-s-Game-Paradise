@@ -6,6 +6,7 @@
  *    정식 원화 요청서: docs/sky-art/asset-requests.md
  */
 import type { BgmName } from './audio';
+import { applyTheme } from './theme';
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
 export interface DiffDef {
@@ -434,3 +435,6 @@ export const STAGES: StageDef[] = [
     },
   },
 ];
+
+// 테마 팩(케이크 기본 / 응가 대탈출)에 맞춰 이름·대사 교체 — 기본 팩은 아무것도 바꾸지 않음
+applyTheme(STAGES);

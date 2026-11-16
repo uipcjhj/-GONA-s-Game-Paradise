@@ -9,7 +9,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host",
     "typecheck": "tsc --noEmit",
-    "shots": "node tools/mobile-shots.cjs"
+    "shots": "node tools/mobile-shots.cjs",
+    "build:poop": "VITE_SKY_THEME=poop VITE_SKY_PREVIEW=1 VITE_SKY_BETA=1 VITE_SKY_NS=gona.skypoop vite build --outDir dist-poop"
   },
   "dependencies": {
     "galmuri": "^2.40.3",

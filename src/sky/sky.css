@@ -214,3 +214,7 @@
   border-left: 0;
   opacity: 0.85;
 }
+
+/* 응가 대탈출 팩 타이틀 부제 · 오프닝 건너뛰기 */
+.ttl-sub { margin: 0 0 2px; font: 700 10px/1.2 'Galmuri11', monospace; letter-spacing: 1px; color: #ffe34a; text-shadow: 0 1px #120a26; text-align: center; }
+.opening-skip { background: none; border: 0; color: #fff4d6; font: inherit; cursor: pointer; }
