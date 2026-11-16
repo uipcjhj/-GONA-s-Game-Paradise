@@ -122,7 +122,7 @@ def has_alpha(im):
 
 def trim(im):
     a = np.array(im)[..., 3]
-    ys, xs = np.nonzero(a > 16)
+    ys, xs = np.nonzero(a > 64)
     if not len(xs):
         die('그림이 전부 투명합니다')
     return im.crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
@@ -155,7 +155,7 @@ def pixelize(im, colors, outline=True):
 def auto_split(im, n):
     """생성 그림이 정확한 칸 나눔이 아닐 때: 투명 배경 위 캐릭터 덩어리 n 개를 찾아 왼쪽부터 순서대로 자름"""
     from scipy import ndimage
-    al = np.array(im)[..., 3] > 16
+    al = np.array(im)[..., 3] > 64  # 생성 그림의 옅은 그림자 안개(알파 1~64)는 무시
     lab, cnt = ndimage.label(ndimage.binary_dilation(al, iterations=6))  # 같은 캐릭터의 떨어진 조각(물방울 등)을 한 덩어리로
     if cnt < n:
         die(f'캐릭터 덩어리를 {n}개 찾지 못했습니다 ({cnt}개) — 칸이 붙어 있으면 --frames 로 균등 분할을 쓰세요')
@@ -295,7 +295,10 @@ def main():
         if n != 4:
             die('비행 스프라이트는 4프레임 (대기 2 · 공격 2) 이어야 합니다')
         parts = auto_split(im, 4) if args.auto_split else split_frames(im, 4)
-        cells = [fit(trim(f), 80, 104) for f in parts]
+        # 4프레임을 '같은 배율'로 줄임 (프레임마다 따로 맞추면 물줄기 같은 이펙트가 있는 프레임만 캐릭터가 작아짐)
+        tr = [trim(f) for f in parts]
+        k = min(80 / max(t.width for t in tr), 104 / max(t.height for t in tr), 1.0)
+        cells = [t.resize((max(1, round(t.width * k)), max(1, round(t.height * k))), Image.LANCZOS) for t in tr]
         out = Image.new('RGBA', (352, 112))
         for i, f in enumerate(cells):
             out.paste(f, (i * 88 + (88 - f.width) // 2, 112 - 4 - f.height), f)
