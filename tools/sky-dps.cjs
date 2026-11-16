@@ -13,7 +13,7 @@ const FAMS = fams.length ? fams : ['mom', 'dad', 'imo', 'halmeoni', 'halabeoji',
   const out = [];
   for (const fam of FAMS) {
     const ctx = await b.newContext({ viewport: { width: 393, height: 636 }, deviceScaleFactor: 1 });
-    await ctx.addInitScript((f) => { try { localStorage.setItem('gona.sky.fam', f); } catch (e) { /* */ } }, fam);
+    await ctx.addInitScript(([f, ns]) => { try { localStorage.setItem(ns + '.fam', f); } catch (e) { /* */ } }, [fam, process.env.SKY_NS || 'gona.sky']);
     const page = await ctx.newPage();
     const errs = [];
     page.on('pageerror', (e) => errs.push(e.message));
