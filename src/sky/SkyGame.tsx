@@ -519,6 +519,9 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
                 <span className="sp-fill" style={{ height: `${Math.round(gauge * 100)}%` }} />
                 <b>{ready ? '필살!' : `${Math.floor(gauge * 100)}%`}</b>
               </button>
+              <button type="button" className="sky-act sky-melee" onPointerDown={() => engine.current?.useMelee()} onContextMenu={(e) => e.preventDefault()} aria-label="근접 공격">
+                근접
+              </button>
               <button type="button" className="sky-act sky-bomb" onPointerDown={() => engine.current?.useBomb()} onContextMenu={(e) => e.preventDefault()}>
                 폭탄<small>×{bombs}</small>
               </button>

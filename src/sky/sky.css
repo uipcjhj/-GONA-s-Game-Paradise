@@ -79,6 +79,7 @@
 .sky-act:active { transform: translateY(2px); filter: brightness(1.1); }
 .sky-charge { left: 8px; width: 64px; height: 44px; font-size: 13px; background: #ffd84a; box-shadow: inset 0 -5px 0 #e8a92c; }
 .sky-bomb { right: 8px; width: 64px; height: 44px; font-size: 13px; background: #ff9ec0; box-shadow: inset 0 -5px 0 #d9407a; }
+.sky-melee { left: 8px; bottom: 104px; width: 64px; height: 44px; font-size: 13px; background: #bfe6ff; box-shadow: inset 0 -5px 0 #3a7ad0; }
 .sky-bomb small { display: block; font-size: 10px; line-height: 1; }
 .sky-sp { right: 8px; bottom: 52px; width: 64px; height: 52px; background: #20124a; overflow: hidden; border-color: #e8b53c; }
 .sky-sp .sp-face { position: absolute; inset: 0; background: no-repeat center / cover; opacity: 0.45; filter: grayscale(0.6); }
@@ -92,10 +93,11 @@
 /* 세로 여유가 있는 화면: 전투 화면 밖 하단 바에 3분할 */
 .sky-ctrl.in-bar { bottom: -60px; }
 .sky-ctrl.in-bar .sky-act { opacity: 1; height: 52px; bottom: 0; font-size: 15px; }
-.sky-ctrl.in-bar .sky-charge { left: 2%; width: 31%; }
-.sky-ctrl.in-bar .sky-sp { left: 34.5%; right: auto; width: 31%; }
+.sky-ctrl.in-bar .sky-charge { left: 2%; width: 23%; }
+.sky-ctrl.in-bar .sky-melee { left: 26.5%; right: auto; width: 23%; bottom: 0; }
+.sky-ctrl.in-bar .sky-sp { left: 51%; right: auto; width: 23%; }
 .sky-ctrl.in-bar .sky-sp b { margin-top: 14px; font-size: 15px; }
-.sky-ctrl.in-bar .sky-bomb { right: 2%; width: 31%; }
+.sky-ctrl.in-bar .sky-bomb { right: 2%; width: 23%; }
 
 /* 일시정지 설정 */
 .sky-opt { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; }

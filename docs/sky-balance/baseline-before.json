@@ -1,0 +1,180 @@
+[
+ {
+  "fam": "mom",
+  "passive": {
+   "dps": 10.79000000000005,
+   "bySrc": {
+    "shot": 10.79
+   },
+   "shots": {
+    "shot": 253,
+    "heart": 236
+   },
+   "dealt": 323.7000000000015
+  },
+  "charge": {
+   "perShotDealt": [
+    76,
+    76,
+    76,
+    72.3,
+    76
+   ],
+   "mean": 75.3,
+   "totalDealt": 480.2666666666646
+  },
+  "hp": [
+   0,
+   0
+  ]
+ },
+ {
+  "fam": "dad",
+  "passive": {
+   "dps": 24.229999999999972,
+   "bySrc": {
+    "shot": 10.79,
+    "beam": 13.44
+   },
+   "shots": {
+    "shot": 252
+   },
+   "dealt": 726.8999999999992
+  },
+  "charge": {
+   "perShotDealt": [
+    76,
+    76,
+    76,
+    76,
+    76
+   ],
+   "mean": 76,
+   "totalDealt": 653.2999999999981
+  },
+  "hp": [
+   0,
+   0
+  ]
+ },
+ {
+  "fam": "imo",
+  "passive": {
+   "dps": 16.910000000000036,
+   "bySrc": {
+    "shot": 10.79,
+    "star": 6.12
+   },
+   "shots": {
+    "shot": 252,
+    "star": 110
+   },
+   "dealt": 507.30000000000103
+  },
+  "charge": {
+   "perShotDealt": [
+    76,
+    76,
+    76,
+    72.3,
+    72.3
+   ],
+   "mean": 74.5,
+   "totalDealt": 568.3333333333323
+  },
+  "hp": [
+   0,
+   0
+  ]
+ },
+ {
+  "fam": "halmeoni",
+  "passive": {
+   "dps": 13.203333333333381,
+   "bySrc": {
+    "shot": 10.79,
+    "potion": 2.41
+   },
+   "shots": {
+    "shot": 252,
+    "potion": 23
+   },
+   "dealt": 396.10000000000144
+  },
+  "charge": {
+   "perShotDealt": [
+    76,
+    76,
+    72.3,
+    72.3,
+    76
+   ],
+   "mean": 74.5,
+   "totalDealt": 519.4333333333311
+  },
+  "hp": [
+   0,
+   0
+  ]
+ },
+ {
+  "fam": "halabeoji",
+  "passive": {
+   "dps": 13.08666666666673,
+   "bySrc": {
+    "shot": 10.83,
+    "lance": 2.25
+   },
+   "shots": {
+    "shot": 254,
+    "lance": 26
+   },
+   "dealt": 392.6000000000019
+  },
+  "charge": {
+   "perShotDealt": [
+    76,
+    76,
+    76,
+    72.3,
+    72.3
+   ],
+   "mean": 74.5,
+   "totalDealt": 511.6333333333311
+  },
+  "hp": [
+   0,
+   0
+  ]
+ },
+ {
+  "fam": "samchon",
+  "passive": {
+   "dps": 15.190000000000062,
+   "bySrc": {
+    "shot": 10.79,
+    "elec": 4.4
+   },
+   "shots": {
+    "shot": 252,
+    "elec": 90
+   },
+   "dealt": 455.70000000000186
+  },
+  "charge": {
+   "perShotDealt": [
+    76,
+    76,
+    72.3,
+    72.3,
+    76
+   ],
+   "mean": 74.5,
+   "totalDealt": 542.53333333333
+  },
+  "hp": [
+   0,
+   0
+  ]
+ }
+]

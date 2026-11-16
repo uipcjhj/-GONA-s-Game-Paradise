@@ -17,12 +17,14 @@ export interface DiffDef {
   ehp: number;
   bhp: number;
   bombs: number;
+  /** 스테이지당 회복(딸기·동료 회복) 보급 횟수 */
+  heal: number;
   desc: string;
 }
 export const DIFF: Record<Difficulty, DiffDef> = {
-  easy: { name: 'EASY', bspd: 0.7, dens: 0.6, cd: 1.45, ehp: 0.75, bhp: 0.7, bombs: 4, desc: '슈팅게임 입문용 · 느린 탄, 적은 탄막' },
-  normal: { name: 'NORMAL', bspd: 0.9, dens: 0.85, cd: 1.1, ehp: 1, bhp: 1, bombs: 3, desc: '연습하면 클리어 · 기본 난이도' },
-  hard: { name: 'HARD', bspd: 1.06, dens: 1.15, cd: 0.88, ehp: 1.15, bhp: 1.2, bombs: 2, desc: '패턴 숙지 필수 · 빽빽한 탄막' },
+  easy: { name: 'EASY', bspd: 0.7, dens: 0.6, cd: 1.45, ehp: 0.75, bhp: 0.7, bombs: 4, heal: 3, desc: '슈팅게임 입문용 · 느린 탄, 적은 탄막' },
+  normal: { name: 'NORMAL', bspd: 0.9, dens: 0.85, cd: 1.1, ehp: 1, bhp: 1, bombs: 3, heal: 1, desc: '연습하면 클리어 · 기본 난이도' },
+  hard: { name: 'HARD', bspd: 1.06, dens: 1.15, cd: 0.88, ehp: 1.15, bhp: 1.2, bombs: 2, heal: 1, desc: '패턴 숙지 필수 · 빽빽한 탄막' },
 };
 
 // ───────── 적 ─────────

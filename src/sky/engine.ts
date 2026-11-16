@@ -133,6 +133,14 @@ export const FAMILY_INFO: Record<FamilyId, { name: string; skill: string; desc: 
 const LAYER = [{ k: 0.32, v: 14, a: 0.75 }, { k: 0.5, v: 30, a: 1 }, { k: 0.6, v: 70, a: 0.55 }];
 
 const MAX_HP = 5;
+/** 가족 차지 공격: 완전 충전까지 걸리는 시간(초) — 아빠·할아버지는 빨리, 삼촌은 오래 */
+const CHARGE_FULL: Record<FamilyId, number> = { mom: 1.0, dad: 0.8, imo: 1.0, halmeoni: 1.0, halabeoji: 0.8, samchon: 1.2 };
+/** 근접 공격: 돌진 시간 · 돌진 속도 · 가족별 피해 · 쿨다운(초). 붙어야 맞고, 맞는 동안 잠깐 무적 */
+const MELEE_T = 0.32;
+const MELEE_SPEED = 240;
+const MELEE: Record<FamilyId, { dmg: number; cd: number }> = {
+  mom: { dmg: 3, cd: 2.2 }, dad: { dmg: 6, cd: 2.6 }, imo: { dmg: 3, cd: 1.8 }, halmeoni: { dmg: 3, cd: 2.8 }, halabeoji: { dmg: 5, cd: 3.0 }, samchon: { dmg: 4, cd: 2.6 },
+};
 const BOMB_T = 1.9;
 const CAP = { parts: 220, booms: 36, fx: 70, floats: 10, eb: 320 };
 const MEDALS = [100, 200, 300, 500, 800, 1000, 1500, 2000, 3000, 5000];
@@ -206,6 +214,11 @@ export class SkyEngine {
   private bombHit = false;
   private power = 1;
   private fireT = 0;
+  /** 근접 공격 상태 · 스테이지 회복 보급 남은 횟수 */
+  private meleeT = 0;
+  private meleeCd = 0;
+  private meleeSeen = new Set<number>();
+  private healLeft = 0;
   private volley = 0;
   private charge = 0;
   private charging = false;
@@ -311,6 +324,7 @@ export class SkyEngine {
     this.hp = opts.hp;
     this.bombs = opts.bombs;
     this.power = opts.power;
+    this.healLeft = this.dif.heal;
     this.score = opts.score;
     this.resize();
     this.bgBaked = this.bakeBackdrop();
@@ -383,6 +397,43 @@ export class SkyEngine {
     buzz([30, 40, 60]);
     this.setCharging(false);
     this.pushHud();
+  }
+
+  /** 근접 공격: 앞으로 돌진해 붙은 적·탄을 친다 (사거리 짧음 · 쿨다운 · 돌진 중 짧은 무적) */
+  useMelee(): void {
+    if (this.paused || this.over || this.sp || this.bombT > 0 || this.meleeCd > 0 || this.meleeT > 0) return;
+    this.meleeT = MELEE_T;
+    this.meleeCd = MELEE[this.fam].cd;
+    this.meleeSeen.clear();
+    this.inv = Math.max(this.inv, MELEE_T + 0.1);
+    this.setCharging(false);
+    this.cKick = 1;
+    this.shootAnimT = 0.3;
+    this.kick(0.15);
+    this.addFx('ring', this.px, this.py - 20, 0.8, 0.22);
+    sfx('shotHeavy', 0.8, 1.3);
+    buzz(20);
+  }
+
+  private updateMelee(dt: number): void {
+    if (this.meleeCd > 0) this.meleeCd -= dt;
+    if (this.meleeT <= 0) return;
+    this.meleeT -= dt;
+    this.py = clamp(this.py - MELEE_SPEED * dt, 40, H - 66);
+    const hx = this.px;
+    const hy = this.py - 22;
+    const dmg = MELEE[this.fam].dmg;
+    for (const e of this.en) {
+      if (e.dead || e.y < -4 || this.meleeSeen.has(e.id)) continue;
+      const reach = 16 + e.hr * 0.8;
+      if (Math.abs(e.x - hx) > reach || Math.abs(e.y - hy) > reach) continue;
+      this.meleeSeen.add(e.id);
+      this.damage(e, dmg, 'melee', hx, hy);
+      this.part(hx, hy, rand(-60, 60), rand(-80, -20), 0.3, '#fff8d0', 2, 0);
+    }
+    for (const q of this.eb) {
+      if (q.alive && q.age >= 0 && Math.abs(q.x - hx) < 16 + q.r && Math.abs(q.y - hy) < 16 + q.r) { q.alive = false; this.starFrom(q.x, q.y); }
+    }
   }
 
   /** 가족 필살기 (게이지 100%) */
@@ -485,6 +536,7 @@ export class SkyEngine {
     this.keys.add(k);
     if (k === 'x') this.useBomb();
     if (k === 'c') this.useFamily();
+    if (k === 'v') this.useMelee();
     if (k === ' ' || k === 'z') this.setCharging(true);
     if (k === 'p' || k === 'escape') this.setPaused(!this.paused);
   };
@@ -704,6 +756,7 @@ export class SkyEngine {
     this.updateLasers(dt);
 
     this.updatePlayer(dt);
+    this.updateMelee(dt);
     this.updateWeapons(dt);
     this.updateCompanion(dt);
     this.updateSpecial(dt);
@@ -874,9 +927,48 @@ export class SkyEngine {
     const c = this.charge;
     this.charge = 0;
     if (c < 0.35 || this.over || this.paused) return;
-    const f = Math.min(1, c / 1.0);
-    const b = this.newPB(this.px, this.py - 22, 0, -240, 7 + f * 9, 10 + f * 28, 'charge', true, 1.8);
-    b.scale = 0.55 + f * 0.6;
+    const f = Math.min(1, c / CHARGE_FULL[this.fam]);
+    const px = this.px;
+    const py = this.py - 22;
+    switch (this.fam) {
+      case 'mom': { // 하트 마법 빔: 전방 집중, 관통
+        const b = this.newPB(px, py, 0, -300, 5 + f * 3, 12 + f * 18, 'heart', true, 1.0);
+        b.scale = 1.4 + f * 0.4;
+        break;
+      }
+      case 'dad': { // 증기 충격파: 넓고 관통하는 파동
+        const b = this.newPB(px, py, 0, -240, 9 + f * 5, 14 + f * 16, 'wave', true, 1.1);
+        b.lvl = 4;
+        break;
+      }
+      case 'imo': { // 스타 캐논: 빠른 관통 별
+        const b = this.newPB(px, py, 0, -340, 5, 14 + f * 18, 'star', true, 1.0);
+        b.scale = 1.6;
+        break;
+      }
+      case 'samchon': { // 폭발 미사일: 한 발 · 명중 시 주변 폭발
+        const b = this.newPB(px, py, 0, -260, 8, 20 + f * 18, 'missile', false, 1.4);
+        b.scale = 1.6;
+        break;
+      }
+      case 'halmeoni': { // 연금 폭발 플라스크: 명중 시 넓은 폭발
+        const b = this.newPB(px, py, 0, -190, 7, 14 + f * 12, 'potion', false, 1.0);
+        b.scale = 1.6;
+        break;
+      }
+      case 'halabeoji': { // 방패 충격파: 즉발 · 주변 탄 소거 + 근접 적 타격
+        const R = 46 + f * 10;
+        for (const q of this.eb) if (q.alive && q.age >= 0 && (q.x - px) ** 2 + (q.y - this.py) ** 2 < R * R) { q.alive = false; this.starFrom(q.x, q.y); }
+        for (const e of this.en) if (!e.dead && e.y > 0 && (e.x - px) ** 2 + (e.y - this.py) ** 2 < (R + e.hr) ** 2) this.damage(e, 6 + f * 8, 'charge', e.x, e.y);
+        this.addFx('ring', px, this.py, 1.5 + f * 0.5, 0.35);
+        this.flashWhite = Math.max(this.flashWhite, 0.2 * f);
+        break;
+      }
+      default: {
+        const b = this.newPB(px, py, 0, -240, 7 + f * 9, 10 + f * 28, 'charge', true, 1.8);
+        b.scale = 0.55 + f * 0.6;
+      }
+    }
     this.shootAnimT = 0.34;
     this.chargeFlash = 0.22;
     this.kick(0.22 + f * 0.25);
@@ -970,42 +1062,38 @@ export class SkyEngine {
     if (this.cCd > 0) return;
     this.cKick = 1;
     if (f === 'mom') {
-      this.cN++;
-      const n = this.cN % 3 === 0 ? 16 : 10;
-      for (let i = 0; i < n; i++) {
-        const a = (i / n) * TAU + this.t;
-        this.newPB(this.cx, this.cy - 10, Math.cos(a) * 100, Math.sin(a) * 100, 4, 2.4, 'heart', true, 1.25);
+      // 하트 부채꼴: 전방으로 퍼지는 하트 5발 (자동 유도 없음)
+      for (let i = -2; i <= 2; i++) {
+        const a = -Math.PI / 2 + i * 0.2;
+        this.newPB(this.cx, this.cy - 10, Math.cos(a) * 150, Math.sin(a) * 150, 3.5, 1.2, 'heart', false, 1.3);
       }
-      sfx('compShot', 1, 1.2);
-      this.cCd = 1.45;
+      sfx('compShot', 0.9, 1.2);
+      this.cCd = 0.9;
     } else if (f === 'dad') {
-      this.beams.push({ follow: true, x: this.cx, t: 0.6, max: 0.6, tick: 0, wide: false });
-      sfx('beam', 0.6);
-      this.kick(0.15);
-      this.cCd = 2.5;
+      // 증기 볼트: 굵고 강한 직선탄 (범위는 좁음, 자동 조준 없음)
+      this.newPB(this.cx, this.cy - 16, 0, -420, 3.5, 3.6, 'shot', false, 1.1).lvl = 3;
+      sfx('shotHeavy', 0.6);
+      this.cCd = 0.9;
     } else if (f === 'imo') {
+      // 별빛 연사: 빠른 직선 별 3발 (가운데 + 살짝 벌어진 두 발 · 자동 유도 없음) — 적이 움직여도 맞도록 넓게 퍼뜨리되 조준은 플레이어 몫
       this.cN++;
-      for (const s of [-1, 1]) {
-        const a = -Math.PI / 2 + s * 0.7;
-        const b = this.newPB(this.cx, this.cy - 14, Math.cos(a) * 130, Math.sin(a) * 130, 3.5, 1.7, 'star', false, 2.4);
-        b.homing = 5.5;
-      }
+      for (const a of [0, -0.12, 0.12]) this.newPB(this.cx, this.cy - 14, Math.sin(a) * 220, -Math.cos(a) * 220, 3.5, 1.2, 'star', false, 1.2);
       if (this.cN % 2) sfx('compShot', 0.7, 1.4);
-      this.cCd = 0.5;
+      this.cCd = 0.55;
     } else if (f === 'samchon') {
-      for (const sd of [-1, 1]) {
-        const a = -Math.PI / 2 + sd * 0.35;
-        const b = this.newPB(this.cx + sd * 6, this.cy - 12, Math.cos(a) * 170, Math.sin(a) * 170, 3, 1.5, 'elec', false, 1.8);
-        b.homing = 5.5;
-      }
+      // 전기 탄 2발: 직선 (자동 유도 없음 — 유도는 필살기에만)
+      for (const sd of [-1, 1]) this.newPB(this.cx + sd * 5, this.cy - 12, 0, -200, 3, 1.8, 'elec', false, 1.2);
       sfx('compShot', 0.6, 0.9);
       this.cCd = 0.62;
     } else if (f === 'halmeoni') {
+      // 연금 포션: 앞으로 던지는 병
       this.cN++;
-      this.newPB(this.cx, this.cy - 14, rand(-12, 12), -150, 4, 3.2, 'potion', false, 1.6);
+      this.newPB(this.cx, this.cy - 14, rand(-12, 12), -150, 4, 2.4, 'potion', false, 1.6);
       sfx('compShot', 0.7, 0.7);
       this.cCd = 1.1;
-      if (this.cN % 7 === 0 && this.hp < MAX_HP) {
+      // 자동 회복 없음: 14발마다 '스테이지 회복 보급'이 남아 있을 때만 하트 1
+      if (this.cN % 14 === 0 && this.hp < MAX_HP && this.healLeft > 0) {
+        this.healLeft--;
         this.hp++;
         this.pushHud();
         sfx('heal');
@@ -1076,9 +1164,10 @@ export class SkyEngine {
       case 'halmeoni':
         // 골든 힐링: 즉시 체력 2 회복 + 5초 보호막 + 주변 탄 정화
         if (first) {
-          const heal = Math.max(0, Math.min(2, MAX_HP - this.hp));
+          const heal = Math.max(0, Math.min(2, MAX_HP - this.hp, this.healLeft));
+          this.healLeft -= heal;
           this.hp += heal;
-          this.barrier = 5;
+          this.barrier = 3;
           this.pushHud();
           sfx('heal');
           this.floatText(this.px, this.py - 30, heal > 0 ? `HP +${heal}` : 'BARRIER', '#ffe34a');
@@ -1887,7 +1976,8 @@ export class SkyEngine {
           this.floatText(it.x, it.y - 6, `${v}`, '#ffe34a');
         } else if (it.kind === 'strawberry') {
           sfx('heal');
-          if (this.hp < MAX_HP) {
+          if (this.hp < MAX_HP && this.healLeft > 0) {
+            this.healLeft--;
             this.hp++;
             this.pushHud();
             this.floatText(this.px, this.py - 24, 'HP +1', '#ff9ec0');
@@ -1984,10 +2074,10 @@ export class SkyEngine {
   }
 
   /** 피해 처리. src: 맞힌 탄 종류(이펙트·소리 결정), hx/hy: 맞은 위치 */
-  private damage(e: Enemy, dmg: number, src: PKind | 'bomb' | 'beam' | 'body', hx: number, hy: number): void {
+  private damage(e: Enemy, dmg: number, src: PKind | 'bomb' | 'beam' | 'body' | 'melee', hx: number, hy: number): void {
     if (e.dead || e.y < -6) return;
     const strong = src === 'charge' || src === 'drill';
-    const special = !!this.sp && src !== 'shot' && src !== 'wave' && src !== 'charge';
+    const special = !!this.sp && src !== 'shot' && src !== 'wave' && src !== 'charge' && src !== 'melee';
     if (e.kind === 'boss') {
       const b = this.bsOf(e);
       if (b.mode === 'enter' || b.mode === 'dying' || b.mode === 'flee') return;
@@ -2090,10 +2180,11 @@ export class SkyEngine {
     if (e.drop) drop(e.drop);
     else {
       const r = Math.random();
-      if (e.type === 'gunship') { drop(r < 0.5 ? 'star' : 'cookie'); if (r < 0.35) drop('strawberry', 10); }
-      else if (r < 0.05) drop('star');
-      else if (r < 0.17) drop('cookie');
-      else if (r < 0.19) drop('banana');
+      // 회복(딸기)은 일반 적에게서 떨어지지 않음 — 회복은 스테이지 보급(난이도별 횟수)과 정해진 자리에서만
+      if (e.type === 'gunship') drop(r < 0.6 ? 'star' : 'cookie');
+      else if (r < 0.10) drop('star');
+      else if (r < 0.18) drop('cookie');
+      else if (r < 0.20) drop('banana');
     }
   }
 
@@ -2139,6 +2230,13 @@ export class SkyEngine {
           if (b.kind === 'potion') {
             for (const o of this.en) if (o !== e && (o.x - b.x) ** 2 + (o.y - b.y) ** 2 < 26 * 26) this.damage(o, 2, 'potion', o.x, o.y);
             this.addBoom(b.x, b.y, 0.35, 0);
+          }
+          // 차지 폭발탄(삼촌 미사일 · 할머니 플라스크): 주변에 절반 피해
+          if (b.scale >= 1.5 && (b.kind === 'missile' || b.kind === 'potion')) {
+            // 폭발 중심은 맞은 적 (탄이 적 가장자리에 닿아도 주변이 안정적으로 맞음)
+            for (const o of this.en) if (o !== e && !o.dead && o.y > -4 && (o.x - e.x) ** 2 + (o.y - e.y) ** 2 < 36 * 36) this.damage(o, b.dmg * 0.5, b.kind, o.x, o.y);
+            this.addBoom(e.x, e.y, 0.6, 0);
+            this.addFx('ring', e.x, e.y, 1.1, 0.25);
           }
           if (b.pierce) b.hits.push(e.id);
           else {
@@ -2779,7 +2877,7 @@ export class SkyEngine {
     const bob = Math.sin(this.t * 4 + 1) * 1.5;
     g.drawImage(fly, f * 88, 0, 88, 112, this.cx - 22, this.cy - 38 + bob - this.cKick * 2, 44, 56);
     if (this.fam !== 'imo' && this.fam !== 'samchon' && this.cCd > 0 && this.cCd < 20 && !this.sp) {
-      const full = this.fam === 'mom' ? 1.45 : this.fam === 'dad' ? 2.5 : this.fam === 'halmeoni' ? 1.1 : 7;
+      const full = this.fam === 'mom' ? 0.9 : this.fam === 'dad' ? 0.9 : this.fam === 'halmeoni' ? 1.1 : 7;
       const k = 1 - clamp(this.cCd / full, 0, 1);
       g.fillStyle = '#1a1226'; g.fillRect(Math.floor(this.cx - 8), Math.floor(this.cy + 16), 17, 3);
       g.fillStyle = k >= 1 ? '#ffe34a' : '#fff8d0'; g.fillRect(Math.floor(this.cx - 7), Math.floor(this.cy + 17), Math.round(15 * k), 1);
