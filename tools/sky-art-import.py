@@ -19,6 +19,8 @@
 
   공통 옵션: --id mom|dad|imo|halmeoni|halabeoji|samchon|gona  --stage stage1|s2…  --slot drone|…  --frames N
              --final (최종 승인 그림으로 표시)  --tint 0.3 (배경 덮개)  --fix-seam  --dry-run
+             --remove-bg [--bg-tol 40] : 배경이 있는 그림의 배경 제거 (가장자리와 이어진 배경색만 지움 — 외곽선 안쪽은 보존)
+             --box x,y,w,h            : 이 영역만 잘라서 사용 (0~1 비율 또는 픽셀) — 얼굴 아이콘을 원화의 얼굴 위치에서 뽑을 때
   결과: 변환 파일 저장 · 원본은 art-src/sky-poop/ 에 보관 · manifest.json 갱신 · 검사 보고 출력
 """
 import argparse, json, os, shutil, sys
@@ -43,6 +45,40 @@ def load(path):
     im = Image.open(path)
     im.load()
     return im.convert('RGBA')
+
+
+def remove_bg(im, tol=40):
+    """가장자리와 연결된 배경만 투명하게: 테두리 색을 몇 가지로 묶고, 그 색과 가깝고 테두리에 닿아 있는 영역만 지움.
+    캐릭터는 굵은 외곽선으로 둘러싸여 있어 안쪽(얼굴·옷의 흰색 등)은 지워지지 않는다."""
+    from scipy import ndimage
+    a = np.array(im).astype(np.int32)
+    rgb = a[..., :3]
+    h, w = rgb.shape[:2]
+    border = np.concatenate([rgb[0], rgb[-1], rgb[:, 0], rgb[:, -1]])
+    q = Image.fromarray(border.reshape(1, -1, 3).astype(np.uint8)).quantize(4, method=Image.Quantize.MEDIANCUT)
+    full = np.array(q.getpalette())
+    pal = np.array([full[i * 3:i * 3 + 3] for i in np.unique(np.array(q))])  # 실제로 쓰인 테두리 색만 (단색 배경이면 1개)
+    near = np.zeros((h, w), bool)
+    for c in pal:
+        near |= np.abs(rgb - c).sum(2) < tol * 3 // 2
+    lab, n = ndimage.label(near)
+    edge = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
+    bg = np.isin(lab, list(edge))
+    # 배경 경계 1px 는 반투명으로 (셀애니 안티앨리어싱 유지)
+    grown = ndimage.binary_dilation(bg) & ~bg
+    alpha = np.where(bg, 0, a[..., 3])
+    alpha = np.where(grown, np.minimum(alpha, 160), alpha)
+    out = a.copy(); out[..., 3] = alpha
+    print(f'  배경 제거: 테두리 색 {[tuple(int(v) for v in c) for c in pal]} · 지운 비율 {bg.mean():.2f}')
+    return Image.fromarray(out.astype(np.uint8), 'RGBA')
+
+
+def crop_box(im, box):
+    v = [float(t) for t in box.split(',')]
+    if all(t <= 1 for t in v):
+        v = [v[0] * im.width, v[1] * im.height, v[2] * im.width, v[3] * im.height]
+    x, y, w, h = [round(t) for t in v]
+    return im.crop((x, y, x + w, y + h))
 
 
 def has_alpha(im):
@@ -132,8 +168,15 @@ def main():
     ap.add_argument('--tint', type=float)
     ap.add_argument('--fix-seam', action='store_true')
     ap.add_argument('--dry-run', action='store_true')
+    ap.add_argument('--remove-bg', action='store_true')
+    ap.add_argument('--bg-tol', type=int, default=40)
+    ap.add_argument('--box')
     args = ap.parse_args()
     im = load(args.src)
+    if args.remove_bg:
+        im = remove_bg(im, args.bg_tol)
+    if args.box:
+        im = crop_box(im, args.box)
     k = args.kind
     print(f'{k}: {args.src} ({im.width}×{im.height})')
     meta = {}
