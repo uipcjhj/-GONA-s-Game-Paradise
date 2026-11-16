@@ -1,0 +1,30 @@
+{
+  "sort-L1": {
+    "startWaitMs": 737,
+    "inputs": 10,
+    "lockPerInputMs": 2,
+    "botRoundSec": 0.2,
+    "resultWaitMs": 607
+  },
+  "tower-L1": {
+    "startWaitMs": 747,
+    "inputs": 5,
+    "lockPerInputMs": 661,
+    "botRoundSec": 2.9,
+    "resultWaitMs": 2447
+  },
+  "toyroom-L1": {
+    "startWaitMs": 729,
+    "inputs": 2,
+    "lockPerInputMs": 382,
+    "botRoundSec": 0.5,
+    "resultWaitMs": 985
+  },
+  "catch-L1": {
+    "startWaitMs": 738,
+    "inputs": 38,
+    "lockPerInputMs": 2,
+    "botRoundSec": 8.6,
+    "resultWaitMs": 490
+  }
+}

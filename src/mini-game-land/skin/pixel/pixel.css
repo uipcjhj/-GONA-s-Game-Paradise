@@ -176,3 +176,20 @@
 @keyframes px-hop { 50% { transform: translateY(-8px); } }
 @keyframes px-oops { 25% { transform: translateX(-4px) rotate(-6deg); } 75% { transform: translateX(4px) rotate(6deg); } }
 @media (prefers-reduced-motion: reduce) { .mgl-frame[data-skin='pixel'] .mgl-screen, .mgl-frame[data-skin='pixel'] .tf-mascot, .mgl-frame[data-skin='pixel'] .tf-cap-loading::after { animation: none !important; } }
+
+/* ── 간식 받아라 */
+.px-ct-sky { position: absolute; inset: 0; overflow: hidden; background: linear-gradient(#7fd3fa 0 30%, #a6e2fc 30% 62%, #c9efff 62%); }
+.px-ct-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 7%; background: var(--grass); box-shadow: inset 0 4px 0 #b3f56d, inset 0 -6px 0 var(--grassD), 0 -2px 0 var(--line); }
+.px-ct-catcher { position: relative; width: 100%; height: 100%; }
+.px-ct-gona { position: absolute; left: 50%; top: -14px; width: 27px; height: 34px; margin-left: -13.5px; }
+.px-ct-basket { position: absolute; left: 4px; top: 22px; width: 36px; height: 20px; }
+.px-ct-catcher[data-mood='happy'] .px-ct-gona { animation: px-hop 0.3s steps(2); }
+.px-ct-catcher[data-mood='oops'] { animation: px-oops 0.3s steps(4); }
+.px-ct-item { width: 100%; height: 100%; display: block; }
+.px-ct-item.star { animation: px-twirl 0.6s steps(4) infinite; }
+@keyframes px-twirl { 50% { transform: scale(0.8) rotate(20deg); } }
+.px-ct-pop { display: block; white-space: nowrap; font-size: 9px; color: #fff; text-shadow: -1px 0 var(--navy), 1px 0 var(--navy), 0 -1px var(--navy), 0 1px var(--navy); }
+.px-ct-pop.star { color: var(--gold); font-size: 11px; }
+.px-ct-pop.bad { color: #ffb0a8; }
+@media (prefers-reduced-motion: reduce) { .px-ct-catcher, .px-ct-gona, .px-ct-item, .mgl-frame[data-skin='pixel'] .ct-pop { animation: none !important; } }
+.mgl-frame[data-skin='pixel'] [data-testid='pick-catch'] .px-btn-card::before { background-color: #c9efff; background-image: url('./art/snack-berry.png'); background-size: 36px 36px; }

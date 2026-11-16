@@ -209,4 +209,4 @@ export function RecordRows({ gameId, name, player }: { gameId: string; name: str
     </div>
   );
 }
-const SUB_NAMES: Record<string, string> = { sort: '편가르기', tower: '아슬아슬 탑', toyroom: '장난감방', challenge: '랜덤 챌린지' };
+const SUB_NAMES: Record<string, string> = { sort: '편가르기', tower: '아슬아슬 탑', toyroom: '장난감방', catch: '간식 받아라', challenge: '랜덤 챌린지' };

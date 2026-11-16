@@ -7,6 +7,7 @@ import type { Skin, UiSlots } from '../types';
 import type { SortSlots } from '../../games/sort/slots';
 import type { TowerSlots, TowerPieceView } from '../../games/tower/slots';
 import type { ToyRoomSlots } from '../../games/toyroom/slots';
+import type { CatchSlots } from '../../games/catch/slots';
 import { gonaUrl } from '../../assets';
 import { Mascot as BaseMascot } from '../components';
 import { condLabel, type Card, type Cond } from '../../games/sort/logic';
@@ -297,6 +298,24 @@ const ToyFeedback: ToyRoomSlots['Feedback'] = ({ kind, text, sub }) => (
   </div>
 );
 
+// ─────────────────────────── 간식 받아라 슬롯 (임시: 원·글자)
+const CT_COL: Record<string, string> = { berry: '#ef6a5b', cookie: '#d9a05a', candy: '#ff6f91', star: '#ffd84a', pepper: '#3fae3f' };
+const CatchBackdrop: CatchSlots['Backdrop'] = () => <div className="tf-ct-sky" />;
+const Catcher: CatchSlots['Catcher'] = ({ mood }) => (
+  <div className="tf-ct-catcher" data-mood={mood}>
+    <img src={gonaUrl} alt="" draggable={false} />
+    <i />
+  </div>
+);
+const CatchItem: CatchSlots['Item'] = ({ kind }) => <div className="tf-ct-item" style={{ background: CT_COL[kind] }}>{kind === 'pepper' ? '🌶' : kind === 'star' ? '★' : ''}</div>;
+const CatchMeter: CatchSlots['Meter'] = ({ caught, goal, miss, maxMiss }) => (
+  <div className="tf-tr-meter">
+    <span className="tf-tr-chip big">받음 {caught}/{goal}</span>
+    <span className="tf-tr-chip" aria-label={`실수 ${miss}/${maxMiss}`}>실수 {Array.from({ length: maxMiss }, (_, i) => (i < miss ? '✕' : '○')).join('')}</span>
+  </div>
+);
+const CatchPop: CatchSlots['Pop'] = ({ kind, text }) => <b className={`tf-ct-pop ${kind}`}>{text}</b>;
+
 const temp: Skin = {
   id: 'temp',
   name: '임시 스킨 (기능 검증용)',
@@ -306,5 +325,6 @@ const temp: Skin = {
   sort: { Friend, RulePanel, StageFrame, BinFace, InfoBar, Feedback, Announce },
   tower: { Backdrop, PieceArt, PlateArt, Meter: TowerMeter, NextQueue, Feedback: TowerFeedback, Notice, GoalLine, Guide, ComMarker, PlateBand },
   toyroom: { Backdrop: RoomBackdrop, ShelfFrame: Shelf, ToyArt, Meter: ToyMeter, Feedback: ToyFeedback },
+  catch: { Backdrop: CatchBackdrop, Catcher, Item: CatchItem, Meter: CatchMeter, Pop: CatchPop },
 };
 export default temp;

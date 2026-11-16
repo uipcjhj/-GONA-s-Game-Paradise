@@ -210,4 +210,14 @@ c.rows(0, 0, [
     'oooooooooooooooooooo', 'oWWWWWWWWWWWWWWWWWWo', 'oooooooooooooooooooo', '........oSSo........', '........oSSo........', '........oooo........'],
     {'o': INK, 'P': hx('ff9fb8'), 'W': hx('fff4d6'), 'C': hx('b8642e'), 'Y': hx('f9e49a'), 'T': hx('fbe3b0'), 'B': hx('f0c987'), 'b': hx('c9944f'), 'S': hx('a86b35')})
 c.save(MINI, 'icon-tower.png')
+# 간식 받아라: 떨어지는 간식 4종 + 고추 (12×12)
+SNACKS = {
+    'berry': ['.....gg.....', '....gGGg....', '..ooggggoo..', '.oRRRRRRRRo.', 'oRhRRWRRRRRo', 'oRRRRRRRWRRo', 'oRRWRRRRRRRo', '.oRRRRRWRRo.', '.oRRRRRRRRo.', '..oRRRWRRo..', '...oRRRRo...', '....oooo....'],
+    'cookie': ['...oooooo...', '..oCCCCCCo..', '.oChCCKCCCo.', 'oCCCCCCCKCCo', 'oCKCCCCCCCCo', 'oCCCCKCCCCCo', 'oCCCCCCCCKCo', 'oCCKCCCCCCCo', '.oCCCCCKCCo.', '.oCCCCCCCCo.', '..oDDDDDDo..', '...oooooo...'],
+    'candy': ['oo........oo', 'oPo.oooo.oPo', 'oPPoWWPPoPPo', '.oPoPWWPPoo.', '..oPPPWWPo..', '..oPWWPPWo..', '..oWWPPWWo..', '..oPPWWPPo..', '.ooPPPWWoPo.', 'oPPoWWPPoPPo', 'oPo.oooo.oPo', 'oo........oo'],
+    'pepper': ['......gg....', '.....gGg....', '....ooggo...', '...oRRRRo...', '..oRhRRRRo..', '..oRhRRRRo..', '..oRRRRRRo..', '...oRRRRRo..', '...oRRRRo...', '....oRRRo...', '.....oRo....', '......o.....'],
+}
+SP = {'o': INK, 'g': hx('58a842'), 'G': hx('8fd96a'), 'R': hx('e8402f'), 'h': hx('ffb4a2'), 'W': hx('fff4d6'), 'C': hx('d9a05a'), 'K': hx('5a3418'), 'D': hx('b57b3a'), 'P': hx('ff6f91')}
+for name, rows in SNACKS.items():
+    c = C(12, 12); c.rows(0, 0, rows, SP); c.save(MINI, f'snack-{name}.png')
 print('ok')

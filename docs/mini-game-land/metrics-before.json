@@ -1,0 +1,44 @@
+{
+  "sort-L1": {
+    "startWaitMs": 1249,
+    "inputs": 10,
+    "lockPerInputMs": 3,
+    "botRoundSec": 0.3,
+    "resultWaitMs": 904
+  },
+  "sort-L5": {
+    "startWaitMs": 1255,
+    "inputs": 10,
+    "lockPerInputMs": 2,
+    "botRoundSec": 0.3,
+    "resultWaitMs": 914
+  },
+  "tower-L1": {
+    "startWaitMs": 1263,
+    "inputs": 6,
+    "lockPerInputMs": 696,
+    "botRoundSec": 3.8,
+    "resultWaitMs": 2780
+  },
+  "tower-L5": {
+    "startWaitMs": 1269,
+    "inputs": 6,
+    "lockPerInputMs": 679,
+    "botRoundSec": 3.8,
+    "resultWaitMs": 2889
+  },
+  "toyroom-L1": {
+    "startWaitMs": 1236,
+    "inputs": 2,
+    "lockPerInputMs": 574,
+    "botRoundSec": 0.7,
+    "resultWaitMs": 1467
+  },
+  "toyroom-L5": {
+    "startWaitMs": 1234,
+    "inputs": 2,
+    "lockPerInputMs": 567,
+    "botRoundSec": 0.6,
+    "resultWaitMs": 1468
+  }
+}

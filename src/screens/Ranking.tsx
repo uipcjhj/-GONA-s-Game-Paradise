@@ -13,6 +13,7 @@ const SUBS = [
   { id: 'sort', label: '편가르기' },
   { id: 'tower', label: '탑' },
   { id: 'toyroom', label: '장난감방' },
+  { id: 'catch', label: '간식' },
   { id: 'challenge', label: '챌린지' },
 ];
 

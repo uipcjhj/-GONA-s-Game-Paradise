@@ -1,0 +1,10 @@
+/* 간식 받아라 — 기반 레이아웃만(색·모양은 스킨). 무대 전체가 터치 영역 */
+.ct { position: relative; height: 100%; display: flex; flex-direction: column; }
+.ct-meter { flex: none; }
+.ct-stage { position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+.ct-world { position: absolute; left: 50%; top: 0; transform-origin: 0 0; }
+.ct-layer { position: absolute; inset: 0; pointer-events: none; }
+.ct-item, .ct-catcher, .ct-pop { position: absolute; pointer-events: none; }
+.ct-pop { animation: ct-pop var(--mgl-fx-catch-pop, 520ms) steps(5) forwards; }
+@keyframes ct-pop { from { transform: translate(-50%, 0); opacity: 1; } to { transform: translate(-50%, -28px); opacity: 0; } }
+.ct-hint { position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; pointer-events: none; }

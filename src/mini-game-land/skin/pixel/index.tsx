@@ -33,6 +33,13 @@ import tLock from './art/toy-lock.png';
 import tPin from './art/toy-pin.png';
 import spark from './art/spark.png';
 import { SnackArt } from './snacks';
+import sBerry from './art/snack-berry.png';
+import sCookie from './art/snack-cookie.png';
+import sCandy from './art/snack-candy.png';
+import sPepper from './art/snack-pepper.png';
+import starImg from './art/star.png';
+import { gonaUrl } from '../../assets';
+import type { CatchSlots } from '../../games/catch/slots';
 import './pixel.css';
 
 const BODY: Record<string, string> = { red, blue, green, yellow };
@@ -175,6 +182,24 @@ const Shelf: ToyRoomSlots['ShelfFrame'] = ({ capacity, locked, state }) => (
 );
 const RoomBackdrop: ToyRoomSlots['Backdrop'] = () => <div className="px-room" />;
 
+// ─────────────────────────── 간식 받아라
+const CT_IMG: Record<string, string> = { berry: sBerry, cookie: sCookie, candy: sCandy, pepper: sPepper, star: starImg };
+const CatchBackdrop: CatchSlots['Backdrop'] = () => (
+  <div className="px-ct-sky">
+    <i className="px-cloud c1" />
+    <i className="px-cloud c2" />
+    <i className="px-ct-ground" />
+  </div>
+);
+const Catcher: CatchSlots['Catcher'] = ({ mood }) => (
+  <div className="px-ct-catcher" data-mood={mood}>
+    <img className="px-ct-gona" src={gonaUrl} alt="" draggable={false} />
+    <img className="px-ct-basket" src={basket} alt="" draggable={false} />
+  </div>
+);
+const CatchItem: CatchSlots['Item'] = ({ kind }) => <img className={`px-ct-item ${kind}`} src={CT_IMG[kind]} alt="" draggable={false} />;
+const CatchPop: CatchSlots['Pop'] = ({ kind, text }) => <b className={`px-ct-pop ${kind}`}>{text}</b>;
+
 const pixel: Skin = {
   id: 'pixel',
   name: '고나 픽셀 UI (코드 도트)',
@@ -184,5 +209,6 @@ const pixel: Skin = {
   sort: { Friend, BinFace, StageFrame },
   tower: { Backdrop: TowerBackdrop, PieceArt, PlateArt, NextQueue },
   toyroom: { Backdrop: RoomBackdrop, ShelfFrame: Shelf, ToyArt },
+  catch: { Backdrop: CatchBackdrop, Catcher, Item: CatchItem, Pop: CatchPop },
 };
 export default pixel;

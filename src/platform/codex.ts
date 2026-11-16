@@ -46,6 +46,7 @@ export const CODEX: CodexDef[] = [
     ['sort', '편가르기 대소동'],
     ['tower', '아슬아슬 탑'],
     ['toyroom', '엉망진창 장난감방'],
+    ['catch', '간식 받아라'],
   ].map<CodexDef>(([s, n]) => ({
     id: `mini-${s}`,
     category: '미니게임',
