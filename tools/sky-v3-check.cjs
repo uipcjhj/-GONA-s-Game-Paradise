@@ -23,6 +23,9 @@ const [url, out, W = '393', H = '636'] = process.argv.slice(2);
   await page.waitForTimeout(1200);
   console.log('터치 후', JSON.stringify(await A()));
   await page.tap('.ttl-start');
+  // 응가 팩: 첫 실행 오프닝 → 건너뛰기
+  await page.waitForSelector('.sel-art, .opening-skip');
+  if (await page.$('.opening-skip')) { await shot('01b-opening'); await page.tap('.opening-skip'); }
   await page.waitForSelector('.sel-art');
   await page.waitForTimeout(900);
   console.log('선택 화면', JSON.stringify(await A()));
@@ -81,17 +84,13 @@ const [url, out, W = '393', H = '636'] = process.argv.slice(2);
   await page.evaluate(() => window.__sky.cheat('killboss'));
   await page.waitForTimeout(900);
   await shot('25-boss-break');
-  await page.waitForSelector('text=STAGE CLEAR', { timeout: 15000 });
+  await page.waitForSelector('.tally', { timeout: 20000 });
   await page.waitForTimeout(400);
-  console.log('클리어 오디오', JSON.stringify(await A()));
   await shot('26-clear');
-  await page.tap('text=타이틀로');
-  await page.waitForSelector('.ttl-start');
-  await page.waitForTimeout(600);
-  console.log('타이틀 복귀 오디오', JSON.stringify(await A()));
-  await page.tap('.ttl-map');
-  await page.waitForTimeout(600);
-  console.log('월드맵 복귀', await page.locator('.frame').count(), JSON.stringify(await A()));
+  await page.tap('.tally .sky-btn-go'); // 다음 스테이지 시작까지 확인
+  await page.waitForSelector('.sky-canvas');
+  await page.waitForTimeout(3000);
+  await shot('27-stage2');
   console.log('실패 요청', bad.length ? bad : '없음');
   console.log('콘솔 오류', errs.length ? errs : '없음');
   await b.close();

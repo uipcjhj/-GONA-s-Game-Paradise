@@ -74,7 +74,7 @@ function compact<T>(arr: T[], keep: (v: T) => boolean, pool?: T[]): void {
   arr.length = j;
 }
 
-type PKind = 'shot' | 'wave' | 'charge' | 'heart' | 'star' | 'elec' | 'potion' | 'lance' | 'missile' | 'refl' | 'drill' | 'water' | 'prune';
+type PKind = 'shot' | 'wave' | 'charge' | 'heart' | 'star' | 'elec' | 'potion' | 'lance' | 'missile' | 'refl' | 'drill' | 'water' | 'prune' | 'probio';
 interface PBullet {
   x: number; y: number; vx: number; vy: number; r: number; dmg: number; kind: PKind; lvl: number;
   pierce: boolean; hits: number[]; life: number; scale: number; homing: number; age: number; alive: boolean;
@@ -99,7 +99,7 @@ interface Laser { x: number; y: number; ang: number; len: number; w: number; war
 interface Item { x: number; y: number; kind: 'cookie' | 'strawberry' | 'banana' | 'star'; age: number; alive: boolean }
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; col: string; size: number; g: number }
 interface Boom { x: number; y: number; age: number; delay: number; scale: number }
-type FxKind = 'spark' | 'metal' | 'weak' | 'ring' | 'puff' | 'smoke';
+type FxKind = 'spark' | 'metal' | 'weak' | 'ring' | 'puff' | 'smoke' | 'wsplash' | 'psplash';
 interface Fx { kind: FxKind; x: number; y: number; age: number; dur: number; scale: number; vy: number }
 interface Prop { name: ArtName; x: number; y: number; v: number; layer: number; vx: number }
 interface Float { x: number; y: number; text: string; age: number; col: string }
@@ -1124,6 +1124,7 @@ export class SkyEngine {
         // 목욕 폭포: 화면 위에서 물줄기가 넓게 쏟아짐 (자동 유도 없음 · 넓은 범위)
         if (every(0.12)) {
           for (let i = 0; i < 2; i++) this.newPB(rand(12, W - 12), -8, rand(-12, 12), 230, 3, 2.2, 'water', false, 2.0).scale = 1.5;
+          if (this.a.extra['fx/water-splash']) this.addFx('wsplash', rand(16, W - 16), rand(6, 22), 1.1, 0.36); // 폭포 입구 물보라
           if (every(0.36)) sfx('compShot', 1, 1.1);
         }
         break;
@@ -1188,7 +1189,16 @@ export class SkyEngine {
           }
           sfx('compShot', 0.8, 0.6);
         }
-        if (pe < 2.3 && e >= 2.3) {
+        if (pe < 2.3 && e >= 2.3 && this.a.extra['chars/samchon/probiotic']) {
+          // 응가 팩: 메카 대신 유산균 3마리가 만세 자세로 위로 돌진 (같은 총 피해)
+          for (let i = 0; i < 3; i++) {
+            const [x, y] = this.probioticPos(i);
+            const b = this.newPB(x, y, 0, -300, 10, 14, 'probio', true, 1.6);
+            b.lvl = i;
+          }
+          this.kick(0.4);
+          sfx('boomM');
+        } else if (pe < 2.3 && e >= 2.3) {
           const b = this.newPB(this.px, this.py - 50, 0, -320, 26, 40, 'drill', true, 1.6);
           b.scale = 1;
           this.kick(0.4);
@@ -2066,7 +2076,9 @@ export class SkyEngine {
   /** 피해 처리. src: 맞힌 탄 종류(이펙트·소리 결정), hx/hy: 맞은 위치 */
   private damage(e: Enemy, dmg: number, src: PKind | 'bomb' | 'beam' | 'body' | 'melee', hx: number, hy: number): void {
     if (e.dead || e.y < -6) return;
-    const strong = src === 'charge' || src === 'drill';
+    // 응가 팩: 물방울·프룬 구슬이 맞으면 물/보라 과즙 튐 (팩 그림이 있을 때만)
+    if ((src === 'water' || src === 'prune') && Math.random() < 0.45 && this.a.extra[src === 'water' ? 'fx/water-splash' : 'fx/prune-splash']) this.addFx(src === 'water' ? 'wsplash' : 'psplash', hx, hy, 0.7, 0.26);
+    const strong = src === 'charge' || src === 'drill' || src === 'probio';
     const special = !!this.sp && src !== 'shot' && src !== 'wave' && src !== 'charge' && src !== 'melee';
     if (e.kind === 'boss') {
       const b = this.bsOf(e);
@@ -2417,6 +2429,15 @@ export class SkyEngine {
     this.g.drawImage(im, fi * fw, 0, fw, im.height, x - w / 2, y - h / 2, w, h);
   }
 
+  /** 격자 시트 (cols×rows) 의 한 칸 */
+  private cell(im: HTMLImageElement, col: number, row: number, cols: number, rows: number, x: number, y: number, k = 1): void {
+    const fw = im.width / cols;
+    const fh = im.height / rows;
+    const w = (fw * k) / R;
+    const h = (fh * k) / R;
+    this.g.drawImage(im, col * fw, row * fh, fw, fh, x - w / 2, y - h / 2, w, h);
+  }
+
   private draw(): void {
     const g = this.g;
     g.setTransform(R, 0, 0, R, 0, 0);
@@ -2667,7 +2688,15 @@ export class SkyEngine {
       g.globalAlpha = 1;
     } else if (s.id === 'halmeoni') {
       this.frame(v['fx/sp-aura'], Math.floor(e * 8) % 4, 4, this.px, this.py, 1.2);
-    } else if (s.id === 'samchon') {
+      const fl = this.a.extra['fx/flame'];
+      if (fl) {
+        // 불꽃의 약손: 몸 둘레를 도는 불꽃 3개 (살짝 커졌다 작아짐)
+        for (let i = 0; i < 3; i++) {
+          const a = this.t * 3 + (i * TAU) / 3;
+          this.frame(fl, 0, 1, this.px + Math.cos(a) * 20, this.py - 4 + Math.sin(a) * 12, 0.7 + Math.sin(this.t * 14 + i) * 0.08);
+        }
+      }
+    } else if (s.id === 'samchon' && !this.a.extra['chars/samchon/probiotic']) {
       const enter = Math.min(1, e / 0.35);
       const exit = e > 2.3 ? (e - 2.3) * 520 : 0;
       const my = this.py - 50 + (1 - enter) * 120 - exit;
@@ -2726,6 +2755,14 @@ export class SkyEngine {
       case 'weak': this.frame(v['fx/weak'], Math.min(3, Math.floor(k * 4)), 4, f.x, f.y, f.scale); break;
       case 'ring': this.frame(v['fx/ring'], Math.min(3, Math.floor(k * 4)), 4, f.x, f.y, f.scale); break;
       case 'puff': this.frame(v['fx/steam-puff'], Math.min(2, Math.floor(k * 3)), 3, f.x, f.y, f.scale); break;
+      case 'wsplash': case 'psplash': {
+        const im = this.a.extra[f.kind === 'wsplash' ? 'fx/water-splash' : 'fx/prune-splash'];
+        if (!im) break;
+        this.g.globalAlpha = k > 0.6 ? Math.max(0, (1 - k) / 0.4) : 1;
+        this.frame(im, 0, 1, f.x, f.y - k * 4, f.scale * (0.7 + k * 0.5));
+        this.g.globalAlpha = 1;
+        break;
+      }
       case 'smoke': {
         // 보스 파손 연기: 회색 구름을 어둡게 (미리 구운 사본)
         const g = this.g;
@@ -2868,6 +2905,8 @@ export class SkyEngine {
       case 'heart': this.frame(v['fx/heart-p'], Math.floor(b.age * 8) % 2, 2, b.x, b.y, b.scale > 1 ? 2 : 1.5); return;
       // 물방울 (엄마): 하늘색 물방울 + 흰 하이라이트 — 단순 탄환 모양 (임시 효과)
       case 'water': {
+        const wd = this.a.extra['fx/water-drop'];
+        if (wd) { this.frame(wd, 0, 1, b.x, b.y, b.scale > 1 ? 1.15 : 0.85); return; }
         const g = this.g;
         const r = (b.scale > 1 ? 3 : 2.2) * (1 + Math.sin(b.age * 14) * 0.08);
         g.fillStyle = '#2f9fd8'; g.beginPath(); g.arc(b.x, b.y, r + 0.8, 0, TAU); g.fill();
@@ -2877,6 +2916,8 @@ export class SkyEngine {
       }
       // 프룬 구슬 (이모): 보라 구슬 + 연보라 하이라이트 — 단순 탄환 모양 (임시 효과)
       case 'prune': {
+        const po = this.a.extra['fx/prune-orb'];
+        if (po) { this.frame(po, 0, 1, b.x, b.y, b.scale > 1 ? 1.1 : 0.8); return; }
         const g = this.g;
         const r = (b.scale > 1 ? 3 : 2.4) * (1 + Math.sin(b.age * 12) * 0.1);
         g.fillStyle = '#3d1466'; g.beginPath(); g.arc(b.x, b.y, r + 0.8, 0, TAU); g.fill();
@@ -2890,6 +2931,11 @@ export class SkyEngine {
       case 'lance': case 'refl': this.frame(v['fx/lance'], 0, 1, b.x, b.y, 1.3); return;
       case 'missile': this.blit(this.pbSprite('fx/missile', Math.atan2(b.vy, b.vx) + Math.PI / 2, Math.floor(b.age * 12) % 2, 2), b.x, b.y); return;
       case 'drill': this.frame(v['fx/mech'], 0, 1, b.x, b.y, 1); return;
+      case 'probio': {
+        const pr = this.a.extra['chars/samchon/probiotic'];
+        if (pr) this.cell(pr, 3, b.lvl % 3, 4, 3, b.x, b.y, 1.2);
+        return;
+      }
     }
   }
 
@@ -2903,9 +2949,15 @@ export class SkyEngine {
   private drawProbiotic(): void {
     const s = this.sp;
     if (!s || s.id !== 'samchon' || s.t < s.cut || s.t > s.cut + 3.0) return;
+    const pr = this.a.extra['chars/samchon/probiotic'];
+    const e = s.t - s.cut;
     for (let i = 0; i < 3; i++) {
       const [x, y] = this.probioticPos(i);
-      this.frame(this.a.v2['fx/charge-orb'], Math.floor(this.t * 10 + i) % 4, 4, x, y, 0.55);
+      if (pr) {
+        if (e >= 2.3) continue; // 돌진한 뒤에는 탄(probio)이 그림
+        const pop = Math.min(1, e / 0.25); // 튀어나오며 커짐
+        this.cell(pr, Math.floor(this.t * 6 + i) % 3, i, 4, 3, x, y + (1 - pop) * 8, 0.6 + pop * 0.4);
+      } else this.frame(this.a.v2['fx/charge-orb'], Math.floor(this.t * 10 + i) % 4, 4, x, y, 0.55);
     }
   }
 
@@ -2945,19 +2997,38 @@ export class SkyEngine {
       g.globalAlpha = 1;
     }
     if (this.sp && this.sp.id === 'halabeoji' && this.sp.t >= this.sp.cut) {
-      // 유해균 방패: 방패 둘레를 도는 보라 점 (세균 막 · 임시 효과)
+      // 유해균 방패: 방패 둘레를 도는 육각 방패 조각 + 다가오다 튕겨 나가는 세균 (팩 그림 없으면 보라 점)
+      const hx = this.a.extra['fx/hex'];
+      const gm = this.a.extra['fx/germ'];
       for (let i = 0; i < 6; i++) {
         const a = this.t * 2.4 + (i * TAU) / 6;
-        g.fillStyle = '#c9a0ff';
-        g.fillRect(Math.round(this.px + Math.cos(a) * 30) - 1, Math.round(this.py - 14 + Math.sin(a) * 20) - 1, 3, 3);
+        const x = this.px + Math.cos(a) * 30;
+        const y = this.py - 14 + Math.sin(a) * 20;
+        if (hx) this.frame(hx, 0, 1, x, y, 0.8);
+        else {
+          g.fillStyle = '#c9a0ff';
+          g.fillRect(Math.round(x) - 1, Math.round(y) - 1, 3, 3);
+        }
+      }
+      if (gm) {
+        for (let i = 0; i < 4; i++) {
+          const ph = (this.t * 0.9 + i * 0.25) % 1; // 0→1: 바깥에서 다가옴 → 방패에 닿으면 튕겨 나감
+          const a = i * 1.7 + 0.6;
+          const r = ph < 0.7 ? 78 - ph * 60 : 36 + (ph - 0.7) * 160;
+          g.globalAlpha = ph < 0.7 ? 1 : Math.max(0, 1 - (ph - 0.7) / 0.3);
+          this.frame(gm, 0, 1, this.px + Math.cos(a) * r, this.py - 14 + Math.sin(a) * r * 0.75, ph < 0.7 ? 0.8 : 0.6);
+        }
+        g.globalAlpha = 1;
       }
     }
     if (this.healHearts.length) {
       const hv = this.a.v2['fx/heart-p'];
+      const hh = this.a.extra['fx/heal-heart'];
       for (const h of this.healHearts) {
         const age = this.t - h.t0;
         g.globalAlpha = clamp(1 - age / 1.1, 0, 1);
-        this.frame(hv, Math.floor(age * 8) % 2, 2, h.x + Math.sin(age * 6 + h.x) * 3, h.y - age * 42, 1.2);
+        if (hh) this.frame(hh, 0, 1, h.x + Math.sin(age * 6 + h.x) * 3, h.y - age * 42, 0.75 + Math.min(age, 0.2));
+        else this.frame(hv, Math.floor(age * 8) % 2, 2, h.x + Math.sin(age * 6 + h.x) * 3, h.y - age * 42, 1.2);
       }
       g.globalAlpha = 1;
       compact(this.healHearts, (h) => this.t - h.t0 < 1.1);

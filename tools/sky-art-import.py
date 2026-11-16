@@ -233,7 +233,7 @@ def save(im, rel, args, meta, orig):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('kind', choices=['illust', 'face', 'cutin', 'fly', 'enemy', 'prop', 'midboss', 'boss', 'bg', 'keyart', 'logo'])
+    ap.add_argument('kind', choices=['illust', 'face', 'cutin', 'fly', 'grid', 'enemy', 'prop', 'midboss', 'boss', 'bg', 'keyart', 'logo'])
     ap.add_argument('src')
     ap.add_argument('--id', choices=FAMILY)
     ap.add_argument('--stage', default='stage1')
@@ -249,6 +249,10 @@ def main():
     ap.add_argument('--auto-split', action='store_true', help='fly: 칸이 고르지 않은 생성 시트에서 캐릭터 4개를 자동으로 찾아 분리')
     ap.add_argument('--compose', action='store_true', help='cutin: 확정 원화(상반신)를 집중선 배경 위에 배치해 720×360 컷인 합성')
     ap.add_argument('--color', default='#8a3fd1', help='cutin --compose 집중선 색')
+    ap.add_argument('--grid', help='grid: 행x열 (예 3x4) — 생성 시트를 고른 칸으로 나눔')
+    ap.add_argument('--cell', help='grid: 결과 칸 크기 WxH (예 40x40)')
+    ap.add_argument('--out', help='grid: 팩 안 저장 경로 (예 chars/samchon/probiotic.png)')
+    ap.add_argument('--row-scale', action='store_true', help='grid: 배율을 행마다 따로 (행 = 한 캐릭터 애니메이션)')
     args = ap.parse_args()
     im = load(args.src)
     if args.remove_bg:
@@ -261,6 +265,33 @@ def main():
 
     if k in ('illust', 'face', 'cutin', 'fly') and not args.id:
         die('--id 가 필요합니다')
+
+    if k == 'grid':
+        # 고른 칸 시트 (유산균 소환체 3종×4프레임, 이펙트 모음 등): 칸마다 트림 → 공통 배율 → 칸 가운데 정렬
+        if not (args.grid and args.cell and args.out):
+            die('grid 는 --grid RxC --cell WxH --out 경로 가 필요합니다')
+        R, C = map(int, args.grid.lower().split('x'))
+        cw, ch = map(int, args.cell.lower().split('x'))
+        gw, gh = im.width / C, im.height / R
+        tr = [[trim(im.crop((round(c * gw), round(r * gh), round((c + 1) * gw), round((r + 1) * gh)))) for c in range(C)] for r in range(R)]
+        m = 2  # 칸 안 여백
+        def scale(cells):
+            return min((cw - m * 2) / max(t.width for t in cells), (ch - m * 2) / max(t.height for t in cells), 1.0)
+        kall = scale([t for row in tr for t in row])
+        out = Image.new('RGBA', (cw * C, ch * R))
+        for r, row in enumerate(tr):
+            kk = scale(row) if args.row_scale else kall
+            for c, t in enumerate(row):
+                f = t.resize((max(1, round(t.width * kk)), max(1, round(t.height * kk))), Image.LANCZOS)
+                out.paste(f, (c * cw + (cw - f.width) // 2, r * ch + (ch - f.height) // 2), f)
+        out = pixelize(out, 96)
+        if args.row_scale and C >= 2:
+            for r in range(R):
+                motion_check([out.crop((c * cw, r * ch, (c + 1) * cw, (r + 1) * ch)) for c in range(C)])
+        report(out, args.out)
+        meta = {'rows': R, 'cols': C, 'cell': [cw, ch]}
+        save(out, args.out, args, meta, args.src)
+        return
 
     if k == 'illust':
         if not has_alpha(im):

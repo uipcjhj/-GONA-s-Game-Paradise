@@ -21,6 +21,12 @@ export const V2_NAMES = [
 ] as const;
 export type V2Name = (typeof V2_NAMES)[number];
 export const CUTIN_IDS = ['gona', 'mom', 'dad', 'imo', 'halmeoni', 'halabeoji', 'samchon'] as const;
+/** 응가 팩에만 있는 추가 그림 (팩에 없으면 null → 엔진이 기존 도형/그림으로 대체) */
+export const EXTRA_NAMES = [
+  'fx/water-drop', 'fx/prune-orb', 'fx/heal-heart', 'fx/flame', 'fx/hex', 'fx/germ', 'fx/prune-splash', 'fx/water-splash',
+  'chars/samchon/probiotic',
+] as const;
+export type ExtraName = (typeof EXTRA_NAMES)[number];
 export type CutinId = (typeof CUTIN_IDS)[number];
 
 export interface Assets {
@@ -29,6 +35,8 @@ export interface Assets {
   gonaSheet: HTMLImageElement;
   v2: Record<V2Name, HTMLImageElement>;
   cutin: Record<CutinId, HTMLImageElement | null>;
+  /** 응가 팩 추가 그림 (없으면 null) */
+  extra: Record<ExtraName, HTMLImageElement | null>;
   /** 흰색 번쩍임 사본 캐시 */
   flash: Map<CanvasImageSource, HTMLCanvasElement>;
 }
@@ -54,19 +62,22 @@ export function loadAssets(): Promise<Assets> {
     // 응가 테마: 신규 그림 팩 목록을 먼저 읽고, 있는 그림만 v3-poop 에서 (없으면 기존 v2)
     await loadArtPack(BASE);
     applyPackToStages(STAGES);
-    const [imgs, gonaSheet, v2list, cutins] = await Promise.all([
+    const [imgs, gonaSheet, v2list, cutins, extras] = await Promise.all([
       Promise.all(IMG_NAMES.map((n) => loadUrl(`${BASE}${n}.png`, false))),
       loadUrl(`${BASE}${packPath('chars/gona/sprite.png')}`, false),
       Promise.all(V2_NAMES.map((n) => loadUrl(`${BASE}${packPath(`${n}.png`)}`, false))),
       Promise.all(CUTIN_IDS.map((n) => loadUrl(`${BASE}${packPath(`chars/${n}/cutin.png`, `v2/chars/${n}/cutin.${n === 'gona' ? 'png' : 'jpg'}`)}`, true))),
+      Promise.all(EXTRA_NAMES.map((n) => (hasPack(`${n}.png`) ? loadUrl(`${BASE}${packPath(`${n}.png`)}`, true) : Promise.resolve(null)))),
     ]);
+    const extra = {} as Record<ExtraName, HTMLImageElement | null>;
+    EXTRA_NAMES.forEach((n, i) => (extra[n] = extras[i]));
     const v2 = {} as Record<V2Name, HTMLImageElement>;
     V2_NAMES.forEach((n, i) => (v2[n] = v2list[i]!));
     const img = {} as Record<ImgName, HTMLImageElement>;
     IMG_NAMES.forEach((n, i) => (img[n] = imgs[i]!));
     const cutin = {} as Record<CutinId, HTMLImageElement | null>;
     CUTIN_IDS.forEach((n, i) => (cutin[n] = cutins[i]));
-    return { img, gonaSheet: gonaSheet!, v2, cutin, flash: new Map() };
+    return { img, gonaSheet: gonaSheet!, v2, cutin, extra, flash: new Map() };
   })();
   return cache;
 }

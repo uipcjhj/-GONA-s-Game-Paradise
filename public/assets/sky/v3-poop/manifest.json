@@ -24,6 +24,22 @@
     "chars/imo/fly.png": {},
     "chars/samchon/fly.png": {},
     "chars/halmeoni/fly.png": {},
-    "chars/halabeoji/fly.png": {}
+    "chars/halabeoji/fly.png": {},
+    "chars/samchon/probiotic.png": {
+      "rows": 3,
+      "cols": 4,
+      "cell": [
+        40,
+        40
+      ]
+    },
+    "fx/water-drop.png": {},
+    "fx/prune-orb.png": {},
+    "fx/heal-heart.png": {},
+    "fx/flame.png": {},
+    "fx/hex.png": {},
+    "fx/germ.png": {},
+    "fx/prune-splash.png": {},
+    "fx/water-splash.png": {}
   }
 }
