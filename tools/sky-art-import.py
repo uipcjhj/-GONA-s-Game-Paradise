@@ -152,6 +152,45 @@ def pixelize(im, colors, outline=True):
     return Image.fromarray(out.astype(np.uint8), 'RGBA')
 
 
+def auto_split(im, n):
+    """생성 그림이 정확한 칸 나눔이 아닐 때: 투명 배경 위 캐릭터 덩어리 n 개를 찾아 왼쪽부터 순서대로 자름"""
+    from scipy import ndimage
+    al = np.array(im)[..., 3] > 16
+    lab, cnt = ndimage.label(ndimage.binary_dilation(al, iterations=6))  # 같은 캐릭터의 떨어진 조각(물방울 등)을 한 덩어리로
+    if cnt < n:
+        die(f'캐릭터 덩어리를 {n}개 찾지 못했습니다 ({cnt}개) — 칸이 붙어 있으면 --frames 로 균등 분할을 쓰세요')
+    sizes = ndimage.sum(al, lab, range(1, cnt + 1))
+    keep = np.argsort(-sizes)[:n] + 1
+    boxes = []
+    for i in keep:
+        ys, xs = np.nonzero(lab == i)
+        boxes.append((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
+    boxes.sort()
+    return [im.crop(b) for b in boxes]
+
+
+def motion_check(cells):
+    """프레임별 실제 움직임 검사: 같은 그림 복제(차이 거의 0) 금지 · 실루엣이 너무 달라 다른 캐릭터처럼 보이는 것 경고"""
+    arr = [np.array(c).astype(int) for c in cells]
+    def diff(a, b):
+        A, B = a[..., 3] > 128, b[..., 3] > 128
+        union = (A | B).sum()
+        both = A & B
+        changed = (A ^ B).sum() + (both & (np.abs(a[..., :3] - b[..., :3]).sum(2) > 60)).sum()
+        return changed / max(1, union), (A & B).sum() / max(1, union)
+    ok = True
+    for i, j, name in [(0, 1, '비행 1↔2'), (2, 3, '공격 1↔2'), (0, 2, '비행↔공격')]:
+        d, iou = diff(arr[i], arr[j])
+        flag = ''
+        if d < 0.02:
+            flag = '  ✗ 거의 같은 그림 (복제) — 실제 동작 차이가 필요'
+            ok = False
+        elif iou < 0.45:
+            flag = '  ! 실루엣이 크게 다름 — 같은 캐릭터인지 눈으로 확인'
+        print(f'  움직임 {name}: 바뀐 픽셀 {d * 100:.1f}% · 실루엣 겹침 {iou:.2f}{flag}')
+    return ok
+
+
 def split_frames(im, n):
     if n <= 1:
         return [im]
@@ -207,6 +246,7 @@ def main():
     ap.add_argument('--remove-bg', action='store_true')
     ap.add_argument('--bg-tol', type=int, default=40)
     ap.add_argument('--box')
+    ap.add_argument('--auto-split', action='store_true', help='fly: 칸이 고르지 않은 생성 시트에서 캐릭터 4개를 자동으로 찾아 분리')
     ap.add_argument('--compose', action='store_true', help='cutin: 확정 원화(상반신)를 집중선 배경 위에 배치해 720×360 컷인 합성')
     ap.add_argument('--color', default='#8a3fd1', help='cutin --compose 집중선 색')
     args = ap.parse_args()
@@ -254,11 +294,14 @@ def main():
         n = args.frames or 4
         if n != 4:
             die('비행 스프라이트는 4프레임 (대기 2 · 공격 2) 이어야 합니다')
-        cells = [fit(trim(f), 80, 104) for f in split_frames(im, 4)]
+        parts = auto_split(im, 4) if args.auto_split else split_frames(im, 4)
+        cells = [fit(trim(f), 80, 104) for f in parts]
         out = Image.new('RGBA', (352, 112))
         for i, f in enumerate(cells):
             out.paste(f, (i * 88 + (88 - f.width) // 2, 112 - 4 - f.height), f)
         out = pixelize(out, 150)  # 4프레임이 같은 팔레트를 쓰도록 시트 전체를 한 번에 정리
+        if not motion_check([out.crop((i * 88, 0, i * 88 + 88, 112)) for i in range(4)]) and not args.dry_run:
+            die('프레임이 서로 복제라서 비행 스프라이트로 쓸 수 없습니다 (저장 안 함)')
         rel = f'chars/{args.id}/fly.png'
     elif k == 'enemy':
         if args.slot not in ENEMY_W:
