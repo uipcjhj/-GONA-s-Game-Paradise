@@ -74,7 +74,7 @@ function compact<T>(arr: T[], keep: (v: T) => boolean, pool?: T[]): void {
   arr.length = j;
 }
 
-type PKind = 'shot' | 'wave' | 'charge' | 'heart' | 'star' | 'elec' | 'potion' | 'lance' | 'missile' | 'refl' | 'drill';
+type PKind = 'shot' | 'wave' | 'charge' | 'heart' | 'star' | 'elec' | 'potion' | 'lance' | 'missile' | 'refl' | 'drill' | 'water' | 'prune';
 interface PBullet {
   x: number; y: number; vx: number; vy: number; r: number; dmg: number; kind: PKind; lvl: number;
   pierce: boolean; hits: number[]; life: number; scale: number; homing: number; age: number; alive: boolean;
@@ -933,7 +933,7 @@ export class SkyEngine {
     const py = this.py - 22;
     switch (this.fam) {
       case 'mom': { // 하트 마법 빔: 전방 집중, 관통
-        const b = this.newPB(px, py, 0, -300, 5 + f * 3, 12 + f * 18, 'heart', true, 1.0);
+        const b = this.newPB(px, py, 0, -300, 5 + f * 3, 12 + f * 18, 'water', true, 1.0);
         b.scale = 1.4 + f * 0.4;
         break;
       }
@@ -943,7 +943,7 @@ export class SkyEngine {
         break;
       }
       case 'imo': { // 스타 캐논: 빠른 관통 별
-        const b = this.newPB(px, py, 0, -340, 5, 14 + f * 18, 'star', true, 1.0);
+        const b = this.newPB(px, py, 0, -340, 5, 14 + f * 18, 'prune', true, 1.0);
         b.scale = 1.6;
         break;
       }
@@ -1059,7 +1059,7 @@ export class SkyEngine {
       // 하트 부채꼴: 전방으로 퍼지는 하트 5발 (자동 유도 없음)
       for (let i = -2; i <= 2; i++) {
         const a = -Math.PI / 2 + i * 0.2;
-        this.newPB(this.cx, this.cy - 10, Math.cos(a) * 150, Math.sin(a) * 150, 3.5, 1.2, 'heart', false, 1.3);
+        this.newPB(this.cx, this.cy - 10, Math.cos(a) * 150, Math.sin(a) * 150, 3.5, 1.2, 'water', false, 1.3);
       }
       sfx('compShot', 0.9, 1.2);
       this.cCd = 0.9;
@@ -1071,7 +1071,7 @@ export class SkyEngine {
     } else if (f === 'imo') {
       // 별빛 연사: 빠른 직선 별 3발 (가운데 + 살짝 벌어진 두 발 · 자동 유도 없음) — 적이 움직여도 맞도록 넓게 퍼뜨리되 조준은 플레이어 몫
       this.cN++;
-      for (const a of [0, -0.12, 0.12]) this.newPB(this.cx, this.cy - 14, Math.sin(a) * 220, -Math.cos(a) * 220, 3.5, 1.2, 'star', false, 1.2);
+      for (const a of [0, -0.12, 0.12]) this.newPB(this.cx, this.cy - 14, Math.sin(a) * 220, -Math.cos(a) * 220, 3.5, 1.2, 'prune', false, 1.2);
       if (this.cN % 2) sfx('compShot', 0.7, 1.4);
       this.cCd = 0.55;
     } else if (f === 'samchon') {
@@ -1119,17 +1119,10 @@ export class SkyEngine {
     const cy = this.cy;
     switch (s.id) {
       case 'mom':
-        // 하트 스톰: 거대한 하트 마법진 + 유도 하트 파상 공격
-        if (every(0.28)) {
-          s.n++;
-          const n = 14;
-          for (let i = 0; i < n; i++) {
-            const a = (i / n) * TAU + s.n * 0.3;
-            const b = this.newPB(this.px + Math.cos(a) * 30, this.py + Math.sin(a) * 30, Math.cos(a) * 90, Math.sin(a) * 90 - 40, 5, 3.0, 'heart', false, 2.2);
-            b.homing = 7;
-            b.scale = 1.5;
-          }
-          sfx('compShot', 1, 1.3);
+        // 목욕 폭포: 화면 위에서 물줄기가 넓게 쏟아짐 (자동 유도 없음 · 넓은 범위)
+        if (every(0.12)) {
+          for (let i = 0; i < 2; i++) this.newPB(rand(12, W - 12), -8, rand(-12, 12), 230, 3, 2.2, 'water', false, 2.0).scale = 1.5;
+          if (every(0.36)) sfx('compShot', 1, 1.1);
         }
         break;
       case 'dad':
@@ -1148,7 +1141,7 @@ export class SkyEngine {
         if (every(0.1)) {
           for (let i = 0; i < 5; i++) {
             const a = -Math.PI / 2 + (i - 2) * 0.32 + rand(-0.08, 0.08);
-            const b = this.newPB(cx, cy - 14, Math.cos(a) * 200, Math.sin(a) * 200, 4, 2.6, 'star', false, 2.2);
+            const b = this.newPB(cx, cy - 14, Math.cos(a) * 200, Math.sin(a) * 200, 4, 2.6, 'prune', false, 2.2);
             b.homing = 9;
             b.scale = 1.3;
           }
@@ -2850,6 +2843,24 @@ export class SkyEngine {
       case 'wave': this.blit(this.pbSprite('fx/shot-wave', Math.atan2(b.vy, b.vx) + Math.PI / 2), b.x, b.y); return;
       case 'charge': this.frame(v['fx/charge'], Math.floor(b.age * 16) % 4, 4, b.x, b.y + 8, b.scale * 1.3); return;
       case 'heart': this.frame(v['fx/heart-p'], Math.floor(b.age * 8) % 2, 2, b.x, b.y, b.scale > 1 ? 2 : 1.5); return;
+      // 물방울 (엄마): 하늘색 물방울 + 흰 하이라이트 — 단순 탄환 모양 (임시 효과)
+      case 'water': {
+        const g = this.g;
+        const r = (b.scale > 1 ? 3 : 2.2) * (1 + Math.sin(b.age * 14) * 0.08);
+        g.fillStyle = '#2f9fd8'; g.beginPath(); g.arc(b.x, b.y, r + 0.8, 0, TAU); g.fill();
+        g.fillStyle = '#9ee6ff'; g.beginPath(); g.arc(b.x, b.y, r, 0, TAU); g.fill();
+        g.fillStyle = '#ffffff'; g.fillRect(Math.round(b.x - r * 0.5), Math.round(b.y - r * 0.6), 1, 1);
+        return;
+      }
+      // 프룬 구슬 (이모): 보라 구슬 + 연보라 하이라이트 — 단순 탄환 모양 (임시 효과)
+      case 'prune': {
+        const g = this.g;
+        const r = (b.scale > 1 ? 3 : 2.4) * (1 + Math.sin(b.age * 12) * 0.1);
+        g.fillStyle = '#3d1466'; g.beginPath(); g.arc(b.x, b.y, r + 0.8, 0, TAU); g.fill();
+        g.fillStyle = '#9b4fe0'; g.beginPath(); g.arc(b.x, b.y, r, 0, TAU); g.fill();
+        g.fillStyle = '#e6c8ff'; g.fillRect(Math.round(b.x - r * 0.5), Math.round(b.y - r * 0.5), 1, 1);
+        return;
+      }
       case 'star': this.frame(v['fx/star-p'], Math.floor(b.age * 10) % 2, 2, b.x, b.y, b.scale > 1 ? 1.6 : 1.2); return;
       case 'elec': this.frame(v['fx/elec'], Math.floor(b.age * 14) % 2, 2, b.x, b.y, 1.2); return;
       case 'potion': this.frame(v['fx/potion'], 0, 1, b.x, b.y, 1.3); return;
@@ -2909,6 +2920,14 @@ export class SkyEngine {
       g.globalAlpha = this.shield < 1.5 && Math.floor(this.t * 10) % 2 ? 0.4 : 0.9;
       g.drawImage(sp, cx - 20, cy - 23);
       g.globalAlpha = 1;
+    }
+    if (this.sp && this.sp.id === 'halabeoji' && this.sp.t >= this.sp.cut) {
+      // 유해균 방패: 방패 둘레를 도는 보라 점 (세균 막 · 임시 효과)
+      for (let i = 0; i < 6; i++) {
+        const a = this.t * 2.4 + (i * TAU) / 6;
+        g.fillStyle = '#c9a0ff';
+        g.fillRect(Math.round(this.px + Math.cos(a) * 30) - 1, Math.round(this.py - 14 + Math.sin(a) * 20) - 1, 3, 3);
+      }
     }
     if (this.charging) {
       const kk = Math.min(1, this.charge / 1.0);
