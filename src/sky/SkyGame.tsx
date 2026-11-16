@@ -6,7 +6,7 @@ import { STAGES, DIFF, type Difficulty } from './stages';
 import { CHARACTERS } from './data/characters';
 import { settings, saveSettings, canVibrate } from './settings';
 import { NS, BETA } from './ns';
-import { THEME } from './theme';
+import { THEME, familyText } from './theme';
 import './sky.css';
 
 const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
@@ -458,9 +458,9 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
             <div className="sel-spr sel-spr-fam" style={{ backgroundImage: `url(${BASE}v2/chars/${fam}/fly.png)` }} />
           </div>
           <dl>
-            <dt className="sel-name">{c.name}</dt><dd className="sel-job">{c.job}</dd>
+            <dt className="sel-name">{c.name}</dt><dd className="sel-job">{familyText(fam)?.job ?? c.job}</dd>
             <dt>일반</dt><dd>{c.attack}</dd>
-            <dt>필살기</dt><dd><b>{SPECIAL_NAME[fam]}</b> — {SP_DESC[fam]}</dd>
+            <dt>필살기</dt><dd><b>{familyText(fam)?.special ?? SPECIAL_NAME[fam]}</b> — {familyText(fam)?.specialDesc || SP_DESC[fam]}</dd>
           </dl>
         </div>
         <ul className="sel-roster">

@@ -11,6 +11,7 @@
  *   - 소리는 Web Audio 버퍼 재사용 (audio.ts) — HTMLAudio 복제 재생 제거
  */
 import { type Assets, type V2Name, type CutinId, type StageArt, whiteOf } from './assets';
+import { familyText } from './theme';
 import { STAGES, DIFF, ENEMIES, type StageDef, type Difficulty, type DiffDef, type EnemyName, type Move, type Fire, type ArtName, type BossDef, type Attack, type Step, type Wave } from './stages';
 import { bulletLooks, type BulletLook } from './bullets';
 import { CHARACTERS } from './data/characters';
@@ -1049,14 +1050,7 @@ export class SkyEngine {
         this.newPB(this.cx + 4, this.cy - 16, 0, -240, 3, 2.6, 'lance', true, 1.4);
         sfx('compShot', 0.8, 0.8);
       }
-      if (this.shield <= 0 && this.cCd <= 0) {
-        this.shield = 6;
-        this.cCd = 99;
-        this.cKick = 1;
-        sfx('shield');
-        this.floatText(this.cx, this.cy - 30, 'SHIELD', '#cdefff');
-      }
-      if (this.shield <= 0 && this.cCd > 50) this.cCd = 7;
+      // 동료 자동 보호막 없음 — 일반 공격에서 상시 무적 금지 (보호는 필살기 중에만)
       return;
     }
     if (this.cCd > 0) return;
@@ -1164,13 +1158,13 @@ export class SkyEngine {
       case 'halmeoni':
         // 골든 힐링: 즉시 체력 2 회복 + 5초 보호막 + 주변 탄 정화
         if (first) {
-          const heal = Math.max(0, Math.min(2, MAX_HP - this.hp, this.healLeft));
+          // 필살기 1회당 체력 1칸 (최대 체력 초과 없음 · 보급 횟수 공유 · 별도 무적 없음)
+          const heal = Math.max(0, Math.min(1, MAX_HP - this.hp, this.healLeft));
           this.healLeft -= heal;
           this.hp += heal;
-          this.barrier = 3;
           this.pushHud();
           sfx('heal');
-          this.floatText(this.px, this.py - 30, heal > 0 ? `HP +${heal}` : 'BARRIER', '#ffe34a');
+          this.floatText(this.px, this.py - 30, heal > 0 ? `HP +${heal}` : '회복 보급 없음', '#ffe34a');
           for (const b of this.eb) if (b.alive && (b.x - this.px) ** 2 + (b.y - this.py) ** 2 < 90 * 90) { b.alive = false; this.starFrom(b.x, b.y); }
           this.flashGold = 0.5;
         }
@@ -1185,10 +1179,11 @@ export class SkyEngine {
         break;
       case 'samchon':
         // 메가 인벤션: 거대 발명 메카가 미사일 연사 → 마지막에 드릴 돌진
-        if (e < 2.3 && every(0.13)) {
-          for (const sd of [-1, 1]) {
-            const b = this.newPB(this.px + sd * 26, this.py - 52, sd * 60, -120, 4, 3.4, 'missile', false, 2.4);
-            b.homing = 8;
+        // 유산균 특공대: 유산균 3마리가 고나 주변을 돌며 위로 쏨 (자동 유도 없음 · 3초 제한)
+        if (e < 3.0 && every(0.5)) {
+          for (let i = 0; i < 3; i++) {
+            const [x, y] = this.probioticPos(i);
+            this.newPB(x, y - 2, 0, -200, 3, 1.6, 'elec', false, 1.2);
           }
           sfx('compShot', 0.8, 0.6);
         }
@@ -1945,12 +1940,6 @@ export class SkyEngine {
         bm.tick = 0.07;
         const half = bm.wide ? 15 : 7;
         for (const e of this.en) if (!e.dead && e.y > 0 && Math.abs(e.x - bm.x) < half + e.hr && e.y < this.cy) this.damage(e, bm.wide ? 6 : 4.2, 'beam', bm.x, e.y + e.hr * 0.6);
-        for (const q of this.eb) {
-          if (q.alive && Math.abs(q.x - bm.x) < half + 2 + q.r && q.y < this.cy) {
-            q.alive = false;
-            this.starFrom(q.x, q.y);
-          }
-        }
       }
     }
     compact(this.beams, (b) => b.t > 0);
@@ -2442,6 +2431,7 @@ export class SkyEngine {
     g.globalAlpha = 1;
 
     this.drawCompanion();
+    this.drawProbiotic();
     this.drawGona();
     this.drawSpecialOver();
 
@@ -2633,7 +2623,7 @@ export class SkyEngine {
     if (ci) g.drawImage(ci, x, y, W, h);
     const name = s.id === 'gona' ? '고나' : CHARACTERS[s.id].name;
     this.text(name, 6 + x * 0.6, y + 4, '#ffffff', 'left', 11);
-    this.text(SPECIAL_NAME[s.id] + '!', W / 2 - x * 0.6, y + h + 6, SP_CUT_COL[s.id], 'center', 16);
+    this.text((familyText(s.id)?.special ?? SPECIAL_NAME[s.id]) + '!', W / 2 - x * 0.6, y + h + 6, SP_CUT_COL[s.id], 'center', 16);
   }
 
   /** 필살기 이펙트 (캐릭터 아래 층) */
@@ -2866,6 +2856,22 @@ export class SkyEngine {
       case 'lance': case 'refl': this.frame(v['fx/lance'], 0, 1, b.x, b.y, 1.3); return;
       case 'missile': this.blit(this.pbSprite('fx/missile', Math.atan2(b.vy, b.vx) + Math.PI / 2, Math.floor(b.age * 12) % 2, 2), b.x, b.y); return;
       case 'drill': this.frame(v['fx/mech'], 0, 1, b.x, b.y, 1); return;
+    }
+  }
+
+  /** 유산균 특공대 위치 (삼촌 필살기 중 고나 주변을 타원으로 돈다) */
+  private probioticPos(i: number): [number, number] {
+    const a = this.t * 2.2 + (i * TAU) / 3;
+    return [this.px + Math.cos(a) * 34, this.py - 6 + Math.sin(a) * 12];
+  }
+
+  /** 유산균 그리기 (임시: 차지 구슬 스프라이트 — 유산균 전용 그림은 아직 없음) */
+  private drawProbiotic(): void {
+    const s = this.sp;
+    if (!s || s.id !== 'samchon' || s.t < s.cut || s.t > s.cut + 3.0) return;
+    for (let i = 0; i < 3; i++) {
+      const [x, y] = this.probioticPos(i);
+      this.frame(this.a.v2['fx/charge-orb'], Math.floor(this.t * 10 + i) % 4, 4, x, y, 0.55);
     }
   }
 

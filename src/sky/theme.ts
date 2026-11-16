@@ -98,3 +98,20 @@ export function applyTheme(stages: StageDef[]): void {
     for (const q of st.script) if ('banner' in q) q.sub = t.sub;
   });
 }
+
+// ───────── 가족 문구 (직업 · 필살기 이름 · 설명) — 응가 팩에서만 값이 있음 ─────────
+export interface FamilyText { job: string; special: string; specialDesc: string }
+type FamKey = 'mom' | 'dad' | 'imo' | 'halmeoni' | 'halabeoji' | 'samchon' | 'gona';
+const FAMILY_POOP: Partial<Record<FamKey, FamilyText>> = {
+  mom: { job: '목욕의 물마법사', special: '쏴아아아! 목욕 폭포', specialDesc: '거대한 물줄기와 거품이 화면을 채우는 넓은 범위 공격' },
+  dad: { job: '수분충전 소방관', special: '수분충전! 장 청소 물대포', specialDesc: '물을 마시고 쏘는 굵은 직선 수압 빔' },
+  imo: { job: '프룬의 보랏빛 요정', special: '프룬주스 퍼플 버스트', specialDesc: '보라색 프룬 에너지를 전방으로 짧고 화려하게 발사' },
+  halmeoni: { job: '불꽃의 약손', special: '현이 배는 똥배! 할미 손은 약손!', specialDesc: '체력 1칸 회복 (최대 체력 초과 없음) · 불꽃과 하트' },
+  halabeoji: { job: '유해균 방패 수호자', special: '나쁜 세균은 못 지나간다!', specialDesc: '거대한 방패 보호막 (지속 시간 제한)' },
+  samchon: { job: '유산균 소환사', special: '출동! 유산균 특공대!', specialDesc: '유산균 3마리가 고나 주변을 돌며 위로 공격 (3초)' },
+  gona: { job: '아기 익룡 전사', special: '황금 익룡의 포효', specialDesc: '' },
+};
+/** 현재 팩의 가족 문구 (케이크 팩은 undefined → 원래 문구 사용) */
+export function familyText(id: FamKey): FamilyText | undefined {
+  return THEME.id === 'poop' ? FAMILY_POOP[id] : undefined;
+}
