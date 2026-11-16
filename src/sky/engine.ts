@@ -220,6 +220,8 @@ export class SkyEngine {
   private meleeCd = 0;
   private meleeSeen = new Set<number>();
   private healLeft = 0;
+  /** 할머니 필살기: 피어오르는 하트 (기존 하트 스프라이트 재사용 · 임시 효과) */
+  private healHearts: { x: number; y: number; t0: number }[] = [];
   private volley = 0;
   private charge = 0;
   private charging = false;
@@ -1149,7 +1151,7 @@ export class SkyEngine {
         }
         break;
       case 'halmeoni':
-        // 골든 힐링: 즉시 체력 2 회복 + 5초 보호막 + 주변 탄 정화
+        // 불꽃의 약손: 체력 1칸 회복 + 주변 탄 정화 + 불꽃·하트 연출
         if (first) {
           // 필살기 1회당 체력 1칸 (최대 체력 초과 없음 · 보급 횟수 공유 · 별도 무적 없음)
           const heal = Math.max(0, Math.min(1, MAX_HP - this.hp, this.healLeft));
@@ -1161,7 +1163,13 @@ export class SkyEngine {
           for (const b of this.eb) if (b.alive && (b.x - this.px) ** 2 + (b.y - this.py) ** 2 < 90 * 90) { b.alive = false; this.starFrom(b.x, b.y); }
           this.flashGold = 0.5;
         }
-        if (every(0.08)) this.part(this.px + rand(-22, 22), this.py + rand(-6, 20), 0, rand(-70, -30), 0.8, Math.random() < 0.5 ? '#ffe34a' : '#fff8d0', 2, 0);
+        // 불꽃 (임시 효과): 몸 둘레에서 주황·노랑 불꽃 입자가 위로 타오름
+        if (every(0.04)) {
+          const a = rand(0, TAU);
+          this.part(this.px + Math.cos(a) * 15, this.py - 6 + Math.sin(a) * 11, rand(-6, 6), rand(-95, -55), 0.45, Math.random() < 0.55 ? '#ff7a2e' : '#ffd34a', 2, 0);
+        }
+        // 하트: 기존 하트 스프라이트가 고나 주변에서 피어오름 (최대 12개)
+        if (every(0.16) && this.healHearts.length < 12) this.healHearts.push({ x: this.px + rand(-18, 18), y: this.py - 4, t0: this.t });
         break;
       case 'halabeoji':
         // 가디언 실드: 방패벽이 적 탄을 막고 은빛 창으로 되돌려 반격
@@ -2928,6 +2936,16 @@ export class SkyEngine {
         g.fillStyle = '#c9a0ff';
         g.fillRect(Math.round(this.px + Math.cos(a) * 30) - 1, Math.round(this.py - 14 + Math.sin(a) * 20) - 1, 3, 3);
       }
+    }
+    if (this.healHearts.length) {
+      const hv = this.a.v2['fx/heart-p'];
+      for (const h of this.healHearts) {
+        const age = this.t - h.t0;
+        g.globalAlpha = clamp(1 - age / 1.1, 0, 1);
+        this.frame(hv, Math.floor(age * 8) % 2, 2, h.x + Math.sin(age * 6 + h.x) * 3, h.y - age * 42, 1.2);
+      }
+      g.globalAlpha = 1;
+      compact(this.healHearts, (h) => this.t - h.t0 < 1.1);
     }
     if (this.charging) {
       const kk = Math.min(1, this.charge / 1.0);
