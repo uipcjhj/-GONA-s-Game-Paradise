@@ -246,6 +246,7 @@ def main():
     ap.add_argument('--remove-bg', action='store_true')
     ap.add_argument('--bg-tol', type=int, default=40)
     ap.add_argument('--box')
+    ap.add_argument('--clip-effect', action='store_true', help='fly: 공격 이펙트 때문에 큰 프레임은 배율 계산에서 빼고 넘치는 위쪽만 자름')
     ap.add_argument('--auto-split', action='store_true', help='fly: 칸이 고르지 않은 생성 시트에서 캐릭터 4개를 자동으로 찾아 분리')
     ap.add_argument('--compose', action='store_true', help='cutin: 확정 원화(상반신)를 집중선 배경 위에 배치해 720×360 컷인 합성')
     ap.add_argument('--color', default='#8a3fd1', help='cutin --compose 집중선 색')
@@ -328,11 +329,23 @@ def main():
         parts = auto_split(im, 4) if args.auto_split else split_frames(im, 4)
         # 4프레임을 '같은 배율'로 줄임 (프레임마다 따로 맞추면 물줄기 같은 이펙트가 있는 프레임만 캐릭터가 작아짐)
         tr = [trim(f) for f in parts]
-        k = min(80 / max(t.width for t in tr), 104 / max(t.height for t in tr), 1.0)
+        if args.clip_effect:
+            # 공격 이펙트(물줄기 등)로 유난히 큰 프레임은 배율 계산에서 빼고, 넘치는 이펙트 위쪽만 칸에 맞게 자름
+            # → 이펙트 하나 때문에 4프레임 몸 전체가 작아지는 것을 막음 (몸·얼굴 크기는 4프레임 동일)
+            hmin = min(t.height for t in tr)
+            body = [t for t in tr if t.height <= hmin * 1.3] or tr
+            k = min(80 / max(t.width for t in body), 104 / max(t.height for t in body), 1.0)
+            print(f'  이펙트 프레임 위쪽 잘라 맞춤: 배율 기준 {len(body)}프레임 · 큰 프레임 {len(tr) - len(body)}개')
+        else:
+            k = min(80 / max(t.width for t in tr), 104 / max(t.height for t in tr), 1.0)
         cells = [t.resize((max(1, round(t.width * k)), max(1, round(t.height * k))), Image.LANCZOS) for t in tr]
         out = Image.new('RGBA', (352, 112))
         for i, f in enumerate(cells):
-            out.paste(f, (i * 88 + (88 - f.width) // 2, 112 - 4 - f.height), f)
+            if f.height > 110 or f.width > 86:  # 칸(88×112)을 넘는 이펙트: 아래(몸) 기준으로 위·좌우만 잘라 냄
+                cw = min(f.width, 86)
+                x0 = (f.width - cw) // 2
+                f = f.crop((x0, max(0, f.height - 110), x0 + cw, f.height))
+            out.paste(f, (i * 88 + (88 - f.width) // 2, 112 - 4 - f.height if f.height <= 108 else 112 - 2 - f.height), f)
         out = pixelize(out, 150)  # 4프레임이 같은 팔레트를 쓰도록 시트 전체를 한 번에 정리
         if not motion_check([out.crop((i * 88, 0, i * 88 + 88, 112)) for i in range(4)]) and not args.dry_run:
             die('프레임이 서로 복제라서 비행 스프라이트로 쓸 수 없습니다 (저장 안 함)')
