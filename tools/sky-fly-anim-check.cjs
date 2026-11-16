@@ -21,7 +21,8 @@ const ORDER = ['mom', 'dad', 'imo', 'halmeoni', 'halabeoji', 'samchon'];
     await page.tap('.sky-btn-go'); await page.waitForSelector('.sky-canvas'); await page.waitForTimeout(2500);
     await page.evaluate(() => window.__sky.cheat('god'));
     const samples = [];
-    for (let i = 0; i < 60; i++) {
+    // 최소 60장 · 4프레임이 모두 나올 때까지 계속 (공격 간격이 긴 할아버지 대비, 최대 400장)
+    for (let i = 0; i < 400 && (i < 60 || new Set(samples.map((x) => x.fr)).size < 4); i++) {
       samples.push(await page.evaluate(() => {
         const s = window.__sky; const c = document.querySelector('.sky-canvas');
         const attacking = s.cKick > 0.15 || (s.fam === 'halabeoji' && s.shield > 0) || (s.sp !== null && s.sp.id !== 'gona');

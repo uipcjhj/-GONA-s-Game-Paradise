@@ -11,7 +11,7 @@
  *   - 소리는 Web Audio 버퍼 재사용 (audio.ts) — HTMLAudio 복제 재생 제거
  */
 import { type Assets, type V2Name, type CutinId, type StageArt, whiteOf } from './assets';
-import { familyText } from './theme';
+import { familyText, THEME_ID } from './theme';
 import { STAGES, DIFF, ENEMIES, type StageDef, type Difficulty, type DiffDef, type EnemyName, type Move, type Fire, type ArtName, type BossDef, type Attack, type Step, type Wave } from './stages';
 import { bulletLooks, type BulletLook } from './bullets';
 import { CHARACTERS } from './data/characters';
@@ -1051,6 +1051,7 @@ export class SkyEngine {
         this.cN = 0;
         this.newPB(this.cx + 4, this.cy - 16, 0, -240, 3, 2.6, 'lance', true, 1.4);
         sfx('compShot', 0.8, 0.8);
+        if (THEME_ID === 'poop') this.cKick = 1; // 응가 팩: 창을 쏠 때 방패 밀기(공격 프레임 2·3)를 보여 줌 (케이크 버전 동작은 그대로)
       }
       // 동료 자동 보호막 없음 — 일반 공격에서 상시 무적 금지 (보호는 필살기 중에만)
       return;
