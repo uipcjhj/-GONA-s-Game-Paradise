@@ -1253,7 +1253,7 @@ export class SkyEngine {
   }
   private bossSolid(e: Enemy, x: number, y: number): boolean {
     const b = this.bsOf(e);
-    const mk = b.mask[b.mask.length > 1 && b.phase >= 2 ? 1 : 0];
+    const mk = b.mask[Math.min(b.mask.length - 1, this.bossFrame(b))];
     if (!mk) return true;
     const lx = Math.floor(x - (e.x - mk.w / 2));
     const ly = Math.floor(y - (e.y - mk.h / 2));
@@ -2312,12 +2312,20 @@ export class SkyEngine {
     return [c, g];
   }
   /** 배경: 원경 대기색 + 탄막 가독성용 어둡게를 미리 합성 (예전엔 매 프레임 화면 전체 반투명 2장) */
+  /** 보스 그림 프레임: 2장 시트 = 정상/파손(2페이즈부터) · 3장 이상 = 페이즈마다 다른 모습 (격파 중은 마지막 장) */
+  private bossFrame(b: { def: BossDef; phase: number; mode: string }): number {
+    const n = b.def.frames;
+    if (n >= 3) return b.mode === 'dying' ? n - 1 : Math.min(n - 1, Math.max(0, b.phase - 1));
+    return n > 1 && (b.phase >= 2 || b.mode === 'dying') ? 1 : 0;
+  }
+
   private bakeBackdrop(): HTMLCanvasElement {
     const [c, g] = this.mkCanvas(W * R, H * R);
     g.drawImage(this.art['bg-backdrop'], 0, 0, W * R, H * R);
-    g.fillStyle = 'rgba(40, 20, 70, 0.28)';
+    const tint = this.st.tint ?? 1; // 응가 팩 배경은 밝은 색감 유지용으로 덜 덮을 수 있음
+    g.fillStyle = `rgba(40, 20, 70, ${0.28 * tint})`;
     g.fillRect(0, 0, c.width, c.height);
-    g.fillStyle = 'rgba(16, 8, 34, 0.22)';
+    g.fillStyle = `rgba(16, 8, 34, ${0.22 * tint})`;
     g.fillRect(0, 0, c.width, c.height);
     return c;
   }
@@ -2793,7 +2801,7 @@ export class SkyEngine {
     const fw = im.width / def.frames;
     const shakeX = b.mode === 'dying' ? Math.sin(e.age * 60) * 1.5 : b.mode === 'tele' ? Math.sin(e.age * 70) * 0.7 : 0;
     const recoil = e === this.boss ? Math.round(this.bossRecoil) : 0;
-    const sx = def.frames > 1 && (b.phase >= 2 || b.mode === 'dying') ? fw : 0;
+    const sx = this.bossFrame(b) * fw;
     this.drawV2(im, e.x + shakeX, e.y - recoil, white, 0, sx, fw, def.k);
     if (def.core) {
       // 최종 보스: 성채 위의 심장 코어 (부품이 남아 있으면 어둡게 봉인)

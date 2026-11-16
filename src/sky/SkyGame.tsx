@@ -7,6 +7,7 @@ import { CHARACTERS } from './data/characters';
 import { settings, saveSettings, canVibrate } from './settings';
 import { NS, BETA } from './ns';
 import { THEME, familyText } from './theme';
+import { packPath } from './artpack';
 import './sky.css';
 
 const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
@@ -324,9 +325,9 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
       <div className="sky end opening" onClick={next}>
         <div className="end-pic" key={`o${slide}`}>
           {sl.img === 'family' ? (
-            <div className="end-family">{FAMILY.map((f) => <img key={f} src={`${BASE}v2/chars/${f}/illust.png`} alt={CHARACTERS[f].name} />)}</div>
+            <div className="end-family">{FAMILY.map((f) => <img key={f} src={`${BASE}${packPath(`chars/${f}/illust.png`)}`} alt={CHARACTERS[f].name} />)}</div>
           ) : (
-            <img src={`${BASE}${sl.img}`} alt="" />
+            <img src={`${BASE}${sl.img.startsWith('v2/') ? packPath(sl.img.slice(3)) : sl.img}`} alt="" />
           )}
         </div>
         <p className="end-text" key={`ot${slide}`}>{sl.text}</p>
@@ -342,9 +343,9 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
         <div className="sky end" onClick={() => (slide < ENDING.length - 1 ? setSlide(slide + 1) : setPhase('credits'))}>
           <div className="end-pic" key={slide}>
             {sl.img === 'family' ? (
-              <div className="end-family">{FAMILY.map((f) => <img key={f} src={`${BASE}v2/chars/${f}/illust.png`} alt={CHARACTERS[f].name} />)}</div>
+              <div className="end-family">{FAMILY.map((f) => <img key={f} src={`${BASE}${packPath(`chars/${f}/illust.png`)}`} alt={CHARACTERS[f].name} />)}</div>
             ) : (
-              <img src={`${BASE}${sl.img}`} alt="" />
+              <img src={`${BASE}${sl.img.startsWith('v2/') ? packPath(sl.img.slice(3)) : sl.img}`} alt="" />
             )}
           </div>
           <p className="end-text" key={`t${slide}`}>{sl.text}</p>
@@ -409,11 +410,11 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
         <div className="ttl-bg" aria-hidden />
         <div className="ttl-cloud c1" aria-hidden />
         <div className="ttl-cloud c2" aria-hidden />
-        <img className={`ttl-art${aw < vp.w - 2 ? ' narrow' : ''}`} style={{ width: aw, height: ah, left: (vp.w - aw) / 2, top: artTop }} src={`${BASE}v2/title/keyart.jpg`} alt="고나와 가족이 황혼의 부유왕국 하늘을 나는 그림" />
+        <img className={`ttl-art${aw < vp.w - 2 ? ' narrow' : ''}`} style={{ width: aw, height: ah, left: (vp.w - aw) / 2, top: artTop }} src={`${BASE}${packPath('title/keyart.jpg')}`} alt="고나와 가족이 황혼의 부유왕국 하늘을 나는 그림" />
         <div className="ttl-sparks" aria-hidden>
           {Array.from({ length: 12 }, (_, i) => <i key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.37) % 2.6}s`, animationDuration: `${2.2 + (i % 4) * 0.5}s` }} />)}
         </div>
-        <img className="ttl-logo" style={{ width: logoW }} src={`${BASE}v2/title/logo.png`} alt="GONA's Sky Adventure" />
+        <img className="ttl-logo" style={{ width: logoW }} src={`${BASE}${packPath('title/logo.png')}`} alt="GONA's Sky Adventure" />
         <div className="ttl-menu" style={{ height: menuH }}>
           <div className="ttl-row">
             <button type="button" className="ttl-start" onClick={go}>PRESS START</button>
@@ -448,14 +449,14 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
         <div className="sel-main">
           <button type="button" className="sel-arrow" onClick={() => step(-1)} aria-label="이전">◀</button>
           <div className="sel-art" key={fam}>
-            <img className="sel-illust" src={`${BASE}v2/chars/${fam}/illust.png`} alt={c.name} />
+            <img className="sel-illust" src={`${BASE}${packPath(`chars/${fam}/illust.png`)}`} alt={c.name} />
           </div>
           <button type="button" className="sel-arrow" onClick={() => step(1)} aria-label="다음">▶</button>
         </div>
         <div className="sel-info">
           <div className="sel-preview" aria-hidden>
             <div className="sel-spr sel-spr-gona" />
-            <div className="sel-spr sel-spr-fam" style={{ backgroundImage: `url(${BASE}v2/chars/${fam}/fly.png)` }} />
+            <div className="sel-spr sel-spr-fam" style={{ backgroundImage: `url(${BASE}${packPath(`chars/${fam}/fly.png`)})` }} />
           </div>
           <dl>
             <dt className="sel-name">{c.name}</dt><dd className="sel-job">{familyText(fam)?.job ?? c.job}</dd>
@@ -466,7 +467,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
         <ul className="sel-roster">
           {FAMILY.map((f) => (
             <li key={f}>
-              <button type="button" className={f === fam ? 'on' : ''} onClick={() => pick(f)} aria-label={CHARACTERS[f].name} style={{ backgroundImage: `url(${BASE}v2/chars/${f}/face.png)` }}>
+              <button type="button" className={f === fam ? 'on' : ''} onClick={() => pick(f)} aria-label={CHARACTERS[f].name} style={{ backgroundImage: `url(${BASE}${packPath(`chars/${f}/face.png`)})` }}>
                 {f === fam && <i>1P</i>}
               </button>
             </li>
@@ -543,7 +544,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
                 onContextMenu={(e) => e.preventDefault()}
                 aria-label={`가족 필살기 ${Math.floor(gauge * 100)}%`}
               >
-                <span className="sp-face" style={{ backgroundImage: `url(${BASE}v2/chars/${fam}/face.png)` }} />
+                <span className="sp-face" style={{ backgroundImage: `url(${BASE}${packPath(`chars/${fam}/face.png`)})` }} />
                 <span className="sp-fill" style={{ height: `${Math.round(gauge * 100)}%` }} />
                 <b>{ready ? '필살!' : `${Math.floor(gauge * 100)}%`}</b>
               </button>

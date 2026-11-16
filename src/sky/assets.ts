@@ -51,11 +51,14 @@ let cache: Promise<Assets> | null = null;
 
 export function loadAssets(): Promise<Assets> {
   cache ??= (async () => {
+    // 응가 테마: 신규 그림 팩 목록을 먼저 읽고, 있는 그림만 v3-poop 에서 (없으면 기존 v2)
+    await loadArtPack(BASE);
+    applyPackToStages(STAGES);
     const [imgs, gonaSheet, v2list, cutins] = await Promise.all([
       Promise.all(IMG_NAMES.map((n) => loadUrl(`${BASE}${n}.png`, false))),
-      loadUrl(`${BASE}v2/chars/gona/sprite.png`, false),
-      Promise.all(V2_NAMES.map((n) => loadUrl(`${BASE}v2/${n}.png`, false))),
-      Promise.all(CUTIN_IDS.map((n) => loadUrl(`${BASE}v2/chars/${n}/cutin.${n === 'gona' ? 'png' : 'jpg'}`, true))),
+      loadUrl(`${BASE}${packPath('chars/gona/sprite.png')}`, false),
+      Promise.all(V2_NAMES.map((n) => loadUrl(`${BASE}${packPath(`${n}.png`)}`, false))),
+      Promise.all(CUTIN_IDS.map((n) => loadUrl(`${BASE}${packPath(`chars/${n}/cutin.png`, `v2/chars/${n}/cutin.${n === 'gona' ? 'png' : 'jpg'}`)}`, true))),
     ]);
     const v2 = {} as Record<V2Name, HTMLImageElement>;
     V2_NAMES.forEach((n, i) => (v2[n] = v2list[i]!));
@@ -86,16 +89,20 @@ export function whiteOf(a: Assets, src: HTMLCanvasElement | HTMLImageElement): H
 }
 
 // ───────── 스테이지별 그림 (스테이지 1 = 승인 에셋, 2~6 = 임시 색변환본) ─────────
-import { ART_NAMES, type ArtName, type StageDef } from './stages';
+import { ART_NAMES, STAGES, type ArtName, type StageDef } from './stages';
+import { loadArtPack, applyPackToStages, packPath, hasPack, stageDir } from './artpack';
 export type StageArt = Record<ArtName, HTMLImageElement>;
 const stageCache = new Map<string, Promise<StageArt>>();
 export function loadStageArt(key: StageDef['art']): Promise<StageArt> {
   let p = stageCache.get(key);
   if (!p) {
-    const dir = key === 'stage1' ? `${BASE}v2/stage1/` : `${BASE}v2/temp/${key}/`;
-    p = Promise.all(ART_NAMES.map((n) => loadUrl(`${dir}${n}.png`, false))).then((list) => {
+    const dir = key === 'stage1' ? 'v2/stage1/' : `v2/temp/${key}/`;
+    const pd = stageDir(key);
+    // 팩에 있는 그림은 v3-poop/<스테이지>/ 에서, 나머지는 기존 폴더에서 (중간보스 전용 그림은 팩에 있을 때만)
+    const names: ArtName[] = hasPack(`${pd}/midboss.png`) ? [...ART_NAMES, 'midboss'] : ART_NAMES;
+    p = Promise.all(names.map((n) => loadUrl(`${BASE}${packPath(`${pd}/${n}.png`, `${dir}${n}.png`)}`, false))).then((list) => {
       const out = {} as StageArt;
-      ART_NAMES.forEach((n, i) => (out[n] = list[i]!));
+      names.forEach((n, i) => (out[n] = list[i]!));
       return out;
     });
     stageCache.set(key, p);

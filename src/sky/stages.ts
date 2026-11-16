@@ -31,7 +31,9 @@ export const DIFF: Record<Difficulty, DiffDef> = {
 // ───────── 적 ─────────
 export type ArtName =
   | 'bg-backdrop' | 'island-castle' | 'island-ruins' | 'island-small' | 'island-tower' | 'clocktower' | 'airship' | 'cloud-big' | 'cloud-small'
-  | 'enemy-drone' | 'enemy-fighter' | 'enemy-orb' | 'enemy-wyvern' | 'enemy-gunship' | 'boss';
+  | 'enemy-drone' | 'enemy-fighter' | 'enemy-orb' | 'enemy-wyvern' | 'enemy-gunship' | 'boss'
+  /** 중간보스 전용 그림 (응가 팩에 있을 때만 · 없으면 기존처럼 다른 적 그림을 씀) */
+  | 'midboss';
 export const ART_NAMES: ArtName[] = ['bg-backdrop', 'island-castle', 'island-ruins', 'island-small', 'island-tower', 'clocktower', 'airship', 'cloud-big', 'cloud-small', 'enemy-drone', 'enemy-fighter', 'enemy-orb', 'enemy-wyvern', 'enemy-gunship', 'boss'];
 
 export type EnemyName = 'drone' | 'fighter' | 'wyvern' | 'orb' | 'gunship';
@@ -79,7 +81,8 @@ export interface BossDef {
   /** 그림 배율 (2배 격자 기준 0.5 = 원래 크기) */
   k: number;
   /** 2프레임 시트(정상 · 파손)인지 */
-  frames: 1 | 2;
+  /** 가로 프레임 수: 1 · 2(정상/파손) · 3 이상(페이즈별 모습 — 응가 팩) */
+  frames: number;
   hp: number;
   hr: number;
   restY: number;
@@ -111,6 +114,8 @@ export interface StageDef {
   boss: BossDef;
   script: Step[];
   story: string;
+  /** 배경 덮개 진하기 (기본 1 · 응가 팩 배경은 manifest 의 tint) */
+  tint?: number;
 }
 
 // ───────── 스크립트 도우미 ─────────
