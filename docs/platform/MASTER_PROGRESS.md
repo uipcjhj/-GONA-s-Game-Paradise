@@ -88,6 +88,10 @@
 - 버그 수정: 판 종료 순간 손을 떼면 결과 화면 버튼이 눌려 다음 판이 시작되던 문제
 - 신규 게임 MVP **간식 받아라**(`games/catch`) — 자유 플레이·챌린지·기록·업적·도감·코인·랭킹 연결, E2E `tools/mgl-catch-check.cjs`
 
+## M6·M7 (진행 결과)
+- 줄넘기(`games/jump`)·가짜 친구 찾기(`games/spot`) MVP: 자유 플레이·챌린지·기록·게임천국 결과/XP/코인·업적(줄넘기 달인·눈썰미 대장)·도감·랭킹 탭 연결
+- E2E `tools/mgl-new-check.cjs`(실제 탭), GIF `tools/capture-new-gif.cjs`, 점검표 `docs/mini-game-land/GAMEPLAY-REVIEW.md` §7~10
+
 ## 차단 사항 (승인 필요)
 - 온라인 랭킹 서버(Cloudflare 등) 개설·연결
 - Food Adventure 저장소 패치 적용(별도 저장소, CLAUDE.md 금지 규칙과 충돌 → 명시 확인 필요)

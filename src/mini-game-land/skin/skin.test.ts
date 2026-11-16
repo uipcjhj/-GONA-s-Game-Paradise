@@ -5,6 +5,8 @@ import { SORT_SLOT_KEYS } from '../games/sort/slots';
 import { TOWER_SLOT_KEYS } from '../games/tower/slots';
 import { TOYROOM_SLOT_KEYS } from '../games/toyroom/slots';
 import { CATCH_SLOT_KEYS } from '../games/catch/slots';
+import { JUMP_SLOT_KEYS } from '../games/jump/slots';
+import { SPOT_SLOT_KEYS } from '../games/spot/slots';
 import { scoreboardView } from './viewmodel';
 import type { EngineSnapshot } from '../core/engine';
 
@@ -14,7 +16,9 @@ const fullSort = Object.fromEntries(SORT_SLOT_KEYS.map((k) => [k, dummy]));
 const fullTower = Object.fromEntries(TOWER_SLOT_KEYS.map((k) => [k, dummy]));
 const fullToy = Object.fromEntries(TOYROOM_SLOT_KEYS.map((k) => [k, dummy]));
 const fullCatch = Object.fromEntries(CATCH_SLOT_KEYS.map((k) => [k, dummy]));
-const full = (id: string, extra: Partial<Skin> = {}): Skin => ({ id, name: id, ui: fullUi, sort: fullSort, tower: fullTower, toyroom: fullToy, catch: fullCatch, tokens: { '--a': '1' }, ...extra }) as Skin;
+const fullJump = Object.fromEntries(JUMP_SLOT_KEYS.map((k) => [k, dummy]));
+const fullSpot = Object.fromEntries(SPOT_SLOT_KEYS.map((k) => [k, dummy]));
+const full = (id: string, extra: Partial<Skin> = {}): Skin => ({ id, name: id, ui: fullUi, sort: fullSort, tower: fullTower, toyroom: fullToy, catch: fullCatch, jump: fullJump, spot: fullSpot, tokens: { '--a': '1' }, ...extra }) as Skin;
 const loaderOf = (m: Record<string, Skin>): Record<string, SkinLoader> => Object.fromEntries(Object.entries(m).map(([k, v]) => [k, async () => ({ default: v })]));
 
 describe('스킨 선택', () => {

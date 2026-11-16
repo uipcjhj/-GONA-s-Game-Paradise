@@ -1,0 +1,11 @@
+/* 가짜 친구 찾기 — 기반 레이아웃(모양·색은 스킨). 칸 하나하나가 버튼(44px↑) */
+.sp { position: relative; height: 100%; display: flex; flex-direction: column; }
+.sp-meter { flex: none; }
+.sp-stage { position: relative; flex: 1 1 0; min-height: 0; display: flex; align-items: center; justify-content: center; padding: var(--sp-pad, 8px); }
+.sp-layer { position: absolute; inset: 0; pointer-events: none; }
+.sp-grid { position: relative; display: grid; gap: var(--sp-gap, 6px); width: 100%; height: 100%; max-width: var(--sp-max-w, 420px); }
+.sp-cell { position: relative; min-width: 44px; min-height: 44px; padding: 0; border: 0; background: none; touch-action: manipulation; }
+.sp-cell[data-wrong='1'] { animation: sp-shake var(--mgl-fx-spot-shake, 300ms) steps(4); }
+@keyframes sp-shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+.sp-pop { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); pointer-events: none; animation: sp-pop var(--mgl-fx-jump-pop, 520ms) steps(5) forwards; }
+@keyframes sp-pop { from { transform: translate(-50%, 0) scale(1.3); opacity: 1; } to { transform: translate(-50%, -22px) scale(1); opacity: 0; } }

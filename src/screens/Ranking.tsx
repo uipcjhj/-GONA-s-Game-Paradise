@@ -14,6 +14,8 @@ const SUBS = [
   { id: 'tower', label: '탑' },
   { id: 'toyroom', label: '장난감방' },
   { id: 'catch', label: '간식' },
+  { id: 'jump', label: '줄넘기' },
+  { id: 'spot', label: '가짜 찾기' },
   { id: 'challenge', label: '챌린지' },
 ];
 

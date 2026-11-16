@@ -40,6 +40,8 @@ import sPepper from './art/snack-pepper.png';
 import starImg from './art/star.png';
 import { gonaUrl } from '../../assets';
 import type { CatchSlots } from '../../games/catch/slots';
+import type { JumpSlots } from '../../games/jump/slots';
+import type { SpotSlots } from '../../games/spot/slots';
 import './pixel.css';
 
 const BODY: Record<string, string> = { red, blue, green, yellow };
@@ -200,6 +202,47 @@ const Catcher: CatchSlots['Catcher'] = ({ mood }) => (
 const CatchItem: CatchSlots['Item'] = ({ kind }) => <img className={`px-ct-item ${kind}`} src={CT_IMG[kind]} alt="" draggable={false} />;
 const CatchPop: CatchSlots['Pop'] = ({ kind, text }) => <b className={`px-ct-pop ${kind}`}>{text}</b>;
 
+// ─────────────────────────── 줄넘기
+const JumpBackdrop: JumpSlots['Backdrop'] = () => (
+  <div className="px-jp-bg">
+    <i className="px-cloud c1" />
+    <i className="px-cloud c2" />
+    <i className="px-ct-ground" />
+  </div>
+);
+const Turner: JumpSlots['Turner'] = ({ side }) => (
+  <span className="px-jp-turner" data-side={side}>
+    {img(side === 'left' ? red : blue, 'l0')}
+    {img(fSmile, 'l1')}
+  </span>
+);
+const Rope: JumpSlots['Rope'] = ({ d, warn }) => (
+  <g className={`px-jp-rope${warn ? ' warn' : ''}`}>
+    <path d={d} fill="none" stroke="#3b2419" strokeWidth={3.2} strokeLinecap="round" />
+    <path d={d} fill="none" stroke={warn ? '#ff6a5b' : '#ffd84a'} strokeWidth={1.4} strokeLinecap="round" />
+  </g>
+);
+const Jumper: JumpSlots['Jumper'] = ({ lift, mood }) => (
+  <span className="px-jp-jumper" data-mood={mood}>
+    <i className="px-jp-shadow" style={{ transform: `scaleX(${1 - lift * 0.5})`, opacity: 1 - lift * 0.5 }} />
+    <img src={gonaUrl} alt="" draggable={false} />
+  </span>
+);
+const JumpPop: JumpSlots['Pop'] = ({ kind, text }) => <b className={`px-jp-pop ${kind}`}>{text}</b>;
+
+// ─────────────────────────── 가짜 친구 찾기 (편가르기 친구 도트 재사용, 칸을 채우는 크기)
+const SpotBackdrop: SpotSlots['Backdrop'] = () => <div className="px-sp-bg" />;
+const SpotFriend: SpotSlots['Friend'] = ({ friend }) => (
+  <span className="px-sp-cell">
+    <span className="px-sp-sprite" style={{ transform: friend.mirror ? 'scaleX(-1)' : undefined }}>
+      {img(BODY[friend.color] ?? red, 'l0')}
+      {img(FACE[friend.face] ?? fSmile, 'l1')}
+      {FEAT[friend.feature] && img(FEAT[friend.feature]!, 'l2')}
+    </span>
+  </span>
+);
+const SpotPop: SpotSlots['Pop'] = ({ kind, text }) => <b className={`px-jp-pop ${kind}`}>{text}</b>;
+
 const pixel: Skin = {
   id: 'pixel',
   name: '고나 픽셀 UI (코드 도트)',
@@ -210,5 +253,7 @@ const pixel: Skin = {
   tower: { Backdrop: TowerBackdrop, PieceArt, PlateArt, NextQueue },
   toyroom: { Backdrop: RoomBackdrop, ShelfFrame: Shelf, ToyArt },
   catch: { Backdrop: CatchBackdrop, Catcher, Item: CatchItem, Pop: CatchPop },
+  jump: { Backdrop: JumpBackdrop, Turner, Rope, Jumper, Pop: JumpPop },
+  spot: { Backdrop: SpotBackdrop, Friend: SpotFriend, Pop: SpotPop },
 };
 export default pixel;

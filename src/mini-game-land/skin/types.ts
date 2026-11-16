@@ -9,6 +9,8 @@ import type { SortSlots } from '../games/sort/slots';
 import type { TowerSlots } from '../games/tower/slots';
 import type { ToyRoomSlots } from '../games/toyroom/slots';
 import type { CatchSlots } from '../games/catch/slots';
+import type { JumpSlots } from '../games/jump/slots';
+import type { SpotSlots } from '../games/spot/slots';
 
 export type Scene = 'menu' | 'play' | 'result';
 export type ButtonVariant = 'normal' | 'primary' | 'card';
@@ -83,6 +85,8 @@ export interface Skin {
   tower?: Partial<TowerSlots>;
   toyroom?: Partial<ToyRoomSlots>;
   catch?: Partial<CatchSlots>;
+  jump?: Partial<JumpSlots>;
+  spot?: Partial<SpotSlots>;
 }
 
 export interface ResolvedSkin {
@@ -95,6 +99,8 @@ export interface ResolvedSkin {
   tower: TowerSlots;
   toyroom: ToyRoomSlots;
   catch: CatchSlots;
+  jump: JumpSlots;
+  spot: SpotSlots;
 }
 
 export const UI_SLOT_KEYS: (keyof UiSlots)[] = ['Background', 'ButtonFace', 'Panel', 'Scoreboard', 'Lives', 'Mascot', 'Heading', 'Callout', 'Badge', 'Caption', 'Tag', 'Logo', 'StatList', 'HowTo'];

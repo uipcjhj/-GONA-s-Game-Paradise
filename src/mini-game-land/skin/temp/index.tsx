@@ -8,6 +8,8 @@ import type { SortSlots } from '../../games/sort/slots';
 import type { TowerSlots, TowerPieceView } from '../../games/tower/slots';
 import type { ToyRoomSlots } from '../../games/toyroom/slots';
 import type { CatchSlots } from '../../games/catch/slots';
+import type { JumpSlots } from '../../games/jump/slots';
+import type { SpotSlots } from '../../games/spot/slots';
 import { gonaUrl } from '../../assets';
 import { Mascot as BaseMascot } from '../components';
 import { condLabel, type Card, type Cond } from '../../games/sort/logic';
@@ -316,6 +318,34 @@ const CatchMeter: CatchSlots['Meter'] = ({ caught, goal, miss, maxMiss }) => (
 );
 const CatchPop: CatchSlots['Pop'] = ({ kind, text }) => <b className={`tf-ct-pop ${kind}`}>{text}</b>;
 
+// ─────────────────────────── 줄넘기·가짜 찾기 (임시 도형)
+const JumpBackdrop: JumpSlots['Backdrop'] = () => <div className="tf-ct-sky" />;
+const Turner: JumpSlots['Turner'] = ({ side }) => <div className="tf-jp-turner" data-side={side} />;
+const Rope: JumpSlots['Rope'] = ({ d, warn }) => <path d={d} fill="none" stroke={warn ? '#e8584f' : '#3b2a3f'} strokeWidth={2.5} strokeLinecap="round" />;
+const Jumper: JumpSlots['Jumper'] = ({ mood }) => <img className="tf-jp-gona" data-mood={mood} src={gonaUrl} alt="" draggable={false} />;
+const JumpMeter: JumpSlots['Meter'] = ({ ok, goal, miss, maxMiss, perfect }) => (
+  <div className="tf-tr-meter">
+    <span className="tf-tr-chip big">점프 {ok}/{goal}</span>
+    <span className="tf-tr-chip">PERFECT {perfect}</span>
+    <span className="tf-tr-chip" aria-label={`실수 ${miss}/${maxMiss}`}>실수 {Array.from({ length: maxMiss }, (_, i) => (i < miss ? '✕' : '○')).join('')}</span>
+  </div>
+);
+const JumpPop: JumpSlots['Pop'] = ({ kind, text }) => <b className={`tf-jp-pop ${kind}`}>{text}</b>;
+const SpotBackdrop: SpotSlots['Backdrop'] = () => <div className="tf-sp-bg" />;
+const SpotFriend: SpotSlots['Friend'] = ({ friend }) => (
+  <div className="tf-sp-friend" data-color={friend.color} style={{ transform: friend.mirror ? 'scaleX(-1)' : undefined }}>
+    <span className="tf-sp-face">{EYES[friend.face]?.join(' ')}</span>
+    {friend.feature !== 'none' && <span className="tf-sp-feat">{friend.feature === 'hat' ? '🎩' : friend.feature === 'ribbon' ? '🎀' : '👓'}</span>}
+  </div>
+);
+const SpotMeter: SpotSlots['Meter'] = ({ found, goal, miss, maxMiss }) => (
+  <div className="tf-tr-meter">
+    <span className="tf-tr-chip big">찾음 {found}/{goal}</span>
+    <span className="tf-tr-chip" aria-label={`실수 ${miss}/${maxMiss}`}>실수 {Array.from({ length: maxMiss }, (_, i) => (i < miss ? '✕' : '○')).join('')}</span>
+  </div>
+);
+const SpotPop: SpotSlots['Pop'] = ({ kind, text }) => <b className={`tf-jp-pop ${kind}`}>{text}</b>;
+
 const temp: Skin = {
   id: 'temp',
   name: '임시 스킨 (기능 검증용)',
@@ -326,5 +356,7 @@ const temp: Skin = {
   tower: { Backdrop, PieceArt, PlateArt, Meter: TowerMeter, NextQueue, Feedback: TowerFeedback, Notice, GoalLine, Guide, ComMarker, PlateBand },
   toyroom: { Backdrop: RoomBackdrop, ShelfFrame: Shelf, ToyArt, Meter: ToyMeter, Feedback: ToyFeedback },
   catch: { Backdrop: CatchBackdrop, Catcher, Item: CatchItem, Meter: CatchMeter, Pop: CatchPop },
+  jump: { Backdrop: JumpBackdrop, Turner, Rope, Jumper, Meter: JumpMeter, Pop: JumpPop },
+  spot: { Backdrop: SpotBackdrop, Friend: SpotFriend, Meter: SpotMeter, Pop: SpotPop },
 };
 export default temp;

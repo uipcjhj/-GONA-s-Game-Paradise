@@ -1,0 +1,10 @@
+/* 줄넘기 — 기반 레이아웃(모양·색은 스킨). 무대 전체가 탭 영역 */
+.jp { position: relative; height: 100%; display: flex; flex-direction: column; }
+.jp-meter { flex: none; }
+.jp-stage { position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; }
+.jp-world { position: absolute; left: 50%; top: 0; transform-origin: 0 0; }
+.jp-layer { position: absolute; inset: 0; pointer-events: none; }
+.jp-svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.jp-turner, .jp-jumper, .jp-pop { position: absolute; pointer-events: none; }
+.jp-pop { transform: translateX(-50%); animation: jp-pop var(--mgl-fx-jump-pop, 520ms) steps(5) forwards; }
+@keyframes jp-pop { from { transform: translate(-50%, 0) scale(1.3); opacity: 1; } to { transform: translate(-50%, -22px) scale(1); opacity: 0; } }

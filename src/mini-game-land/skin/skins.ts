@@ -2,6 +2,8 @@ import { SORT_SLOT_KEYS } from '../games/sort/slots';
 import { TOWER_SLOT_KEYS } from '../games/tower/slots';
 import { TOYROOM_SLOT_KEYS } from '../games/toyroom/slots';
 import { CATCH_SLOT_KEYS } from '../games/catch/slots';
+import { JUMP_SLOT_KEYS } from '../games/jump/slots';
+import { SPOT_SLOT_KEYS } from '../games/spot/slots';
 import { UI_SLOT_KEYS, type ResolvedSkin, type Skin } from './types';
 
 export type SkinLoader = () => Promise<{ default: Skin }>;
@@ -32,6 +34,8 @@ export function mergeSkin(base: ResolvedSkin | null, over: Skin): ResolvedSkin {
     tower: { ...(base?.tower ?? {}), ...(over.tower ?? {}) } as ResolvedSkin['tower'],
     toyroom: { ...(base?.toyroom ?? {}), ...(over.toyroom ?? {}) } as ResolvedSkin['toyroom'],
     catch: { ...(base?.catch ?? {}), ...(over.catch ?? {}) } as ResolvedSkin['catch'],
+    jump: { ...(base?.jump ?? {}), ...(over.jump ?? {}) } as ResolvedSkin['jump'],
+    spot: { ...(base?.spot ?? {}), ...(over.spot ?? {}) } as ResolvedSkin['spot'],
   };
 }
 
@@ -43,6 +47,8 @@ export function missingSlots(skin: ResolvedSkin): string[] {
     ...TOWER_SLOT_KEYS.filter((k) => !skin.tower[k]).map((k) => `tower.${k}`),
     ...TOYROOM_SLOT_KEYS.filter((k) => !skin.toyroom[k]).map((k) => `toyroom.${k}`),
     ...CATCH_SLOT_KEYS.filter((k) => !skin.catch[k]).map((k) => `catch.${k}`),
+    ...JUMP_SLOT_KEYS.filter((k) => !skin.jump[k]).map((k) => `jump.${k}`),
+    ...SPOT_SLOT_KEYS.filter((k) => !skin.spot[k]).map((k) => `spot.${k}`),
   ];
 }
 

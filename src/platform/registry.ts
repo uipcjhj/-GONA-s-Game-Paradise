@@ -57,6 +57,8 @@ export const GAMES: GameDef[] = [
       { id: 'tower', name: '고나의 아슬아슬 탑', rule: {} },
       { id: 'toyroom', name: '고나의 엉망진창 장난감방', rule: {} },
       { id: 'catch', name: '고나의 간식 받아라!', rule: {} },
+      { id: 'jump', name: '고나의 폴짝폴짝 줄넘기', rule: {} },
+      { id: 'spot', name: '고나의 가짜 친구 찾기', rule: {} },
       { id: 'challenge', name: '랜덤 챌린지', rule: { maxScore: 500_000, scoreComparable: true } },
     ],
   },

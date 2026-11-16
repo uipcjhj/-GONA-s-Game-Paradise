@@ -193,3 +193,25 @@
 .px-ct-pop.bad { color: #ffb0a8; }
 @media (prefers-reduced-motion: reduce) { .px-ct-catcher, .px-ct-gona, .px-ct-item, .mgl-frame[data-skin='pixel'] .ct-pop { animation: none !important; } }
 .mgl-frame[data-skin='pixel'] [data-testid='pick-catch'] .px-btn-card::before { background-color: #c9efff; background-image: url('./art/snack-berry.png'); background-size: 36px 36px; }
+
+/* ── 줄넘기 */
+.px-jp-bg { position: absolute; inset: 0; overflow: hidden; background: linear-gradient(#ffd8a8 0 14%, #bfe9ff 14% 52%, #a6e2fc 52%); }
+.px-jp-turner { position: relative; display: block; width: 100%; height: 100%; }
+.px-jp-turner img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.px-jp-turner[data-side='right'] img { transform: scaleX(-1); }
+.px-jp-jumper { position: relative; display: block; width: 100%; height: 100%; }
+.px-jp-jumper img { position: absolute; left: 50%; bottom: 0; width: 27px; height: 34px; margin-left: -13.5px; }
+.px-jp-shadow { position: absolute; left: 20%; right: 20%; bottom: -3px; height: 3px; background: rgba(59, 36, 25, 0.3); }
+.px-jp-jumper[data-mood='oops'] img { animation: px-oops 0.35s steps(4); }
+.px-jp-pop { display: block; white-space: nowrap; font-size: 12px; font-weight: 700; color: #fff; text-shadow: -1px 0 var(--navy), 1px 0 var(--navy), 0 -1px var(--navy), 0 1px var(--navy), 0 2px var(--navy); }
+.px-jp-pop.perfect, .px-jp-pop.quick { color: var(--gold); font-size: 15px; }
+.px-jp-pop.miss, .px-jp-pop.bad { color: #ff9a8a; }
+.px-jp-pop.cue { padding: 1px 5px; background: var(--red); font-size: 10px; text-shadow: 0 1px #a8452a; box-shadow: 0 0 0 1px var(--line); }
+/* ── 가짜 친구 찾기 */
+.px-sp-bg { position: absolute; inset: 0; background: url('./art/tile-stage.png') 0 0 / 32px 32px; image-rendering: pixelated; opacity: 0.9; }
+.px-sp-cell { position: absolute; inset: 0; display: block; background: var(--cream); box-shadow: 0 0 0 2px var(--line), 0 3px 0 2px var(--line); }
+.mgl-frame[data-skin='pixel'] .sp-cell:active .px-sp-cell { transform: translateY(2px); box-shadow: 0 0 0 2px var(--line); }
+.px-sp-sprite { position: absolute; left: 50%; top: 50%; width: 82%; aspect-ratio: 24 / 26; max-height: 92%; transform-origin: 50% 50%; translate: -50% -50%; }
+.px-sp-sprite img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mgl-frame[data-skin='pixel'] [data-testid='pick-jump'] .px-btn-card::before { background-color: #ffe9c4; background-image: url('./art/face-smile.png'), url('./art/friend-yellow.png'); background-size: 40px 44px; }
+.mgl-frame[data-skin='pixel'] [data-testid='pick-spot'] .px-btn-card::before { background-color: #fff4d6; background-image: url('./art/feat-glasses.png'), url('./art/face-sleepy.png'), url('./art/friend-blue.png'); background-size: 40px 44px; }

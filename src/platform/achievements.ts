@@ -40,6 +40,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'mini-sort-clear', gameId: 'minigame-paradise', name: '편가르기 심판', desc: '편가르기를 클리어해요', target: 1, rewardCoins: 20, value: (p) => sub(p, 'sort')?.clears ?? 0 },
   { id: 'mini-tower-clear', gameId: 'minigame-paradise', name: '탑 쌓기 성공', desc: '아슬아슬 탑을 클리어해요', target: 1, rewardCoins: 20, value: (p) => sub(p, 'tower')?.clears ?? 0 },
   { id: 'mini-catch-clear', gameId: 'minigame-paradise', name: '간식 대장', desc: '간식 받아라를 클리어해요', target: 1, rewardCoins: 20, value: (p) => sub(p, 'catch')?.clears ?? 0 },
+  { id: 'mini-jump-clear', gameId: 'minigame-paradise', name: '줄넘기 달인', desc: '줄넘기를 클리어해요', target: 1, rewardCoins: 20, value: (p) => sub(p, 'jump')?.clears ?? 0 },
+  { id: 'mini-spot-clear', gameId: 'minigame-paradise', name: '눈썰미 대장', desc: '가짜 친구 찾기를 클리어해요', target: 1, rewardCoins: 20, value: (p) => sub(p, 'spot')?.clears ?? 0 },
   { id: 'mini-toy-clear', gameId: 'minigame-paradise', name: '장난감 정리 끝', desc: '장난감방을 클리어해요', target: 1, rewardCoins: 20, value: (p) => sub(p, 'toyroom')?.clears ?? 0 },
 ];
 export const getAchievement = (id: string) => ACHIEVEMENTS.find((a) => a.id === id);

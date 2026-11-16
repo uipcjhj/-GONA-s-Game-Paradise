@@ -4,10 +4,12 @@ import { tower } from '../games/tower';
 import { toyroom } from '../games/toyroom';
 import { tapTest } from '../games/tap-test';
 import { catchGame } from '../games/catch';
+import { jumpGame } from '../games/jump';
+import { spotGame } from '../games/spot';
 
 /** 만들어 둔 모든 미니게임. 새 게임은 모듈 하나를 만들어 여기에 추가하면 자유 플레이·챌린지에 모두 나타남. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const ALL_GAMES: MiniGameModule<any>[] = [sort, tower, toyroom, catchGame, tapTest];
+export const ALL_GAMES: MiniGameModule<any>[] = [sort, tower, toyroom, catchGame, jumpGame, spotGame, tapTest];
 
 /**
  * 화면에 내보낼 게임 선택.

@@ -11,6 +11,8 @@ export const FX = {
   // 장난감방 이동 연출 합계 0.57→0.37초(입력 잠금 단축, 규칙 동일)
   toyroom: { liftMs: 60, popMs: 160, clearMs: 70, placeMs: 80, feedbackMs: 1100, feedbackWarnMs: 1400, selectMs: 80 },
   catch: { popMs: 520, moodMs: 450 },
+  jump: { popMs: 520, moodMs: 400 },
+  spot: { popMs: 520, shakeMs: 300 },
 } as const;
 
 /** 타이머가 정리되기 직전에 CSS 애니메이션이 끝나도록 주는 여유 */
@@ -19,6 +21,8 @@ export const FX_CLEANUP_MARGIN_MS = 20;
 /** CSS 변수로 내보낼 값(애니메이션 길이에 쓰이는 것만) */
 export function fxCssVars(): Record<string, string> {
   return {
+    '--mgl-fx-jump-pop': `${FX.jump.popMs}ms`,
+    '--mgl-fx-spot-shake': `${FX.spot.shakeMs}ms`,
     '--mgl-fx-catch-pop': `${FX.catch.popMs}ms`,
     '--mgl-fx-sort-enter': `${FX.sort.enterMs}ms`,
     '--mgl-fx-sort-fly': `${FX.sort.flyMs}ms`,

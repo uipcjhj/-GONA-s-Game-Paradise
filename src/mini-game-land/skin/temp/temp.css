@@ -202,3 +202,17 @@ body { color: var(--line); }
 .tf-ct-pop { white-space: nowrap; font-size: 9px; color: #fff; text-shadow: 0 1px var(--line), 1px 0 var(--line), -1px 0 var(--line); }
 .tf-ct-pop.bad { color: #ffb0a8; }
 .tf-ct-pop.star { color: var(--gold); }
+
+/* ── 줄넘기·가짜 찾기 (임시) */
+.tf-jp-turner { width: 100%; height: 100%; background: #4a8fe8; box-shadow: 0 0 0 1px var(--line); }
+.tf-jp-turner[data-side='right'] { background: #ef6a5b; }
+.tf-jp-gona { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.tf-jp-pop { display: block; white-space: nowrap; font-size: 12px; color: #fff; text-shadow: 0 1px var(--line), 1px 0 var(--line), -1px 0 var(--line), 0 -1px var(--line); }
+.tf-jp-pop.perfect, .tf-jp-pop.quick { color: var(--gold); font-size: 14px; }
+.tf-jp-pop.miss, .tf-jp-pop.bad { color: #ffb0a8; }
+.tf-jp-pop.cue { color: #fff; background: var(--red); padding: 1px 4px; font-size: 10px; text-shadow: none; }
+.tf-sp-bg { position: absolute; inset: 0; background: #ffe9c8; }
+.tf-sp-friend { position: relative; width: 100%; height: 100%; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--line); }
+.tf-sp-friend[data-color='red'] { background: #e8584f; } .tf-sp-friend[data-color='blue'] { background: #4a8fe8; } .tf-sp-friend[data-color='green'] { background: #5fcf5f; } .tf-sp-friend[data-color='yellow'] { background: #ffd84a; }
+.tf-sp-face { font-size: 14px; font-weight: 700; }
+.tf-sp-feat { position: absolute; right: 2px; top: 0; font-size: 12px; }
