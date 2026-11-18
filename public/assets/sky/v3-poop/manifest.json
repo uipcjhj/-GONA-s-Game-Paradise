@@ -40,6 +40,20 @@
     "fx/hex.png": {},
     "fx/germ.png": {},
     "fx/prune-splash.png": {},
-    "fx/water-splash.png": {}
+    "fx/water-splash.png": {},
+    "villain/duo.png": {
+      "rows": 2,
+      "cols": 4,
+      "cell": [
+        64,
+        64
+      ]
+    },
+    "villain/bbo-face.png": {
+      "frames": 3
+    },
+    "villain/kku-face.png": {
+      "frames": 3
+    }
   }
 }

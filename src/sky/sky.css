@@ -218,3 +218,29 @@
 /* 응가 대탈출 팩 타이틀 부제 · 오프닝 건너뛰기 */
 .ttl-sub { margin: 0 0 2px; font: 700 10px/1.2 'Galmuri11', monospace; letter-spacing: 1px; color: #ffe34a; text-shadow: 0 1px #120a26; text-align: center; }
 .opening-skip { background: none; border: 0; color: #fff4d6; font: inherit; cursor: pointer; }
+
+/* ───── 스토리 대화창 (응가 테마) — 90년대 아케이드 슈팅식: 남색 창 + 금색 이중 테두리 + 초상화 칸 ───── */
+.sky-talk { position: absolute; inset: 0; z-index: 30; display: flex; align-items: flex-end; padding: 0 6px 10%; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; background: linear-gradient(transparent 55%, rgba(10, 8, 30, 0.45)); }
+.talk-win {
+  position: relative; width: 100%; min-height: 96px; display: flex; gap: 8px; align-items: stretch; padding: 8px 8px 10px;
+  background: #141a3a; border: 3px solid #ffd34a; outline: 3px solid #1a1226; box-shadow: inset 0 0 0 2px #6a4a12, inset 0 3px 0 4px #22305e;
+  image-rendering: pixelated; animation: talk-in 0.16s steps(3) both;
+}
+.talk-win.foe { background: #2a1030; box-shadow: inset 0 0 0 2px #6a4a12, inset 0 3px 0 4px #4a1f4e; }
+.talk-win.plain { background: #10162e; }
+@keyframes talk-in { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+.talk-pic { flex: 0 0 76px; height: 76px; align-self: center; background: #0b0f24; border: 2px solid #ffd34a; outline: 2px solid #1a1226; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.talk-win.foe .talk-pic { background: #1a0820; }
+.talk-face { display: block; width: 72px; height: 72px; background-size: cover; background-position: center top; image-rendering: pixelated; }
+.talk-face.sheet3 { background-size: 300% 100%; }
+canvas.talk-face { width: 72px; height: 72px; }
+.talk-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding-top: 2px; }
+.talk-name { align-self: flex-start; padding: 1px 7px; font-size: 12px; color: #1a1226; background: #ffd34a; border: 2px solid #1a1226; letter-spacing: 1px; }
+.talk-win.foe .talk-name { background: #ff8ab0; }
+.talk-text { margin: 0; font-size: 14px; line-height: 1.45; color: #fff8e4; text-shadow: 0 2px 0 #000; word-break: keep-all; min-height: 2.9em; }
+.talk-more { display: inline-block; margin-left: 4px; color: #ffd34a; animation: talk-blink 0.6s steps(2) infinite; }
+@keyframes talk-blink { 50% { opacity: 0; } }
+.talk-skip {
+  position: absolute; right: -3px; top: -24px; height: 20px; padding: 0 7px; font-family: inherit; font-size: 11px; font-weight: 700; color: #1a1226;
+  background: #fff4d6; border: 2px solid #1a1226; box-shadow: 0 2px 0 #1a1226; cursor: pointer;
+}

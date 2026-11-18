@@ -24,7 +24,7 @@ export const CUTIN_IDS = ['gona', 'mom', 'dad', 'imo', 'halmeoni', 'halabeoji', 
 /** 응가 팩에만 있는 추가 그림 (팩에 없으면 null → 엔진이 기존 도형/그림으로 대체) */
 export const EXTRA_NAMES = [
   'fx/water-drop', 'fx/prune-orb', 'fx/heal-heart', 'fx/flame', 'fx/hex', 'fx/germ', 'fx/prune-splash', 'fx/water-splash',
-  'chars/samchon/probiotic',
+  'chars/samchon/probiotic', 'villain/duo',
 ] as const;
 export type ExtraName = (typeof EXTRA_NAMES)[number];
 export type CutinId = (typeof CUTIN_IDS)[number];

@@ -7,6 +7,7 @@
  */
 import type { BgmName } from './audio';
 import { applyTheme } from './theme';
+import { applyStory, type TalkKey } from './story';
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
 export interface DiffDef {
@@ -68,7 +69,10 @@ export type Step =
   | { warning: true }
   | { boss: true }
   | { item: 'star' | 'banana' | 'strawberry'; x: number }
-  | { banner: string; sub?: string };
+  | { banner: string; sub?: string }
+  /** 응가 팩 스토리: 대화 (전투 일시정지) · 뽀글이·꾸덕이 등장 (장난 / 중간보스 호출 / 보스 호출) */
+  | { talk: TalkKey }
+  | { villain: 'prank' | 'callMid' | 'callBoss' };
 
 // ───────── 보스 ─────────
 export type Attack =
@@ -443,3 +447,5 @@ export const STAGES: StageDef[] = [
 
 // 테마 팩(케이크 기본 / 응가 대탈출)에 맞춰 이름·대사 교체 — 기본 팩은 아무것도 바꾸지 않음
 applyTheme(STAGES);
+// 응가 팩: 시작 대화 · 빌런 장난 · 빌런의 중간보스/보스 호출 단계를 대본에 끼워 넣음 (케이크는 그대로)
+applyStory(STAGES);

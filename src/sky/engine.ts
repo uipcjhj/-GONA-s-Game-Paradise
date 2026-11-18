@@ -12,6 +12,7 @@
  */
 import { type Assets, type V2Name, type CutinId, type StageArt, whiteOf } from './assets';
 import { familyText, THEME_ID } from './theme';
+import { talkLines, type TalkKey } from './story';
 import { STAGES, DIFF, ENEMIES, type StageDef, type Difficulty, type DiffDef, type EnemyName, type Move, type Fire, type ArtName, type BossDef, type Attack, type Step, type Wave } from './stages';
 import { bulletLooks, type BulletLook } from './bullets';
 import { CHARACTERS } from './data/characters';
@@ -277,7 +278,13 @@ export class SkyEngine {
   private dif: DiffDef;
   private stepIdx = 0;
   private stepWait = 0;
-  private block: 'none' | 'midboss' | 'warning' | 'boss' = 'none';
+  private block: 'none' | 'midboss' | 'warning' | 'boss' | 'villain' = 'none';
+  // ───── 응가 팩 스토리: 대화(전투 정지) · 뽀글이·꾸덕이 ─────
+  /** 대화창을 띄울 때 부름 (SkyGame 이 설정) — 대화가 끝나면 endTalk() */
+  onTalk: ((key: TalkKey) => void) | null = null;
+  talking = false;
+  private talkDone = new Set<string>();
+  private vil: { kind: 'prank' | 'callMid' | 'callBoss'; x: number; y: number; vy: number; t: number; mode: 'in' | 'talk' | 'act' | 'out'; act: number; done: boolean } | null = null;
   private warnT = 0;
   private spawnQ: Spawn[] = [];
   private midboss: Enemy | null = null;
@@ -362,13 +369,32 @@ export class SkyEngine {
     window.removeEventListener('keyup', this.onKeyUp);
     stopSfx(this.chargeSnd);
   }
+  /** 스토리 대화 시작 (대사가 없으면 아무것도 안 함 → 케이크 테마·대사 없는 순간은 그대로 진행) */
+  private talk(key: TalkKey): boolean {
+    if (this.over || !this.onTalk || this.talkDone.has(key) || !talkLines(this.st.id, key)) return false;
+    this.talkDone.add(key);
+    this.talking = true;
+    this.setCharging(false);
+    this.dragId = null;
+    this.hasTarget = false;
+    this.keys.clear();
+    this.onTalk(key);
+    return true;
+  }
+  /** 대화가 끝나면 SkyGame 이 부름 → 전투 재개 (재개 직후 잠깐 무적) */
+  endTalk(): void {
+    if (!this.talking) return;
+    this.talking = false;
+    this.inv = Math.max(this.inv, 0.8);
+    this.last = performance.now();
+  }
   setPaused(p: boolean): void {
     this.paused = p;
     this.setCharging(false);
     this.pushHud();
   }
   holdCharge(down: boolean): void {
-    if (this.paused || this.over) return;
+    if (this.paused || this.talking || this.over) return;
     this.setCharging(down);
   }
   private pushHud(): void {
@@ -388,7 +414,7 @@ export class SkyEngine {
 
   /** 고나 폭탄: 황금 익룡의 포효 */
   useBomb(): void {
-    if (this.paused || this.over || this.bombs <= 0 || this.bombT > 0 || this.sp) return;
+    if (this.paused || this.talking || this.over || this.bombs <= 0 || this.bombT > 0 || this.sp) return;
     this.bombs--;
     this.bombT = BOMB_T;
     this.bombHit = false;
@@ -404,7 +430,7 @@ export class SkyEngine {
 
   /** 근접 공격: 앞으로 돌진해 붙은 적·탄을 친다 (사거리 짧음 · 쿨다운 · 돌진 중 짧은 무적) */
   useMelee(): void {
-    if (this.paused || this.over || this.sp || this.bombT > 0 || this.meleeCd > 0 || this.meleeT > 0) return;
+    if (this.paused || this.talking || this.over || this.sp || this.bombT > 0 || this.meleeCd > 0 || this.meleeT > 0) return;
     this.meleeT = MELEE_T;
     this.meleeCd = MELEE[this.fam].cd;
     this.meleeSeen.clear();
@@ -441,7 +467,7 @@ export class SkyEngine {
 
   /** 가족 필살기 (게이지 100%) */
   useFamily(): void {
-    if (this.paused || this.over || this.gauge < 1 || this.sp || this.bombT > 0) return;
+    if (this.paused || this.talking || this.over || this.gauge < 1 || this.sp || this.bombT > 0) return;
     this.gauge = 0;
     const f = this.fam;
     this.sp = { id: f, t: 0, cut: SP_CUT, dur: SP_DUR[f], n: 0, x: this.cx, y: this.cy, init: false };
@@ -460,6 +486,7 @@ export class SkyEngine {
       stage: this.st.id, t: +this.t.toFixed(1), hp: this.hp, score: this.score, enemies: this.en.length, ebullets: this.eb.length, pbullets: this.pb.length, parts: this.parts.length, fx: this.fx.length + this.booms.length,
       boss: this.boss ? Math.round(this.boss.hp) : -1, bossMax: this.boss ? this.boss.max : 0, phase: this.bs?.phase ?? 0, mid: this.midboss ? Math.round(this.midboss.hp) : -1, block: this.block, step: this.stepIdx,
       power: this.power, over: this.over ? 1 : 0, won: this.overWon ? 1 : 0, px: Math.round(this.px), py: Math.round(this.py), anim: this.lastAnim, hits: this.hits, lasers: this.lasers.length,
+      talking: this.talking ? 1 : 0, vil: this.vil ? `${this.vil.kind}:${this.vil.mode}` : '',
       cause: JSON.stringify(this.hitLog), gauge: +this.gauge.toFixed(2), sp: this.sp ? this.sp.id : '', bombs: this.bombs, S: R, fps: this.perf.fps, ft: this.perf.ft, ftMax: this.perf.ftMax, upd: this.perf.upd, drw: this.perf.drw,
     };
   }
@@ -498,7 +525,7 @@ export class SkyEngine {
   sim(seconds: number): void {
     const dt = 1 / 60;
     const n = Math.round(seconds * 60);
-    for (let i = 0; i < n && !this.over; i++) {
+    for (let i = 0; i < n && !this.over && !this.talking; i++) {
       if (this.hitstop > 0) { this.hitstop -= dt; continue; }
       let d = dt;
       if (this.sp && this.sp.t < this.sp.cut) { this.sp.t += dt; d *= 0.3; }
@@ -508,7 +535,7 @@ export class SkyEngine {
 
   // ───────────── 입력 ─────────────
   private onDown = (e: PointerEvent): void => {
-    if (this.paused || this.over) return;
+    if (this.paused || this.talking || this.over) return;
     if (this.dragId !== null) return;
     this.dragId = e.pointerId;
     this.canvas.setPointerCapture?.(e.pointerId);
@@ -549,7 +576,7 @@ export class SkyEngine {
     if (k === ' ' || k === 'z') this.setCharging(false);
   };
   private setCharging(on: boolean): void {
-    if (on && (this.over || this.paused)) on = false;
+    if (on && (this.over || this.paused || this.talking)) on = false;
     if (on === this.charging) return;
     this.charging = on;
     if (on) this.chargeSnd = sfx('chargeUp');
@@ -629,9 +656,13 @@ export class SkyEngine {
       return;
     }
     if (this.block === 'boss') return;
+    if (this.block === 'villain') {
+      if (this.vil) return;
+      this.block = 'none';
+    }
     this.stepWait -= dt;
     const sc = this.st.script;
-    while (this.stepWait <= 0 && this.stepIdx < sc.length && this.block === 'none') {
+    while (this.stepWait <= 0 && this.stepIdx < sc.length && this.block === 'none' && !this.talking) {
       this.execStep(sc[this.stepIdx++]);
     }
   }
@@ -639,6 +670,12 @@ export class SkyEngine {
   private execStep(q: Step): void {
     if ('wait' in q) this.stepWait += q.wait;
     else if ('wave' in q) this.spawnWave(q.wave);
+    else if ('talk' in q) this.talk(q.talk);
+    else if ('villain' in q) {
+      this.block = 'villain';
+      this.vil = { kind: q.villain, x: W / 2, y: -34, vy: 0, t: 0, mode: 'in', act: 0, done: false };
+      sfx('menuOk', 0.7);
+    }
     else if ('banner' in q) {
       this.banner = { text: q.banner, sub: q.sub, t: 2.8, col: '#ffe9a8' };
       if (this.st.temp) this.floatText(W / 2, 168, '※ 임시 그래픽', '#cfc4ff');
@@ -659,6 +696,58 @@ export class SkyEngine {
       this.boss = this.spawnBossEnemy(this.st.boss);
       playBgm(this.st.bossBgm, 0.2, 0.6);
     }
+  }
+
+  /** 뽀글이·꾸덕이: 내려옴 → 대화 → 장난(탄·졸개) / 중간보스·보스 호출 → 도망 */
+  private updateVillain(dt: number): void {
+    const v = this.vil;
+    if (!v) return;
+    v.t += dt;
+    v.x = W / 2 + Math.sin(v.t * 1.5) * 26;
+    if (v.mode === 'in') {
+      v.y += (70 - v.y) * Math.min(1, dt * 3) + 14 * dt;
+      if (v.y >= 66) {
+        v.mode = 'talk';
+        this.talk(v.kind);
+      }
+    } else if (v.mode === 'talk') {
+      v.mode = 'act'; // 대화가 끝나 다시 움직이기 시작
+    } else if (v.mode === 'act') {
+      v.act += dt;
+      if (!v.done && v.act > 0.35) {
+        v.done = true;
+        if (v.kind === 'prank') {
+          // 뽀글이: 느린 가스 방울 고리 · 꾸덕이: 쌀알 졸개 호출
+          const n = this.cnt(12);
+          for (let i = 0; i < n; i++) {
+            const a = (i / n) * TAU + v.t;
+            this.newEB(v.x - 18, v.y, Math.cos(a) * this.spd(48), Math.sin(a) * this.spd(48), 3, 'smell');
+          }
+          this.spawnWave({ e: 'drone', n: 5, move: 'swarm', gap: 0.22, x0: 30, x1: 150 });
+          this.floatText(v.x, v.y - 26, '킥킥킥!', '#e8c8ff');
+          sfx('compShot', 0.8, 0.7);
+        } else if (v.kind === 'callMid') {
+          this.floatText(v.x, v.y - 26, '부탁해요~!', '#ffe9a8');
+        } else {
+          this.floatText(v.x, v.y - 26, '도망이다~!', '#cfc4ff');
+        }
+      }
+      if (v.act > 0.9) v.mode = 'out';
+    } else {
+      v.vy = Math.min(v.vy + 260 * dt, 260);
+      v.y -= v.vy * dt;
+      if (v.y < -50) this.vil = null;
+    }
+  }
+  private drawVillain(): void {
+    const v = this.vil;
+    const im = this.a.extra['villain/duo'];
+    if (!v || !im) return;
+    const panic = v.mode === 'out' && v.kind !== 'prank';
+    const col = v.mode === 'act' ? (v.kind === 'callBoss' ? 3 : 2) : v.mode === 'out' ? (panic ? 3 : 1) : Math.floor(v.t * 4) % 2;
+    const bob = Math.sin(v.t * 6) * 2;
+    this.cell(im, col, 0, 4, 2, v.x - 18, v.y + bob, 1);
+    this.cell(im, col, 1, 4, 2, v.x + 18, v.y - bob + 4, 1);
   }
 
   private spawnWave(w: Wave): void {
@@ -698,7 +787,7 @@ export class SkyEngine {
     let dt = Math.min(0.033, (now - this.last) / 1000);
     this.last = now;
     const t0 = performance.now();
-    if (!this.paused) {
+    if (!this.paused && !this.talking) {
       if (this.hitstop > 0) {
         // 히트스톱: 아주 짧게 세계를 멈춤 (흔들림·섬광만 진행)
         this.hitstop -= dt;
@@ -756,6 +845,7 @@ export class SkyEngine {
     }
 
     this.runScript(dt);
+    this.updateVillain(dt);
     this.updateLasers(dt);
 
     this.updatePlayer(dt);
@@ -1573,12 +1663,14 @@ export class SkyEngine {
       for (let i = 0; i < 6; i++) this.addBoom(e.x + rand(-30, 30), e.y + rand(-20, 30), 0.8, i * 0.08);
       this.debris(e.x, e.y, 18, ['#c02040', '#d8a040', '#5a5a66']);
       this.bossSay(phase === np ? `${def.name} 최종 형태!` : `장갑 파손! ${def.name} 분노`, '#ff7a8a');
+      if (!def.mid) this.talk(phase >= 3 ? 'bossP3' : 'bossP2');
     }
     if (b.mode === 'enter') {
       e.y += (def.restY - e.y) * Math.min(1, dt * 1.6) + 10 * dt;
       if (e.y > def.restY - 4) {
         b.mode = 'idle';
         b.rest = 0.8;
+        this.talk(def.mid ? 'midIn' : 'bossIn');
       }
       return;
     }
@@ -1586,6 +1678,7 @@ export class SkyEngine {
     if (def.mid && b.life > 48) {
       b.mode = 'flee';
       this.bossSay(`${def.name} 도주!`, '#cfc4ff');
+      this.talk('midFlee');
       return;
     }
     const fast = b.phase === np && np >= 3 ? 1.15 : 1;
@@ -2145,6 +2238,7 @@ export class SkyEngine {
           for (const o of this.en) if (o.kind === 'small') this.damage(o, 999, 'bomb', o.x, o.y);
         } else sfx('boomL', 0.8);
         this.bossSay(`${b.def.name} 격파!`, '#ffe34a');
+        this.talk(b.def.mid ? 'midDown' : 'bossDown');
         this.kick(1, 0.12);
         buzz([60, 40, 60], 0);
       }
@@ -2461,6 +2555,7 @@ export class SkyEngine {
     for (const b of this.pb) this.drawPBullet(b);
     g.globalAlpha = 1;
 
+    this.drawVillain();
     this.drawCompanion();
     this.drawProbiotic();
     this.drawGona();

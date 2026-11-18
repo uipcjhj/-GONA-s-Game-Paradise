@@ -253,6 +253,7 @@ def main():
     ap.add_argument('--grid', help='grid: 행x열 (예 3x4) — 생성 시트를 고른 칸으로 나눔')
     ap.add_argument('--cell', help='grid: 결과 칸 크기 WxH (예 40x40)')
     ap.add_argument('--out', help='grid: 팩 안 저장 경로 (예 chars/samchon/probiotic.png)')
+    ap.add_argument('--main-blob', action='store_true', help='grid: 칸마다 가장 큰 덩어리만 남김 (옆 프레임 조각 제거)')
     ap.add_argument('--row-scale', action='store_true', help='grid: 배율을 행마다 따로 (행 = 한 캐릭터 애니메이션)')
     args = ap.parse_args()
     im = load(args.src)
@@ -274,7 +275,20 @@ def main():
         R, C = map(int, args.grid.lower().split('x'))
         cw, ch = map(int, args.cell.lower().split('x'))
         gw, gh = im.width / C, im.height / R
-        tr = [[trim(im.crop((round(c * gw), round(r * gh), round((c + 1) * gw), round((r + 1) * gh)))) for c in range(C)] for r in range(R)]
+        def main_blob(cell):
+            # 칸 경계 밖에서 넘어온 옆 프레임 조각 제거: 가장 큰 덩어리(가까운 조각 포함)만 남김
+            if not args.main_blob:
+                return cell
+            from scipy import ndimage
+            a = np.array(cell)
+            lab, cnt = ndimage.label(ndimage.binary_dilation(a[..., 3] > 64, iterations=10))
+            if cnt <= 1:
+                return cell
+            sizes = ndimage.sum(a[..., 3] > 64, lab, range(1, cnt + 1))
+            keep = lab == (int(np.argmax(sizes)) + 1)
+            a[~keep] = 0
+            return Image.fromarray(a, 'RGBA')
+        tr = [[trim(main_blob(im.crop((round(c * gw), round(r * gh), round((c + 1) * gw), round((r + 1) * gh))))) for c in range(C)] for r in range(R)]
         m = 2  # 칸 안 여백
         def scale(cells):
             return min((cw - m * 2) / max(t.width for t in cells), (ch - m * 2) / max(t.height for t in cells), 1.0)

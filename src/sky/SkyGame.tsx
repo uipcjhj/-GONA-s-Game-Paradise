@@ -8,6 +8,8 @@ import { settings, saveSettings, canVibrate } from './settings';
 import { NS, BETA } from './ns';
 import { THEME, familyText } from './theme';
 import { packPath } from './artpack';
+import { talkLines } from './story';
+import { TalkBox, resolveLines, type TalkLine } from './TalkBox';
 import './sky.css';
 
 const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
@@ -62,6 +64,8 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
   });
   const [run, setRun] = useState(0);
   const [paused, setPaused] = useState(false);
+  /** 스토리 대화 (응가 테마) — 있는 동안 전투 정지 */
+  const [talk, setTalk] = useState<{ n: number; lines: TalkLine[] } | null>(null);
   const [result, setResult] = useState<EndInfo | null>(null);
   const [records, setRecords] = useState(loadRecords);
   const [diff, setDiff] = useState<Difficulty>(() => {
@@ -178,8 +182,17 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
       },
     );
     engine.current = eng;
+    setTalk(null);
+    const opts = runOpts;
+    eng.onTalk = (key) => {
+      const ls = talkLines(opts.stage, key);
+      const lines = ls ? resolveLines(ls, opts.fam, STAGES[opts.stage - 1]) : [];
+      if (lines.length) setTalk((t) => ({ n: (t?.n ?? 0) + 1, lines }));
+      else eng.endTalk();
+    };
     if (location.search.includes('skytest')) (window as unknown as { __sky: SkyEngine }).__sky = eng;
     return () => {
+      setTalk(null);
       eng.destroy();
       engine.current = null;
     };
@@ -522,7 +535,16 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
     <div className="sky sky-play" ref={boxRef}>
       <div className="sky-stage" style={{ width: box.w, height: box.h, marginBottom: box.bar ? CTRL : 0 }}>
         <canvas ref={canvasRef} className="sky-canvas" style={{ width: box.w, height: box.h }} />
-        {phase === 'play' && (
+        {phase === 'play' && talk && runOpts && (
+          <TalkBox
+            key={talk.n}
+            lines={talk.lines}
+            st={STAGES[runOpts.stage - 1]}
+            art={stageArt}
+            onDone={() => { setTalk(null); engine.current?.endTalk(); }}
+          />
+        )}
+        {phase === 'play' && !talk && (
           <>
             <button type="button" className="sky-pause" onPointerDown={(e) => { e.stopPropagation(); togglePause(true); }} aria-label="일시정지">II</button>
             <div className={`sky-ctrl${box.bar ? ' in-bar' : ''}`}>
