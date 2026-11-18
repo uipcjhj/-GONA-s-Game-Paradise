@@ -48,3 +48,12 @@
 - 정식·dev 에서 보이는 이미지 6개 404(`snacks/jelly.png`, `character/stages/walker.png`, `boss/sniff-sheet.png`, `boss/kiss-sheet.png`, `monsters/glasses-sheet.png`, `monsters/farter-sheet.png`)는 **배포 전부터** 저장소에 없던 선택 그림(있으면 교체, 없으면 기본 그림 사용)이다. 배포와 무관 · Food Adventure 는 수정하지 않음.
 - 배포 직후·요청을 한꺼번에 많이 보낼 때 GitHub Pages 가 잠깐 503 을 돌려줄 수 있다 (재확인 시 정상). 테스트판 그림 로더는 그림 하나라도 실패하면 오류 화면을 띄우므로, 그럴 때는 새로고침.
 - 앞으로 배포: sky-test 브랜치 `sky-poop-test/` 에 새 빌드를 넣고 푸시하면 같은 워크플로가 네 경로를 함께 배포한다 (출처 검사·파일 검사 실패 시 배포 안 함). 복구는 Run workflow 에 이전 커밋 입력.
+
+## 7. 오프닝 시네마틱 배포 (2026-11-18)
+| 단계 | 결과 |
+|---|---|
+| 소스 | `claude/gonas-sky-poop-dev` `a461349` (32초 오프닝 시네마틱) |
+| 배포 | sky-test `74a3689 → 91ebd09` (sky-poop-test/ 만) · 통합 워크플로 run #24 `44274282864` 성공 · sky-poop-test `index-f79CAo9B.js` |
+| 다른 경로 | 정식 `index-Bm3i9mp0.js`·sky-test `index-DQ4aMbrJ.js` 배포 전과 동일 · dev 는 빌드 시각 표시만 변경 |
+| 실제 브라우저 확인 | 393×636 · 390×844 — 네 주소 정상 · sky-poop-test 오프닝 6장면·자막 14줄·선택→STAGE 1·재방문·다시보기·SKIP 3연타 모두 정상 · 콘솔 오류·실패 요청 0 |
+| 복구 | 이전 sky-poop-test 백업(74a3689) · Run workflow 에 `sky_ref=74a3689` |
