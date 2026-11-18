@@ -23,6 +23,14 @@ export interface PackMeta {
   k?: number;
   /** 배경 어둡게 덮는 정도 (1 = 기존 케이크 버전과 같음 · 0 = 덮지 않음) */
   tint?: number;
+  /** 보스 부품(포탑) 위치 · 약점 위치 재지정 (새 보스 그림에 맞춤, 논리 픽셀) */
+  partDx?: number;
+  partDy?: number;
+  weakDy?: number;
+  /** 배경 그림에 이미 건물·지형이 그려져 있어 기존 소품(성·시계탑 등)을 끔 */
+  noProps?: boolean;
+  /** 보스 탄 모양 (새 보스 그림에 맞춤) */
+  bullet?: StageDef['boss']['bullet'];
   /** 최종 승인 그림인지 (false/없음 = 신규 시안 · 임시) */
   final?: boolean;
 }
@@ -83,8 +91,17 @@ export function applyPackToStages(stages: StageDef[]): void {
     if (boss) {
       st.boss.frames = boss.frames ?? st.boss.frames;
       if (boss.k) st.boss.k = boss.k;
+      for (const p of st.boss.parts) {
+        if (typeof boss.partDx === 'number') p.dx = Math.sign(p.dx) * boss.partDx;
+        if (typeof boss.partDy === 'number') p.dy = boss.partDy;
+      }
+      if (boss.bullet) st.boss.bullet = boss.bullet;
+      if (typeof boss.weakDy === 'number' && st.boss.weak) st.boss.weak = { ...st.boss.weak, dy: boss.weakDy };
     }
     const bg = packMeta(`${dir}/bg-backdrop.png`);
     if (bg && typeof bg.tint === 'number') st.tint = bg.tint;
+    if (bg?.noProps) st.props = [];
+    // 배경·중간보스·보스가 모두 새 그림이면 '임시 그래픽' 표시를 끔
+    if (bg && mid && boss) st.temp = false;
   }
 }

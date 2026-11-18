@@ -284,6 +284,8 @@ export class SkyEngine {
   onTalk: ((key: TalkKey) => void) | null = null;
   talking = false;
   private talkDone = new Set<string>();
+  /** 같은 순간에 대사가 겹치면 (페이즈 전환 + 격파 등) 차례대로 */
+  private talkQ: TalkKey[] = [];
   private vil: { kind: 'prank' | 'callMid' | 'callBoss'; x: number; y: number; vy: number; t: number; mode: 'in' | 'talk' | 'act' | 'out'; act: number; done: boolean } | null = null;
   private warnT = 0;
   private spawnQ: Spawn[] = [];
@@ -373,6 +375,10 @@ export class SkyEngine {
   private talk(key: TalkKey): boolean {
     if (this.over || !this.onTalk || this.talkDone.has(key) || !talkLines(this.st.id, key)) return false;
     this.talkDone.add(key);
+    if (this.talking) {
+      this.talkQ.push(key);
+      return true;
+    }
     this.talking = true;
     this.setCharging(false);
     this.dragId = null;
@@ -384,6 +390,11 @@ export class SkyEngine {
   /** 대화가 끝나면 SkyGame 이 부름 → 전투 재개 (재개 직후 잠깐 무적) */
   endTalk(): void {
     if (!this.talking) return;
+    const nx = this.talkQ.shift();
+    if (nx && this.onTalk && !this.over) {
+      this.onTalk(nx);
+      return;
+    }
     this.talking = false;
     this.inv = Math.max(this.inv, 0.8);
     this.last = performance.now();
@@ -2622,7 +2633,7 @@ export class SkyEngine {
   }
   private updateProps(dt: number): void {
     const P = this.st.props;
-    if (this.propIdx === 0 && this.propLoop === 0 && this.props.length === 0) {
+    if (P.length && this.propIdx === 0 && this.propLoop === 0 && this.props.length === 0) {
       this.spawnProp(P[0], 70);
       this.spawnProp(P[1], 20);
       this.spawnProp([0, 'island-small', 0, 0.82, 0], 190);

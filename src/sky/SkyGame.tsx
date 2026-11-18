@@ -10,6 +10,7 @@ import { THEME, familyText } from './theme';
 import { packPath } from './artpack';
 import { talkLines } from './story';
 import { TalkBox, resolveLines, type TalkLine } from './TalkBox';
+import { PoopEnding } from './PoopEnding';
 import './sky.css';
 
 const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
@@ -66,6 +67,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
   const [paused, setPaused] = useState(false);
   /** 스토리 대화 (응가 테마) — 있는 동안 전투 정지 */
   const [talk, setTalk] = useState<{ n: number; lines: TalkLine[] } | null>(null);
+  const talkN = useRef(0);
   const [result, setResult] = useState<EndInfo | null>(null);
   const [records, setRecords] = useState(loadRecords);
   const [diff, setDiff] = useState<Difficulty>(() => {
@@ -185,9 +187,10 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
     setTalk(null);
     const opts = runOpts;
     eng.onTalk = (key) => {
+      if (location.search.includes('skytest')) ((window as unknown as { __talkKeys?: string[] }).__talkKeys ??= []).push(`S${opts.stage}:${key}`);
       const ls = talkLines(opts.stage, key);
-      const lines = ls ? resolveLines(ls, opts.fam, STAGES[opts.stage - 1]) : [];
-      if (lines.length) setTalk((t) => ({ n: (t?.n ?? 0) + 1, lines }));
+      const lines = ls ? resolveLines(ls, opts.fam, STAGES[opts.stage - 1], key) : [];
+      if (lines.length) setTalk({ n: ++talkN.current, lines });
       else eng.endTalk();
     };
     if (location.search.includes('skytest')) (window as unknown as { __sky: SkyEngine }).__sky = eng;
@@ -254,7 +257,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
 
   // 엔딩 슬라이드 자동 넘김
   useEffect(() => {
-    if (phase !== 'ending') return;
+    if (phase !== 'ending' || THEME.id === 'poop') return; // 응가 테마는 PoopEnding 이 직접 진행
     const id = window.setTimeout(() => (slide < ENDING.length - 1 ? setSlide(slide + 1) : setPhase('credits')), 4200);
     return () => window.clearTimeout(id);
   }, [phase, slide]);
@@ -351,6 +354,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
 
   if (phase === 'ending' || phase === 'credits') {
     const sl = ENDING[Math.min(slide, ENDING.length - 1)];
+    if (phase === 'ending' && THEME.id === 'poop') return <PoopEnding onDone={() => setPhase('credits')} />;
     if (phase === 'ending') {
       return (
         <div className="sky end" onClick={() => (slide < ENDING.length - 1 ? setSlide(slide + 1) : setPhase('credits'))}>
@@ -637,6 +641,12 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
                 <dt>SCORE</dt><dd>{String(result.score).padStart(8, '0')}</dd>
                 <dt>최대 콤보</dt><dd>{result.maxCombo}</dd>
               </dl>
+              {THEME.id === 'poop' && (
+                <div className="tally-train" aria-label={`응가 열차 ${result.stage}/${STAGES.length}`}>
+                  {STAGES.map((_, i) => <i key={i} className={i < result.stage ? 'on' : ''} />)}
+                  <img src={`${BASE}${packPath('ending/train.png', 'v2/fx/missile.png')}`} alt="응가 열차" style={{ left: `${((result.stage - 0.5) / STAGES.length) * 100}%` }} />
+                </div>
+              )}
               <p className="tally-next">NEXT ▶ STAGE {result.stage + 1} · {STAGES[result.stage]?.name}</p>
               <button type="button" className="sky-btn sky-btn-go" onClick={nextStage}>다음 스테이지</button>
               <button type="button" className="sky-btn" onClick={() => { recordRun(result, false); setPhase('title'); }}>타이틀로</button>

@@ -233,6 +233,7 @@
 .talk-win.foe .talk-pic { background: #1a0820; }
 .talk-face { display: block; width: 72px; height: 72px; background-size: cover; background-position: center top; image-rendering: pixelated; }
 .talk-face.sheet3 { background-size: 300% 100%; }
+.talk-face.train { background-size: contain; background-repeat: no-repeat; background-position: center; }
 canvas.talk-face { width: 72px; height: 72px; }
 .talk-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding-top: 2px; }
 .talk-name { align-self: flex-start; padding: 1px 7px; font-size: 12px; color: #1a1226; background: #ffd34a; border: 2px solid #1a1226; letter-spacing: 1px; }
@@ -244,3 +245,47 @@ canvas.talk-face { width: 72px; height: 72px; }
   position: absolute; right: -3px; top: -24px; height: 20px; padding: 0 7px; font-family: inherit; font-size: 11px; font-weight: 700; color: #1a1226;
   background: #fff4d6; border: 2px solid #1a1226; box-shadow: 0 2px 0 #1a1226; cursor: pointer;
 }
+
+/* ───── 응가 대탈출 최종 엔딩 ───── */
+.sky.end.pe { padding: 0; gap: 0; justify-content: flex-start; overflow: hidden; background: #0c0618; }
+.pe-stage { position: absolute; inset: 0; animation: selin 0.5s steps(4) both; }
+.pe-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.75) saturate(1.1); }
+.pe-train { position: absolute; top: 46%; left: 0; width: 46%; max-width: 220px; image-rendering: pixelated; animation: pe-train 7s linear forwards, pe-chug 0.3s steps(2) infinite; }
+@keyframes pe-train { from { transform: translateX(-110%); } to { transform: translateX(240%); } }
+@keyframes pe-chug { 50% { margin-top: -2px; } }
+.pe-cheer { position: absolute; top: 9%; left: 0; right: 0; display: flex; justify-content: center; gap: 4px; }
+.pe-cheer img { width: 13%; max-width: 56px; aspect-ratio: 1; object-fit: cover; border: 2px solid #ffd34a; background: #20124a; image-rendering: pixelated; animation: pe-hop 0.5s steps(2) infinite; }
+.pe-cheer img:nth-child(even) { animation-delay: 0.25s; }
+@keyframes pe-hop { 50% { transform: translateY(-6px); } }
+.pe-white { position: absolute; inset: 0; background: #fff; animation: pe-fadein 0.8s steps(6) both; }
+@keyframes pe-fadein { from { opacity: 0; } to { opacity: 1; } }
+.pe-room { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #f6dcc0; }
+.pe-room::before { content: ''; position: absolute; inset: 0 0 auto; height: 18%; background: #e8c49e; }
+.pe-gona { position: relative; height: 62%; max-width: 86%; object-fit: contain; animation: pe-shake 0.18s steps(2) infinite; }
+.pe-gona.hard { animation-duration: 0.08s; filter: saturate(1.4) hue-rotate(-12deg) brightness(1.04); }
+@keyframes pe-shake { 50% { transform: translate(2px, -1px) rotate(0.6deg); } }
+.pes-fart .pe-gona { animation: pe-jolt 0.4s steps(3) 1 both; }
+@keyframes pe-jolt { 0% { transform: translateY(0); } 40% { transform: translateY(-14px) scale(1.04); } 100% { transform: none; } }
+.pe-boom { position: absolute; top: 14%; left: 0; right: 0; text-align: center; font-size: 64px; color: #ffd34a; -webkit-text-stroke: 3px #1a1226; text-shadow: 0 5px 0 #1a1226; animation: pe-pop 0.5s steps(4) both; }
+@keyframes pe-pop { 0% { transform: scale(0.2); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+.pe-puff { position: absolute; bottom: 20%; width: 26%; aspect-ratio: 1; background-position: 0 0; background-size: 300% 100%; background-repeat: no-repeat; image-rendering: pixelated; opacity: 0.9; animation: pe-puff 1.6s steps(6) both; }
+.pe-puff.a { left: 18%; } .pe-puff.b { left: 40%; animation-delay: 0.15s; } .pe-puff.c { left: 60%; animation-delay: 0.3s; }
+@keyframes pe-puff { from { transform: translateY(0) scale(0.6); opacity: 1; } to { transform: translateY(-60px) scale(1.4); opacity: 0; } }
+.pe-family { position: absolute; inset: 0 0 34%; background: #2a1450; }
+.pe-f { position: absolute; height: 34%; object-fit: contain; transition: transform 0.4s steps(4), filter 0.3s; filter: brightness(0.7); }
+.pe-f.talk { filter: none; transform: scale(1.18) translateY(-4%); z-index: 2; }
+.pe-f.f0 { left: 1%; top: 6%; } .pe-f.f1 { right: 1%; top: 6%; } .pe-f.f2 { left: 0; top: 36%; }
+.pe-f.f3 { right: 0; top: 36%; } .pe-f.f4 { left: 16%; top: 62%; } .pe-f.f5 { right: 16%; top: 62%; }
+.pe-center { left: 50%; top: 24%; height: 48%; margin-left: -18%; filter: none; z-index: 1; }
+.pe-family.hug .pe-f { filter: none; }
+.pe-family.hug .f0 { transform: translate(40%, 30%); } .pe-family.hug .f1 { transform: translate(-40%, 30%); }
+.pe-family.hug .f2 { transform: translate(45%, 0); } .pe-family.hug .f3 { transform: translate(-45%, 0); }
+.pe-family.hug .f4 { transform: translate(30%, -25%); } .pe-family.hug .f5 { transform: translate(-30%, -25%); }
+.pe-hearts i { position: absolute; bottom: 4%; width: 22px; height: 22px; background-position: center; background-size: contain; background-repeat: no-repeat; image-rendering: pixelated; animation: pe-heart 2.4s steps(12) infinite; }
+@keyframes pe-heart { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-260px); opacity: 0; } }
+.pe-skipall { position: absolute; top: 8px; right: 8px; z-index: 40; height: 26px; padding: 0 8px; font-family: inherit; font-size: 11px; font-weight: 700; color: #1a1226; background: #fff4d6; border: 2px solid #1a1226; cursor: pointer; }
+/* 정산 화면: 응가 열차 진행도 (응가 테마) */
+.tally-train { position: relative; height: 30px; margin: 2px 4px 0; display: flex; gap: 3px; align-items: flex-end; }
+.tally-train i { flex: 1; height: 6px; background: #d8c9a4; border: 2px solid #3b2a3f; }
+.tally-train i.on { background: #78d246; }
+.tally-train img { position: absolute; bottom: 6px; width: 34px; margin-left: -17px; image-rendering: pixelated; animation: pe-chug 0.3s steps(2) infinite; }

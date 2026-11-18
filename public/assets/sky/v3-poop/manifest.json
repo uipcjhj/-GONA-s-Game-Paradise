@@ -54,6 +54,28 @@
     },
     "villain/kku-face.png": {
       "frames": 3
+    },
+    "stage1/boss.png": {
+      "frames": 3,
+      "k": 0.5,
+      "partDx": 35,
+      "partDy": -17,
+      "weakDy": 15,
+      "bullet": "ring"
+    },
+    "stage1/midboss.png": {
+      "frames": 2,
+      "k": 0.5
+    },
+    "stage1/enemy-drone.png": {},
+    "stage1/enemy-fighter.png": {},
+    "stage1/enemy-wyvern.png": {},
+    "stage1/enemy-orb.png": {},
+    "stage1/enemy-gunship.png": {},
+    "ending/train.png": {},
+    "stage1/bg-backdrop.png": {
+      "tint": 0.35,
+      "noProps": true
     }
   }
 }

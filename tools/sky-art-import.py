@@ -381,7 +381,10 @@ def main():
     elif k in ('midboss', 'boss'):
         n = args.frames or (3 if k == 'boss' else 1)
         fw, fh, colors = (216, 230, 96) if k == 'midboss' else (220, 240, 128)
-        frames = [fit(trim(f), fw, fh) for f in split_frames(im, n)]
+        # 페이즈끼리 같은 배율 (크기가 들쭉날쭉하지 않게) · 고르지 않은 생성 시트는 --auto-split
+        tr = [trim(f) for f in (auto_split(im, n) if args.auto_split else split_frames(im, n))]
+        kk = min(fw / max(t.width for t in tr), fh / max(t.height for t in tr), 1.0)
+        frames = [t.resize((max(1, round(t.width * kk)), max(1, round(t.height * kk))), Image.LANCZOS) for t in tr]
         h = max(f.height for f in frames)
         out = Image.new('RGBA', (fw * n, h))
         for i, f in enumerate(frames):

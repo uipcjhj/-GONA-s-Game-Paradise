@@ -50,11 +50,9 @@ const [s0, s1] = RANGE.split('-').map(Number);
           log.push(`S${st} [${d ? d.vil || d.block : ''} ph${d ? d.phase : ''}] ${talk.name}: ${talk.text}`);
           if (talk.i === 0 && lastKeyShot !== k) { lastKeyShot = k; await page.waitForTimeout(talk.text.length * 34 + 120); await shot(`s${st}-talk`); }
         }
-        // 실제 터치로 진행 (찍는 중이면 한 번 더)
-        await page.tap('.sky-talk', { position: { x: 30, y: 30 } });
-        await page.waitForTimeout(30);
+        // 실제 터치로 진행: 한 번에 한 번만 (찍는 중이면 다 보이기 → 다음 확인 때 다음 줄)
         await page.tap('.sky-talk', { position: { x: 30, y: 30 } }).catch(() => {});
-        await page.waitForTimeout(60);
+        await page.waitForTimeout(40);
         continue;
       }
       if (d && d.over) { await page.waitForTimeout(300); continue; }
@@ -70,6 +68,32 @@ const [s0, s1] = RANGE.split('-').map(Number);
       await page.waitForTimeout(300);
     }
   }
+  // 최종 스테이지면 엔딩 → 크레딧까지 (장면마다 캡처 · 터치로 진행)
+  if (s1 === 6) {
+    await page.waitForSelector('.sky.end', { timeout: 20000 });
+    const scenes = new Set();
+    for (let k = 0; k < 400; k++) {
+      if (await page.$('.cred')) break;
+      const cls = await page.evaluate(() => document.querySelector('.sky.end')?.className || '');
+      const tk = await page.evaluate(() => window.__skyTalk ? { name: window.__skyTalk.name, text: window.__skyTalk.text, typing: window.__skyTalk.typing } : null);
+      if (tk && !tk.typing) {
+        const key = `${tk.name}|${tk.text}`;
+        if (!scenes.has(key)) {
+          scenes.add(key);
+          log.push(`ENDING [${cls.replace('sky end pe ', '')}] ${tk.name || '(해설)'}: ${tk.text}`);
+          await page.waitForTimeout(350);
+          await shot('ending');
+        }
+        await page.tap('.sky-talk', { position: { x: 30, y: 30 } }).catch(() => {});
+      }
+      await page.waitForTimeout(120);
+    }
+    await page.waitForSelector('.cred', { timeout: 20000 });
+    await page.waitForTimeout(800);
+    await shot('credits');
+    log.push('크레딧 도착');
+  }
+  log.push('열린 대화 키: ' + (await page.evaluate(() => (window.__talkKeys || []).join(' '))));
   fs.writeFileSync(`${out}/${tag}-log.txt`, log.join('\n'));
   console.log(log.join('\n'));
   console.log('실패 요청', bad.length ? bad : '없음', '· 콘솔 오류', errs.length ? errs : '없음');
