@@ -3295,7 +3295,7 @@ export class SkyEngine {
     for (let i = 0; i < 4; i++) { g.fillStyle = i < this.power ? '#58e0ff' : '#2a3060'; g.fillRect(W - 46 + i * 7, 16, 5, 5); }
     this.text('P', W - 54, 13, '#58e0ff', 'left', 11);
     // 임시 그래픽 스테이지: 화면 아래쪽에 항상 작게 표시 (최종본으로 오해하지 않게)
-    if (THEME_ID === 'poop' && this.st.temp && !this.over) this.text('임시 그래픽', W - 3, H - 11, '#cfc4ff', 'right', 9);
+    if (THEME_ID === 'poop' && this.st.temp && !this.over) this.text('※ 임시 그래픽', W / 2, H - 11, '#cfc4ff', 'center', 9);
     // 필살 게이지·차지 게이지는 조작 버튼과 고나 발밑에 표시 (가운데 일시정지 버튼과 겹치지 않게 HUD 에서는 생략)
     const mult = Math.min(5, 1 + Math.floor(this.combo / 5));
     if (this.combo >= 3) this.text(`${this.combo} HIT${mult > 1 ? ` x${mult}` : ''}`, 4, this.boss ? 40 : 30, '#ff9ec0', 'left', 11);
