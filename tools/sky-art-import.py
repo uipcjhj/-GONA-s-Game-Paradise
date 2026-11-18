@@ -226,7 +226,9 @@ def save(im, rel, args, meta, orig):
     m = json.load(open(mpath, encoding='utf-8')) if os.path.exists(mpath) else {'version': 1, 'files': {}}
     if args.final:
         meta['final'] = True
-    m['files'][rel] = meta
+    old = m['files'].get(rel, {})  # 손으로 넣은 값(포탑 위치·약점·탄 모양 등)은 다시 변환해도 유지
+    old.update(meta)
+    m['files'][rel] = old
     json.dump(m, open(mpath, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
     print(f'  ✓ 저장 · manifest 갱신 ({"최종" if args.final else "시안/임시"})')
 
@@ -246,6 +248,7 @@ def main():
     ap.add_argument('--remove-bg', action='store_true')
     ap.add_argument('--bg-tol', type=int, default=40)
     ap.add_argument('--box')
+    ap.add_argument('--amber-red', help='boss: 이 프레임들(0부터, 쉼표)의 진한 빨강을 호박색으로 (피처럼 보이는 소스 보정)')
     ap.add_argument('--clip-effect', action='store_true', help='fly: 공격 이펙트 때문에 큰 프레임은 배율 계산에서 빼고 넘치는 위쪽만 자름')
     ap.add_argument('--auto-split', action='store_true', help='fly: 칸이 고르지 않은 생성 시트에서 캐릭터 4개를 자동으로 찾아 분리')
     ap.add_argument('--compose', action='store_true', help='cutin: 확정 원화(상반신)를 집중선 배경 위에 배치해 720×360 컷인 합성')
@@ -390,6 +393,28 @@ def main():
         for i, f in enumerate(frames):
             out.paste(f, (i * fw + (fw - f.width) // 2, (h - f.height) // 2), f)
         out = pixelize(out, colors)  # 페이즈끼리 같은 팔레트
+        if args.amber_red:
+            # 붉은 소스·액체가 피처럼 보이지 않게: 채도 높은 빨강을 밝은 황금 시럽(조청·꿀) 색으로 (지정한 프레임만)
+            import colorsys
+            a = np.array(out).astype(float)
+            fr = [int(x) for x in args.amber_red.split(',')]
+            for fi in fr:
+                x0, x1 = fi * fw, (fi + 1) * fw
+                sub = a[:, x0:x1]
+                for yy in range(sub.shape[0]):
+                    for xx in range(sub.shape[1]):
+                        r, g, b_, al = sub[yy, xx]
+                        if al < 128:
+                            continue
+                        h, sat, val = colorsys.rgb_to_hsv(r / 255, g / 255, b_ / 255)
+                        if 80 <= xx <= 140 and 70 <= yy <= 118:
+                            continue  # 입 안(붉은 입속)은 그대로
+                        if (h < 0.035 or h > 0.94) and sat > 0.45 and val > 0.22:
+                            nv = val * 1.28 if val > 0.45 else val * 1.05  # 어두운 그림자는 밝기 유지 (점박이 방지)
+                            nr, ng, nb = colorsys.hsv_to_rgb(0.1, min(1, sat * 0.92), min(1, nv))
+                            sub[yy, xx, :3] = (nr * 255, ng * 255, nb * 255)
+            out = Image.fromarray(a.astype(np.uint8), 'RGBA')
+            print(f'  붉은 액체 → 호박색 보정 (프레임 {fr})')
         meta = {'frames': n, 'k': 0.5}
         rel = f'{args.stage}/{k}.png'
     elif k == 'bg':

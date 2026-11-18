@@ -65,7 +65,7 @@ const POOP: ThemePack = {
   ],
   credits: [
     ["GONA's Sky Adventure", 'The Great Poo Escape!'], ['기획 · 원작', '고나네 가족'], ['캐릭터', '고나 · 엄마 · 아빠 · 이모 · 할머니 · 할아버지 · 삼촌'],
-    ['게임 프로그래밍 · 사운드 합성', 'Claude Code'], ['음악 · 효과음', '오리지널 합성 (tools/sky-audio)'], ['원화 · 스프라이트', '승인 원화 · 신규 그래픽 제작 대기 중 (임시 연출)'],
+    ['게임 프로그래밍 · 사운드 합성', 'Claude Code'], ['음악 · 효과음', '오리지널 합성 (tools/sky-audio)'], ['원화 · 스프라이트', '가족 원화·비행 스프라이트 · STAGE 1 신규 그래픽 (STAGE 2~6 은 임시 그래픽 — 정식 그림 제작 전)'],
     ['스페셜 땡스', '게임천국에 놀러 와 준 모든 친구들'], ['', 'THANK YOU FOR PLAYING!'],
   ],
   stages: [

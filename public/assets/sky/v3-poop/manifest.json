@@ -61,7 +61,7 @@
       "partDx": 35,
       "partDy": -17,
       "weakDy": 15,
-      "bullet": "ring"
+      "bullet": "flask"
     },
     "stage1/midboss.png": {
       "frames": 2,
@@ -74,7 +74,7 @@
     "stage1/enemy-gunship.png": {},
     "ending/train.png": {},
     "stage1/bg-backdrop.png": {
-      "tint": 0.35,
+      "tint": 0.5,
       "noProps": true
     }
   }

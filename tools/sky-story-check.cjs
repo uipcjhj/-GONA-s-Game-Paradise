@@ -29,40 +29,56 @@ const [s0, s1] = RANGE.split('-').map(Number);
   if (s0 > 1) await page.evaluate((st) => window.__skyFlow.start(st), s0);
   else await page.tap('.sky-btn-go');
   const log = [];
+  let fromIdx = 0; // 이번 스테이지 대사 기록이 시작되는 위치 (스테이지 시작 전에 정함)
   for (let st = s0; st <= s1; st++) {
     await page.waitForSelector('.sky-canvas');
     await page.waitForFunction(() => window.__sky && window.__sky.debug().stage > 0);
     await page.waitForTimeout(400);
     await page.evaluate(() => { window.__sky.cheat('god'); window.__sky.cheat('power'); window.__sky.cheat('auto'); });
     const seen = new Set();
-    let lastKeyShot = '';
+    const from = fromIdx;
     const t0 = Date.now();
     for (;;) {
-      if (Date.now() - t0 > 240000) { log.push(`S${st} 시간 초과`); break; }
-      const phase = await page.evaluate(() => (document.querySelector('.tally') ? 'tally' : document.querySelector('.sky.end') ? 'ending' : document.querySelector('.sky-overlay .sky-btn-go') && !document.querySelector('.tally') ? 'other' : 'play'));
+      if (Date.now() - t0 > 300000) { log.push(`S${st} 시간 초과`); break; }
+      const phase = await page.evaluate(() => (document.querySelector('.tally') ? 'tally' : document.querySelector('.sky.end') ? 'ending' : 'play'));
       if (phase === 'tally' || phase === 'ending') break;
-      const talk = await page.evaluate(() => window.__skyTalk ? { i: window.__skyTalk.i, n: window.__skyTalk.n, name: window.__skyTalk.name, text: window.__skyTalk.text } : null);
-      const d = await page.evaluate(() => window.__sky ? window.__sky.debug() : null);
+      const st8 = await page.evaluate(() => ({ talk: window.__skyTalk ? { i: window.__skyTalk.i, typing: window.__skyTalk.typing, text: window.__skyTalk.text } : null, bark: !!window.__skyBark, d: window.__sky ? window.__sky.debug() : null }));
+      const { talk, bark, d } = st8;
       if (talk) {
-        const k = `${talk.name}|${talk.text}`;
-        if (!seen.has(k)) {
-          seen.add(k);
-          log.push(`S${st} [${d ? d.vil || d.block : ''} ph${d ? d.phase : ''}] ${talk.name}: ${talk.text}`);
-          if (talk.i === 0 && lastKeyShot !== k) { lastKeyShot = k; await page.waitForTimeout(talk.text.length * 34 + 120); await shot(`s${st}-talk`); }
-        }
-        // 실제 터치로 진행: 한 번에 한 번만 (찍는 중이면 다 보이기 → 다음 확인 때 다음 줄)
+        // 정지 대화: 첫 줄이 다 찍히면 캡처 → 실제 터치로 한 번씩 진행
+        if (!talk.typing && talk.i === 0 && !seen.has(talk.text)) { seen.add(talk.text); await shot(`s${st}-talk`); }
         await page.tap('.sky-talk', { position: { x: 30, y: 30 } }).catch(() => {});
-        await page.waitForTimeout(40);
+        await page.waitForTimeout(talk.typing ? 40 : 120);
         continue;
       }
       if (d && d.over) { await page.waitForTimeout(300); continue; }
-      // 빌런 등장 장면 캡처 (대화 직전)
-      if (d && d.vil && d.vil.endsWith(':in') && !seen.has('vil' + d.vil + d.step)) { seen.add('vil' + d.vil + d.step); await shot(`s${st}-villain`); }
-      await page.evaluate(() => window.__sky.sim(1.5));
-      await page.waitForTimeout(20);
+      if (bark && d && !seen.has('bark' + d.step + d.phase + d.vil)) { seen.add('bark' + d.step + d.phase + d.vil); await page.waitForTimeout(500); await shot(`s${st}-bark`); }
+      // 무전창이 떠 있으면 실제 시간에 가깝게 (대사가 보일 시간을 줌), 아니면 빠르게
+      await page.evaluate((b) => window.__sky.sim(b ? 0.12 : 1.5), bark);
+      await page.waitForTimeout(bark ? 90 : 20);
     }
+    // 대사 검증: 열린 대화 키 순서대로 기대 대사를 만들고, 실제로 화면에 보인 대사와 비교
+    const chk = await page.evaluate(({ st, fam, from }) => {
+      const keys = (window.__talkKeys || []).filter((k) => k.startsWith(`S${st}:`)).map((k) => k.split(':')[1]);
+      const exp = keys.flatMap((k) => window.__skyExpected(st, k, fam));
+      const endT = new Set(window.__skyEndingExpected || []); // 엔딩 대사는 엔딩 검증에서
+      const raw = (window.__talkSeen || []).slice(from).filter((x) => !endT.has(x.text));
+      const seenL = raw.filter((x, i) => !(i > 0 && raw[i - 1].text === x.text && raw[i - 1].mode === x.mode));
+      const cmp = (m) => {
+        const e = exp.filter((x) => x.mode === m).map((x) => x.text);
+        // 무전창: 정지 대화가 시작돼 버려진 줄(drop)도 '처리됨'으로 셈 (화면에는 안 나오는 것이 맞음)
+        const g = seenL.filter((x) => x.mode === m || (m === 'bark' && x.mode === 'drop')).map((x) => x.text);
+        const miss = e.filter((t) => !g.includes(t));
+        const order = miss.length === 0 && e.every((t, i) => g[i] === t);
+        return { n: e.length, shown: g.length, miss, order };
+      };
+      return { keys, talk: cmp('talk'), bark: cmp('bark'), dropped: seenL.filter((x) => x.mode === 'drop').length, lines: seenL.map((x) => `${x.mode === 'talk' ? '■' : x.mode === 'drop' ? '×' : '·'} ${x.name || '(해설)'}: ${x.text}`) };
+    }, { st, fam: FAM, from });
+    log.push(...chk.lines.map((l) => `S${st} ${l}`));
+    log.push(`S${st} 검증: 열린 키 ${chk.keys.length}개 [${chk.keys.join(' ')}] · 정지 대화 ${chk.talk.shown}/${chk.talk.n} 순서 ${chk.talk.order ? 'OK' : '틀림'} · 무전창 ${chk.bark.shown}/${chk.bark.n} 순서 ${chk.bark.order ? 'OK' : '틀림'} (보스 대화로 생략 ${chk.dropped}줄)` + (chk.talk.miss.length + chk.bark.miss.length ? ` · 누락 ${JSON.stringify([...chk.talk.miss, ...chk.bark.miss])}` : ''));
     await shot(`s${st}-clear`);
     if (st < s1) {
+      fromIdx = await page.evaluate(() => (window.__talkSeen || []).length);
       await page.waitForSelector('.tally .sky-btn-go', { timeout: 15000 });
       await page.tap('.tally .sky-btn-go');
       await page.waitForTimeout(300);
@@ -71,23 +87,24 @@ const [s0, s1] = RANGE.split('-').map(Number);
   // 최종 스테이지면 엔딩 → 크레딧까지 (장면마다 캡처 · 터치로 진행)
   if (s1 === 6) {
     await page.waitForSelector('.sky.end', { timeout: 20000 });
-    const scenes = new Set();
-    for (let k = 0; k < 400; k++) {
+    const efrom = fromIdx; // 마지막 스테이지 시작 위치부터 찾아서 엔딩 첫 줄 위치를 정함
+    const shotScene = new Set();
+    for (let k = 0; k < 600; k++) {
       if (await page.$('.cred')) break;
-      const cls = await page.evaluate(() => document.querySelector('.sky.end')?.className || '');
-      const tk = await page.evaluate(() => window.__skyTalk ? { name: window.__skyTalk.name, text: window.__skyTalk.text, typing: window.__skyTalk.typing } : null);
-      if (tk && !tk.typing) {
-        const key = `${tk.name}|${tk.text}`;
-        if (!scenes.has(key)) {
-          scenes.add(key);
-          log.push(`ENDING [${cls.replace('sky end pe ', '')}] ${tk.name || '(해설)'}: ${tk.text}`);
-          await page.waitForTimeout(350);
-          await shot('ending');
-        }
-        await page.tap('.sky-talk', { position: { x: 30, y: 30 } }).catch(() => {});
-      }
-      await page.waitForTimeout(120);
+      const cls = await page.evaluate(() => (document.querySelector('.sky.end')?.className || '').replace('sky end pe ', ''));
+      if (!shotScene.has(cls)) { shotScene.add(cls); await page.waitForTimeout(900); await shot(`ending-${cls}`); }
+      // 엔딩은 자동으로 넘어감 — 터치하지 않고 실제 시간 그대로 (타이밍 측정)
+      await page.waitForTimeout(150);
     }
+    const ech = await page.evaluate((efrom) => {
+      const exp = window.__skyEndingExpected || [];
+      const all = (window.__talkSeen || []).slice(efrom).map((x) => x.text);
+      const st0 = all.indexOf(exp[0]);
+      const raw = (st0 >= 0 ? all.slice(st0) : all.filter((t) => exp.includes(t))).filter((t, i, arr) => !(i > 0 && arr[i - 1] === t));
+      return { exp: exp.length, shown: raw.length, order: exp.every((t, i) => raw[i] === t), miss: exp.filter((t) => !raw.includes(t)), lines: raw };
+    }, efrom);
+    log.push(...ech.lines.map((l) => `ENDING ${l}`));
+    log.push(`ENDING 검증: ${ech.shown}/${ech.exp} 순서 ${ech.order ? 'OK' : '틀림'}` + (ech.miss.length ? ` · 누락 ${JSON.stringify(ech.miss)}` : ''));
     await page.waitForSelector('.cred', { timeout: 20000 });
     await page.waitForTimeout(800);
     await shot('credits');

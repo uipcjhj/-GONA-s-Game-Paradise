@@ -47,6 +47,8 @@ const SCENES: { id: SceneId; lines: TalkLine[] }[] = [
   ] },
 ];
 
+if (location.search.includes('skytest')) Object.assign(window, { __skyEndingExpected: SCENES.flatMap((s) => s.lines.map((l) => l.text)) });
+
 export function PoopEnding({ onDone }: { onDone: () => void }) {
   const [sc, setSc] = useState(0);
   const [who, setWho] = useState<string>('');
@@ -55,8 +57,11 @@ export function PoopEnding({ onDone }: { onDone: () => void }) {
     if (sc + 1 >= SCENES.length) onDone();
     else {
       const n = SCENES[sc + 1].id;
-      if (n === 'fart') { sfx('boomM', 0.7); sfx('bomb', 0.4); }
-      if (n === 'white' || n === 'success') sfx('menuOk');
+      // 장면 효과음 (기존 합성 효과음 재사용)
+      if (n === 'white') sfx('cutin', 0.8);
+      if (n === 'fart') { sfx('boomS', 0.9); sfx('shotHeavy', 0.6); }
+      if (n === 'success') sfx('gaugeFull', 0.9);
+      if (n === 'hug') sfx('heal', 0.8);
       setSc(sc + 1);
       setWho('');
     }
@@ -100,8 +105,14 @@ export function PoopEnding({ onDone }: { onDone: () => void }) {
         lines={scene.lines}
         st={null}
         art={null}
-        auto={scene.id === 'white' ? 600 : 1700}
-        onLine={(l) => setWho(`${l.name}|${l.text}`)}
+        auto={scene.id === 'white' ? 700 : scene.id === 'fart' ? 1300 : scene.id === 'success' ? 1400 : 1800}
+        onLine={(l, i) => {
+          setWho(`${l.name}|${l.text}`);
+          // 줄마다 작은 효과음: 열차 기적 · 힘주기 · 가족 반응
+          if (scene.id === 'train' && i === 1) sfx('start', 0.8);
+          if (scene.id === 'strain' && i === 2) sfx('chargeUp', 0.7);
+          if (scene.id === 'success' && i > 0) sfx('item', 0.6);
+        }}
         onDone={nextScene}
         skipLabel="다음 장면 ▶▶"
       />

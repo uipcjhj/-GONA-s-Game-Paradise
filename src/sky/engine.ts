@@ -12,7 +12,7 @@
  */
 import { type Assets, type V2Name, type CutinId, type StageArt, whiteOf } from './assets';
 import { familyText, THEME_ID } from './theme';
-import { talkLines, type TalkKey } from './story';
+import { talkLines, talkMode, barkSeconds, type TalkKey } from './story';
 import { STAGES, DIFF, ENEMIES, type StageDef, type Difficulty, type DiffDef, type EnemyName, type Move, type Fire, type ArtName, type BossDef, type Attack, type Step, type Wave } from './stages';
 import { bulletLooks, type BulletLook } from './bullets';
 import { CHARACTERS } from './data/characters';
@@ -58,6 +58,17 @@ export interface HudInfo {
   gauge: number;
   bombs: number;
 }
+
+// ───────────── 뽀글이·꾸덕이 스테이지별 연출 (등장 방향 · 장난 · 도망) ─────────────
+type VilPrank = 'ring' | 'puffs' | 'squad' | 'rain' | 'turrets' | 'guards';
+const VIL_STYLE: { from: 'top' | 'left' | 'right' | 'swoop'; prank: VilPrank; exit: 'up' | 'spin' | 'dash' | 'zigzag' | 'drop' | 'split' }[] = [
+  { from: 'top', prank: 'ring', exit: 'up' }, // 1 이유식 왕국: 위에서 내려와 가스 고리 + 쌀알 졸개
+  { from: 'left', prank: 'puffs', exit: 'spin' }, // 2 버섯가스 숲: 왼쪽에서 등장, 가스 풍선 3개, 빙글빙글 도망
+  { from: 'right', prank: 'squad', exit: 'dash' }, // 3 소화 공장: 오른쪽에서 등장, 양옆 편대, 옆으로 질주
+  { from: 'swoop', prank: 'rain', exit: 'zigzag' }, // 4 수분의 바다: 아래에서 휘어 올라옴, 물방울 비, 지그재그
+  { from: 'top', prank: 'turrets', exit: 'drop' }, // 5 딱딱 응가 성문: 포탑 설치, 헛디뎌 떨어졌다가 튀어 도망
+  { from: 'right', prank: 'guards', exit: 'split' }, // 6 변비마왕성: 근위대 호출, 둘이 서로 다른 쪽으로 (배신)
+];
 
 // ───────────── 작은 도구 ─────────────
 const rand = (a: number, b: number): number => a + Math.random() * (b - a);
@@ -282,11 +293,13 @@ export class SkyEngine {
   // ───── 응가 팩 스토리: 대화(전투 정지) · 뽀글이·꾸덕이 ─────
   /** 대화창을 띄울 때 부름 (SkyGame 이 설정) — 대화가 끝나면 endTalk() */
   onTalk: ((key: TalkKey) => void) | null = null;
+  /** 전투를 멈추지 않는 무전창 대사 (SkyGame 이 설정) */
+  onBark: ((key: TalkKey) => void) | null = null;
   talking = false;
   private talkDone = new Set<string>();
   /** 같은 순간에 대사가 겹치면 (페이즈 전환 + 격파 등) 차례대로 */
   private talkQ: TalkKey[] = [];
-  private vil: { kind: 'prank' | 'callMid' | 'callBoss'; x: number; y: number; vy: number; t: number; mode: 'in' | 'talk' | 'act' | 'out'; act: number; done: boolean } | null = null;
+  private vil: { kind: 'prank' | 'callMid' | 'callBoss'; x: number; y: number; sx: number; sy: number; vy: number; t: number; t2: number; hold: number; split: number; mode: 'in' | 'talk' | 'act' | 'out'; act: number; done: boolean } | null = null;
   private warnT = 0;
   private spawnQ: Spawn[] = [];
   private midboss: Enemy | null = null;
@@ -375,6 +388,10 @@ export class SkyEngine {
   private talk(key: TalkKey): boolean {
     if (this.over || !this.onTalk || this.talkDone.has(key) || !talkLines(this.st.id, key)) return false;
     this.talkDone.add(key);
+    if (talkMode(this.st.id, key) === 'bark') {
+      this.onBark?.(key);
+      return false;
+    }
     if (this.talking) {
       this.talkQ.push(key);
       return true;
@@ -386,6 +403,17 @@ export class SkyEngine {
     this.keys.clear();
     this.onTalk(key);
     return true;
+  }
+  /** 무전창 대사가 보이는 시간 (빌런이 그동안 제자리에서 떠듦) */
+  private barkDur(key: TalkKey): number {
+    const ls = talkLines(this.st.id, key);
+    if (!ls || talkMode(this.st.id, key) !== 'bark') return 0;
+    let t = 0;
+    for (const l of ls) {
+      const tx = l.who === 'partner' ? l.by?.[this.fam] : l.text;
+      if (tx) t += barkSeconds(tx);
+    }
+    return t;
   }
   /** 대화가 끝나면 SkyGame 이 부름 → 전투 재개 (재개 직후 잠깐 무적) */
   endTalk(): void {
@@ -684,7 +712,10 @@ export class SkyEngine {
     else if ('talk' in q) this.talk(q.talk);
     else if ('villain' in q) {
       this.block = 'villain';
-      this.vil = { kind: q.villain, x: W / 2, y: -34, vy: 0, t: 0, mode: 'in', act: 0, done: false };
+      const from = VIL_STYLE[(this.st.id - 1) % VIL_STYLE.length].from;
+      const sx = from === 'left' || from === 'swoop' ? -34 : from === 'right' ? W + 34 : W / 2;
+      const sy = from === 'top' ? -34 : from === 'swoop' ? 150 : 30;
+      this.vil = { kind: q.villain, x: sx, y: sy, sx, sy, vy: 0, t: 0, t2: 0, hold: 0, split: 0, mode: 'in', act: 0, done: false };
       sfx('menuOk', 0.7);
     }
     else if ('banner' in q) {
@@ -709,46 +740,91 @@ export class SkyEngine {
     }
   }
 
-  /** 뽀글이·꾸덕이: 내려옴 → 대화 → 장난(탄·졸개) / 중간보스·보스 호출 → 도망 */
+  /** 뽀글이·꾸덕이: 등장 → 무전창 대사(전투 계속) → 장난 / 중간보스·보스 호출 → 도망
+   *  스테이지마다 등장 방향 · 장난 종류 · 도망 방식이 다름 (VIL_STYLE) */
   private updateVillain(dt: number): void {
     const v = this.vil;
     if (!v) return;
+    const sty = VIL_STYLE[(this.st.id - 1) % VIL_STYLE.length];
     v.t += dt;
-    v.x = W / 2 + Math.sin(v.t * 1.5) * 26;
     if (v.mode === 'in') {
-      v.y += (70 - v.y) * Math.min(1, dt * 3) + 14 * dt;
-      if (v.y >= 66) {
+      const p = Math.min(1, v.t / 1.1);
+      const e = 1 - (1 - p) ** 3;
+      v.x = v.sx + (W / 2 - v.sx) * e;
+      v.y = v.sy + (66 - v.sy) * e - (sty.from === 'swoop' ? Math.sin(p * Math.PI) * 40 : 0);
+      if (p >= 1) {
         v.mode = 'talk';
+        v.hold = this.barkDur(v.kind);
         this.talk(v.kind);
       }
-    } else if (v.mode === 'talk') {
-      v.mode = 'act'; // 대화가 끝나 다시 움직이기 시작
+      return;
+    }
+    if (v.mode === 'talk' || v.mode === 'act') v.x = W / 2 + Math.sin((v.t - 1.1) * 1.5) * 22;
+    if (v.mode === 'talk') {
+      v.hold -= dt; // 무전창 대사가 보이는 동안 제자리에서 떠듦 (정지 대화였다면 끝난 뒤 바로)
+      if (v.hold <= 0) v.mode = 'act';
     } else if (v.mode === 'act') {
       v.act += dt;
       if (!v.done && v.act > 0.35) {
         v.done = true;
-        if (v.kind === 'prank') {
-          // 뽀글이: 느린 가스 방울 고리 · 꾸덕이: 쌀알 졸개 호출
-          const n = this.cnt(12);
-          for (let i = 0; i < n; i++) {
-            const a = (i / n) * TAU + v.t;
-            this.newEB(v.x - 18, v.y, Math.cos(a) * this.spd(48), Math.sin(a) * this.spd(48), 3, 'smell');
-          }
-          this.spawnWave({ e: 'drone', n: 5, move: 'swarm', gap: 0.22, x0: 30, x1: 150 });
-          this.floatText(v.x, v.y - 26, '킥킥킥!', '#e8c8ff');
-          sfx('compShot', 0.8, 0.7);
-        } else if (v.kind === 'callMid') {
-          this.floatText(v.x, v.y - 26, '부탁해요~!', '#ffe9a8');
-        } else {
-          this.floatText(v.x, v.y - 26, '도망이다~!', '#cfc4ff');
-        }
+        if (v.kind === 'prank') this.villainPrank(sty.prank, v.x, v.y);
+        else if (v.kind === 'callMid') this.floatText(v.x, v.y - 26, '부탁해요~!', '#ffe9a8');
+        else this.floatText(v.x, v.y - 26, this.st.id === 6 ? '퇴근이다~!' : '도망이다~!', '#cfc4ff');
       }
-      if (v.act > 0.9) v.mode = 'out';
+      if (v.act > 0.9) { v.mode = 'out'; v.t2 = 0; }
     } else {
-      v.vy = Math.min(v.vy + 260 * dt, 260);
-      v.y -= v.vy * dt;
-      if (v.y < -50) this.vil = null;
+      v.t2 += dt;
+      v.vy = Math.min(v.vy + 260 * dt, 280);
+      switch (sty.exit) {
+        case 'spin': v.x += Math.cos(v.t2 * 9) * 120 * dt + 40 * dt; v.y -= v.vy * 0.8 * dt; break;
+        case 'dash': v.x += (90 + v.t2 * 400) * dt; v.y -= 20 * dt; break;
+        case 'zigzag': v.x = W / 2 + Math.sin(v.t2 * 10) * 40; v.y -= v.vy * dt; break;
+        case 'drop': if (v.t2 < 0.35) v.y += 60 * dt; else v.y -= v.vy * 1.2 * dt; break;
+        case 'split': v.split += 120 * dt; v.y -= v.vy * 0.7 * dt; break;
+        default: v.y -= v.vy * dt;
+      }
+      if (v.y < -50 || v.x > W + 60 || v.x < -60 || v.split > W) this.vil = null;
     }
+  }
+  /** 빌런 장난 (스테이지마다 다름) */
+  private villainPrank(kind: VilPrank, x: number, y: number): void {
+    const sp = (v: number) => this.spd(v);
+    if (kind === 'ring') {
+      // 뽀글이 가스 방울 고리 + 쌀알 졸개
+      const n = this.cnt(12);
+      for (let i = 0; i < n; i++) { const a = (i / n) * TAU; this.newEB(x - 18, y, Math.cos(a) * sp(48), Math.sin(a) * sp(48), 3, 'smell'); }
+      this.spawnWave({ e: 'drone', n: 5, move: 'swarm', gap: 0.22, x0: 30, x1: 150 });
+      this.floatText(x, y - 26, '킥킥킥!', '#e8c8ff');
+    } else if (kind === 'puffs') {
+      // 가스 풍선 3개가 터지며 작은 가스 고리
+      for (const cx of [x - 46, x, x + 46]) {
+        const n = this.cnt(7);
+        for (let i = 0; i < n; i++) { const a = (i / n) * TAU; this.newEB(cx, y + 10, Math.cos(a) * sp(34), Math.sin(a) * sp(34) + sp(18), 3, 'smell'); }
+      }
+      this.spawnWave({ e: 'drone', n: 4, move: 'zig', gap: 0.3, x0: 30, x1: 150 });
+      this.floatText(x, y - 26, '뿡뿡~!', '#c8ffb0');
+    } else if (kind === 'squad') {
+      // 컨베이어처럼 양옆에서 편대 출격 (탄 없음)
+      this.spawnWave({ e: 'fighter', n: 5, move: 'strafe', gap: 0.3, dir: 1, y: 40 });
+      this.spawnWave({ e: 'fighter', n: 5, move: 'strafe', gap: 0.3, dir: -1, y: 72 });
+      this.floatText(x, y - 26, '최대 속도~!', '#ffe0a0');
+    } else if (kind === 'rain') {
+      // 훔친 물방울을 뿌림 (부채꼴로 떨어지는 느린 탄)
+      const n = this.cnt(9, true);
+      for (let i = 0; i < n; i++) { const a = Math.PI / 2 + (i - (n - 1) / 2) * 0.16; this.newEB(x, y + 8, Math.cos(a) * sp(70), Math.sin(a) * sp(70), 3, 'wave'); }
+      this.floatText(x, y - 26, '메롱~!', '#a8e8ff');
+    } else if (kind === 'turrets') {
+      // 돌멩이 포탑 둘을 내려놓음
+      this.spawnWave({ e: 'orb', n: 1, move: 'turret', x0: 40, x1: 40, fire: 'ring' });
+      this.spawnWave({ e: 'orb', n: 1, move: 'turret', x0: 140, x1: 140, fire: 'ring' });
+      this.floatText(x, y - 26, '딱딱하지롱!', '#ffd8a0');
+    } else {
+      // 근위대 호출: 고리 비행 편대 + 일렬 대기 드론
+      this.spawnWave({ e: 'fighter', n: 4, move: 'loop', gap: 0.35, dir: 1 });
+      this.spawnWave({ e: 'drone', n: 6, move: 'hold', gap: 0.15, x0: 30, x1: 150, y: 50, fire: 'aim1' });
+      this.floatText(x, y - 26, '근위대 출동~!', '#ffb0d0');
+    }
+    sfx('compShot', 0.8, 0.7);
   }
   private drawVillain(): void {
     const v = this.vil;
@@ -757,8 +833,8 @@ export class SkyEngine {
     const panic = v.mode === 'out' && v.kind !== 'prank';
     const col = v.mode === 'act' ? (v.kind === 'callBoss' ? 3 : 2) : v.mode === 'out' ? (panic ? 3 : 1) : Math.floor(v.t * 4) % 2;
     const bob = Math.sin(v.t * 6) * 2;
-    this.cell(im, col, 0, 4, 2, v.x - 18, v.y + bob, 1);
-    this.cell(im, col, 1, 4, 2, v.x + 18, v.y - bob + 4, 1);
+    this.cell(im, col, 0, 4, 2, v.x - 18 - v.split, v.y + bob, 1);
+    this.cell(im, col, 1, 4, 2, v.x + 18 + v.split, v.y - bob + 4, 1);
   }
 
   private spawnWave(w: Wave): void {
@@ -3218,6 +3294,8 @@ export class SkyEngine {
     this.text(String(this.score).padStart(8, '0'), W - 4, 2, '#ffe9a8', 'right');
     for (let i = 0; i < 4; i++) { g.fillStyle = i < this.power ? '#58e0ff' : '#2a3060'; g.fillRect(W - 46 + i * 7, 16, 5, 5); }
     this.text('P', W - 54, 13, '#58e0ff', 'left', 11);
+    // 임시 그래픽 스테이지: 화면 아래쪽에 항상 작게 표시 (최종본으로 오해하지 않게)
+    if (THEME_ID === 'poop' && this.st.temp && !this.over) this.text('임시 그래픽', W - 3, H - 11, '#cfc4ff', 'right', 9);
     // 필살 게이지·차지 게이지는 조작 버튼과 고나 발밑에 표시 (가운데 일시정지 버튼과 겹치지 않게 HUD 에서는 생략)
     const mult = Math.min(5, 1 + Math.floor(this.combo / 5));
     if (this.combo >= 3) this.text(`${this.combo} HIT${mult > 1 ? ` x${mult}` : ''}`, 4, this.boss ? 40 : 30, '#ff9ec0', 'left', 11);

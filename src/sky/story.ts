@@ -65,7 +65,6 @@ const S2: StageStory = {
   ],
   prank: [
     { who: 'kku', face: 1, text: '뿡뿡 가스 풍선 선물이다~!' },
-    { who: 'bbo', face: 1, text: '킥킥, 코 막아도 소용없지롱!' },
     P({ mom: '으으, 고나야 숨 꾹 참아!', dad: '이 녀석들, 또 너희냐!', imo: '(코 막고) …진짜 최악이야.', halmeoni: '에구머니, 냄새야!', halabeoji: '저 녀석들이 가스를 퍼뜨린 거였군!', samchon: '가스 농도가 위험 수준이야!' }),
   ],
   callMid: [{ who: 'kku', face: 1, text: '방귀 풍선 비행정, 출격~!' }],
@@ -92,7 +91,6 @@ const S3: StageStory = {
   ],
   prank: [
     { who: 'kku', face: 1, text: '공장장은 내가 조종하고 있지롱!' },
-    { who: 'bbo', face: 1, text: '컨베이어 최대 속도~!' },
     P({ mom: '공장장님이 조종당하고 있었다니!', dad: '이 녀석들 짓이었구나!', imo: '꾸덕이, 너 딱 걸렸어.', halmeoni: '남의 공장에서 무슨 짓이여!', halabeoji: '공장장을 풀어 줘야겠다!', samchon: '내 발명품으로 고쳐 주마!' }),
   ],
   callMid: [{ who: 'kku', face: 1, text: '감자 로봇 비행정, 가동!' }],
@@ -119,7 +117,6 @@ const S4: StageStory = {
   ],
   prank: [
     { who: 'bbo', face: 1, text: '물방울은 우리가 다 훔쳤지롱~' },
-    { who: 'kku', face: 1, text: '목마르지? 메롱~!' },
     P({ mom: '남의 물을 훔치면 못써!', dad: '물대포 맛 좀 볼래?', imo: '어휴, 진짜 얄미워!', halmeoni: '물 도둑은 혼나야지!', halabeoji: '저 녀석들부터 붙잡아라!', samchon: '물방울 회수 작전 개시!' }),
   ],
   callMid: [{ who: 'kku', face: 1, text: '도둑 대장님, 물방울 지켜 주세요!' }],
@@ -146,7 +143,6 @@ const S5: StageStory = {
   ],
   prank: [
     { who: 'kku', face: 1, text: '이 성은 꾸덕꾸덕 굳어서 절대 못 뚫지!' },
-    { who: 'bbo', face: 1, text: '돌멩이 병사들, 출동~!' },
     P({ mom: '흥, 고나는 절대 포기 안 해!', dad: '두고 봐라, 다 뚫어 줄 테니!', imo: '그 말 꼭 기억해 둬.', halmeoni: '할미 손이 약손인 걸 모르는구나!', halabeoji: '이 방패보다 단단할까?', samchon: '굳은 건 녹이면 되지!' }),
   ],
   callMid: [{ who: 'bbo', face: 1, text: '유령 대장님~ 무서운 거 보여 줘요!' }],
@@ -173,7 +169,6 @@ const S6: StageStory = {
   ],
   prank: [
     { who: 'bbo', face: 1, text: '마왕님 성에 온 걸 환영… 아니, 돌아가!' },
-    { who: 'kku', face: 1, text: '근위대, 전부 나와라~!' },
     P({ mom: '이번엔 안 봐줄 거야!', dad: '끝까지 귀찮게 하는구나!', imo: '마지막 경고야, 비켜.', halmeoni: '아직도 정신을 못 차렸구먼!', halabeoji: '고나야, 할아비 옆에 꼭 붙어라!', samchon: '이번엔 놓치지 않는다!' }),
   ],
   callMid: [{ who: 'kku', face: 1, text: '호위 기사님, 마지막 방어선이에요!' }],
@@ -201,6 +196,21 @@ const S6: StageStory = {
 };
 
 const STORY: StageStory[] = [S1, S2, S3, S4, S5, S6];
+
+/**
+ * 대화 방식 (실제 플레이 템포 기준으로 압축)
+ *  - 'talk' : 전투를 멈추고 대화창 — 보스 등장 · 보스 격파 · FINAL 3페이즈(가족 협력) 만
+ *  - 'bark' : 전투를 멈추지 않는 짧은 무전창 (화면 위쪽, 자동으로 사라짐) — 나머지 전부
+ */
+export function talkMode(stage: number, key: TalkKey): 'talk' | 'bark' {
+  if (key === 'bossIn' || key === 'bossDown') return 'talk';
+  if (stage === 6 && key === 'bossP3') return 'talk';
+  return 'bark';
+}
+/** 무전창 한 줄 표시 시간(초) — 빌런이 그동안 제자리에서 떠들다가 움직임 */
+export function barkSeconds(text: string): number {
+  return 1.5 + [...text].length * 0.055;
+}
 
 /** 이 스테이지·순간에 대사가 있는지 (케이크 테마는 항상 없음) */
 export function talkLines(stage: number, key: TalkKey): Line[] | null {

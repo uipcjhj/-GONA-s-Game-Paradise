@@ -274,6 +274,10 @@ canvas.talk-face { width: 72px; height: 72px; }
 .pe-family { position: absolute; inset: 0 0 34%; background: #2a1450; }
 .pe-f { position: absolute; height: 34%; object-fit: contain; transition: transform 0.4s steps(4), filter 0.3s; filter: brightness(0.7); }
 .pe-f.talk { filter: none; transform: scale(1.18) translateY(-4%); z-index: 2; }
+/* 말할 때 커지는 그림이 화면 밖으로 잘리지 않게 바깥 가장자리 기준으로 커짐 */
+.pe-f.f0, .pe-f.f2, .pe-f.f4 { transform-origin: left top; }
+.pe-f.f1, .pe-f.f3, .pe-f.f5 { transform-origin: right top; }
+.pe-f.talk.f0, .pe-f.talk.f1 { transform: scale(1.18) translateY(2%); }
 .pe-f.f0 { left: 1%; top: 6%; } .pe-f.f1 { right: 1%; top: 6%; } .pe-f.f2 { left: 0; top: 36%; }
 .pe-f.f3 { right: 0; top: 36%; } .pe-f.f4 { left: 16%; top: 62%; } .pe-f.f5 { right: 16%; top: 62%; }
 .pe-center { left: 50%; top: 24%; height: 48%; margin-left: -18%; filter: none; z-index: 1; }
@@ -289,3 +293,15 @@ canvas.talk-face { width: 72px; height: 72px; }
 .tally-train i { flex: 1; height: 6px; background: #d8c9a4; border: 2px solid #3b2a3f; }
 .tally-train i.on { background: #78d246; }
 .tally-train img { position: absolute; bottom: 6px; width: 34px; margin-left: -17px; image-rendering: pixelated; animation: pe-chug 0.3s steps(2) infinite; }
+/* 무전창: 전투를 멈추지 않는 짧은 대사 (화면 위쪽 · 터치 통과) */
+.sky-bark {
+  position: absolute; top: 9%; left: 6px; right: 6px; z-index: 25; pointer-events: none; display: flex; gap: 6px; align-items: center; padding: 4px 6px;
+  background: rgba(20, 26, 58, 0.92); border: 2px solid #ffd34a; outline: 2px solid #1a1226; animation: talk-in 0.14s steps(3) both;
+}
+.sky-bark.foe { background: rgba(42, 16, 48, 0.92); }
+.bark-pic { flex: 0 0 40px; height: 40px; background: #0b0f24; border: 2px solid #ffd34a; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.bark-pic .talk-face, .bark-pic canvas.talk-face { width: 36px; height: 36px; }
+.bark-body { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.bark-body b { font-size: 10px; color: #ffd34a; letter-spacing: 1px; }
+.sky-bark.foe .bark-body b { color: #ff8ab0; }
+.bark-body span { font-size: 12px; line-height: 1.35; color: #fff8e4; text-shadow: 0 1px 0 #000; word-break: keep-all; }

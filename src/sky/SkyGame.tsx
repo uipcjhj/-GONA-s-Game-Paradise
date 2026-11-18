@@ -8,8 +8,8 @@ import { settings, saveSettings, canVibrate } from './settings';
 import { NS, BETA } from './ns';
 import { THEME, familyText } from './theme';
 import { packPath } from './artpack';
-import { talkLines } from './story';
-import { TalkBox, resolveLines, type TalkLine } from './TalkBox';
+import { talkLines, talkMode, type TalkKey } from './story';
+import { TalkBox, BarkBox, resolveLines, type TalkLine } from './TalkBox';
 import { PoopEnding } from './PoopEnding';
 import './sky.css';
 
@@ -17,7 +17,8 @@ const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
 const FAMILY: FamilyId[] = ['mom', 'dad', 'imo', 'halmeoni', 'halabeoji', 'samchon'];
 const REC_KEY = `${NS}.records`;
 const DIFFS: Difficulty[] = ['easy', 'normal', 'hard'];
-const DEV = /[?&](dev|skytest)/.test(location.search);
+// 테스트 메뉴(STAGE 1~6 선택 · 엔딩 보기): 주소에 ?dev / ?skytest, 또는 #dev (미리보기 링크는 #dev 만 전달됨)
+const DEV = /[?&](dev|skytest)/.test(location.search) || location.hash === '#dev';
 interface Rec { score: number; reach: number; clear: boolean }
 type Records = Record<Difficulty, Rec>;
 function loadRecords(): Records {
@@ -68,6 +69,8 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
   /** 스토리 대화 (응가 테마) — 있는 동안 전투 정지 */
   const [talk, setTalk] = useState<{ n: number; lines: TalkLine[] } | null>(null);
   const talkN = useRef(0);
+  /** 무전창 대기열 (전투 중 짧은 대사) */
+  const [barks, setBarks] = useState<{ n: number; line: TalkLine }[]>([]);
   const [result, setResult] = useState<EndInfo | null>(null);
   const [records, setRecords] = useState(loadRecords);
   const [diff, setDiff] = useState<Difficulty>(() => {
@@ -185,12 +188,31 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
     );
     engine.current = eng;
     setTalk(null);
+    setBarks([]);
     const opts = runOpts;
+    eng.onBark = (key) => {
+      if (location.search.includes('skytest')) ((window as unknown as { __talkKeys?: string[] }).__talkKeys ??= []).push(`S${opts.stage}:${key}`);
+      const ls = talkLines(opts.stage, key);
+      if (!ls) return;
+      const lines = resolveLines(ls, opts.fam, STAGES[opts.stage - 1], key);
+      setBarks((b) => [...b, ...lines.map((line) => ({ n: ++talkN.current, line }))]);
+    };
     eng.onTalk = (key) => {
       if (location.search.includes('skytest')) ((window as unknown as { __talkKeys?: string[] }).__talkKeys ??= []).push(`S${opts.stage}:${key}`);
       const ls = talkLines(opts.stage, key);
       const lines = ls ? resolveLines(ls, opts.fam, STAGES[opts.stage - 1], key) : [];
-      if (lines.length) setTalk({ n: ++talkN.current, lines });
+      if (lines.length) {
+        // 정지 대화가 시작되면 아직 못 보여 준 무전창 대사는 버림 (끝난 뒤 지난 대사가 뒤늦게 뜨지 않게)
+        setBarks((b) => {
+          if (b.length && location.search.includes('skytest')) {
+            const w = window as unknown as { __talkSeen?: { mode: string; who: string; name: string; text: string }[] };
+            const showing = !!(window as unknown as { __skyBark?: unknown }).__skyBark; // 지금 떠 있던 줄은 이미 '보임'으로 기록됨
+            for (const x of showing ? b.slice(1) : b) (w.__talkSeen ??= []).push({ mode: 'drop', who: x.line.who, name: x.line.name, text: x.line.text });
+          }
+          return [];
+        });
+        setTalk({ n: ++talkN.current, lines });
+      }
       else eng.endTalk();
     };
     if (location.search.includes('skytest')) (window as unknown as { __sky: SkyEngine }).__sky = eng;
@@ -299,6 +321,10 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
     setContinues((c) => c + 1);
     beginStage({ ...runOpts, stage: result.stage, hp: 5, bombs: DIFF[runOpts.diff].bombs, power: Math.max(2, result.power), score: 0 });
   };
+  if (location.search.includes('skytest')) Object.assign(window, {
+    // 자동 검수: 스테이지·순간별로 보여야 하는 대사 (방식 · 순서)
+    __skyExpected: (st: number, key: TalkKey, f: FamilyId) => resolveLines(talkLines(st, key) ?? [], f, STAGES[st - 1], key).map((l) => ({ mode: talkMode(st, key), text: l.text })),
+  });
   if (location.search.includes('skytest')) Object.assign(window, { __skyFlow: { nextStage, doContinue, start: (st: number, d: Difficulty = 'normal') => start(fam, d, st), phase } });
 
   useEffect(() => {
@@ -436,6 +462,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
           <div className="ttl-row">
             <button type="button" className="ttl-start" onClick={go}>PRESS START</button>
             {THEME.opening.length > 0 && <button type="button" className="ttl-map" onClick={() => { sfx('menuMove'); setSlide(0); setPhase('opening'); }}>오프닝</button>}
+            {DEV && THEME.id === 'poop' && <button type="button" className="ttl-map ttl-test" onClick={() => { sfx('menuMove'); setSlide(0); playBgm('ending', 1.2); setPhase('ending'); }}>엔딩</button>}
             <button type="button" className="ttl-map" onClick={() => { sfx('menuMove'); onExit(); }}>월드맵</button>
           </div>
           {!soundOn && <p className="ttl-hint">♪ 화면을 터치하면 음악이 켜져요</p>}
@@ -539,6 +566,9 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
     <div className="sky sky-play" ref={boxRef}>
       <div className="sky-stage" style={{ width: box.w, height: box.h, marginBottom: box.bar ? CTRL : 0 }}>
         <canvas ref={canvasRef} className="sky-canvas" style={{ width: box.w, height: box.h }} />
+        {phase === 'play' && !talk && !paused && barks.length > 0 && runOpts && (
+          <BarkBox key={barks[0].n} line={barks[0].line} st={STAGES[runOpts.stage - 1]} art={stageArt} onNext={() => setBarks((b) => b.slice(1))} />
+        )}
         {phase === 'play' && talk && runOpts && (
           <TalkBox
             key={talk.n}
@@ -647,7 +677,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
                   <img src={`${BASE}${packPath('ending/train.png', 'v2/fx/missile.png')}`} alt="응가 열차" style={{ left: `${((result.stage - 0.5) / STAGES.length) * 100}%` }} />
                 </div>
               )}
-              <p className="tally-next">NEXT ▶ STAGE {result.stage + 1} · {STAGES[result.stage]?.name}</p>
+              <p className="tally-next">NEXT ▶ STAGE {result.stage + 1} · {STAGES[result.stage]?.name}{THEME.id === 'poop' && STAGES[result.stage]?.temp ? ' (임시 그래픽)' : ''}</p>
               <button type="button" className="sky-btn sky-btn-go" onClick={nextStage}>다음 스테이지</button>
               <button type="button" className="sky-btn" onClick={() => { recordRun(result, false); setPhase('title'); }}>타이틀로</button>
             </div>

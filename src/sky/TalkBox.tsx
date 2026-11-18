@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FamilyId } from './engine';
 import type { StageDef } from './stages';
 import type { StageArt } from './assets';
-import type { Line, Speaker } from './story';
+import { barkSeconds, type Line, type Speaker } from './story';
 import { CHARACTERS } from './data/characters';
 import { packPath, hasPack } from './artpack';
 import { sfx } from './audio';
@@ -103,7 +103,7 @@ export function TalkBox({ lines, st, art, onDone, auto, onLine, skipLabel = 'SKI
     else { setI(i + 1); setShown(0); }
   };
 
-  useEffect(() => { if (line) onLine?.(line, i); }, [i]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (line) { onLine?.(line, i); recordSeen('talk', line); } }, [i]); // eslint-disable-line react-hooks/exhaustive-deps
   // 자동 넘김 (엔딩)
   useEffect(() => {
     if (!auto || !line || shown < full) return;
@@ -151,6 +151,48 @@ export function TalkBox({ lines, st, art, onDone, auto, onLine, skipLabel = 'SKI
           </p>
         </div>
         <button type="button" className="talk-skip" onPointerDown={(e) => { e.stopPropagation(); finish(); }}>{skipLabel}</button>
+      </div>
+    </div>
+  );
+}
+
+/** 자동 검수용: 화면에 실제로 보인 대사를 순서대로 기록 (?skytest) */
+export function recordSeen(mode: 'talk' | 'bark', l: TalkLine): void {
+  if (!location.search.includes('skytest')) return;
+  const w = window as unknown as { __talkSeen?: { mode: string; who: string; name: string; text: string }[] };
+  (w.__talkSeen ??= []).push({ mode, who: l.who, name: l.name, text: l.text });
+}
+
+/**
+ * 무전창 (전투를 멈추지 않는 짧은 대사) — 화면 위쪽 작은 창, 줄마다 자동으로 넘어감, 터치는 그대로 전투로 통과
+ * 빌런 장난 · 중간보스 · 페이즈 전환 등 '일반 이벤트' 대사용
+ */
+export function BarkBox({ line, onNext, st, art }: { line: TalkLine; onNext: () => void; st: StageDef | null; art: StageArt | null }) {
+  const [shown, setShown] = useState(0);
+  const full = [...line.text].length;
+  useEffect(() => { recordSeen('bark', line); }, [line]);
+  useEffect(() => {
+    if (shown >= full) return;
+    const id = window.setTimeout(() => setShown((n) => n + 1), 22);
+    return () => window.clearTimeout(id);
+  }, [shown, full]);
+  useEffect(() => {
+    const id = window.setTimeout(onNext, barkSeconds(line.text) * 1000);
+    return () => window.clearTimeout(id);
+  }, [line]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!location.search.includes('skytest')) return;
+    Object.assign(window, { __skyBark: { who: line.who, name: line.name, text: line.text } });
+    return () => { delete (window as unknown as { __skyBark?: unknown }).__skyBark; };
+  });
+  const villain = line.who === 'bbo' || line.who === 'kku' || line.who === 'mid' || line.who === 'boss';
+  const pic = portrait(line, st, art);
+  return (
+    <div className={`sky-bark${villain ? ' foe' : ''}`}>
+      {pic && <div className="bark-pic">{pic}</div>}
+      <div className="bark-body">
+        {line.name && <b>{line.name}</b>}
+        <span>{[...line.text].slice(0, shown).join('')}</span>
       </div>
     </div>
   );
