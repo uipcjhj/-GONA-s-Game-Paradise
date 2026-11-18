@@ -36,3 +36,15 @@
 ## 5. 그동안 테스트 방법 (배포 없이)
 - 미리보기 링크(Claude 아티팩트, 비공개): 최신 응가 테스트 빌드를 그대로 올려 둠 — iPhone Safari 에서 열어 플레이 가능.
 - 로컬: `npm run build:poop && python3 -m http.server 8767 -d dist-poop` → `http://<주소>:8767/?dev` (미리보기 링크는 끝에 `#dev`)
+
+## 6. 실행 결과 (2026-11-18, 사용자가 Pages 출처를 GitHub Actions 로 변경한 뒤)
+| 단계 | 실행 | 결과 |
+|---|---|---|
+| 1. 변경 없는 재배포 | 통합 워크플로 수동 실행 (main, 입력 비움) · run #22 `44262007333` | 성공 · 출처 검사 통과(build_type=workflow) · 정식·sky-test·sky-poop-test 의 js 파일이 배포 전과 **동일**, dev 는 빌드 시각 표시만 달라짐 |
+| 2. 응가 테스트판 갱신 | sky-test 에 `25f8196`(통합 워크플로) + `74a3689`(sky-poop-test/ 만) fast-forward 푸시 · run #23 `44262169664` | 성공 · sky-poop-test 가 새 빌드(`index-Bczkf093.js`, 소스 c2918a7) · sky-test/ 변경 0 |
+| 3. 네 주소 확인 | 실제 브라우저(iPhone 393×636 · 390×844) | /GoNa/ · /GoNa/dev/ · /GoNa/sky-test/ · /GoNa/sky-poop-test/ 모두 200 · 화면 정상 · 두 테스트판 콘솔 오류·실패 요청 0 |
+
+참고
+- 정식·dev 에서 보이는 이미지 6개 404(`snacks/jelly.png`, `character/stages/walker.png`, `boss/sniff-sheet.png`, `boss/kiss-sheet.png`, `monsters/glasses-sheet.png`, `monsters/farter-sheet.png`)는 **배포 전부터** 저장소에 없던 선택 그림(있으면 교체, 없으면 기본 그림 사용)이다. 배포와 무관 · Food Adventure 는 수정하지 않음.
+- 배포 직후·요청을 한꺼번에 많이 보낼 때 GitHub Pages 가 잠깐 503 을 돌려줄 수 있다 (재확인 시 정상). 테스트판 그림 로더는 그림 하나라도 실패하면 오류 화면을 띄우므로, 그럴 때는 새로고침.
+- 앞으로 배포: sky-test 브랜치 `sky-poop-test/` 에 새 빌드를 넣고 푸시하면 같은 워크플로가 네 경로를 함께 배포한다 (출처 검사·파일 검사 실패 시 배포 안 함). 복구는 Run workflow 에 이전 커밋 입력.
