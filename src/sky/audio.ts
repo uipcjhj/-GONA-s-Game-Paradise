@@ -15,7 +15,7 @@
  */
 import LOOPS from './audioLoops';
 
-export type BgmName = 'title' | 'select' | 'stage1' | 'stage2' | 'stage3' | 'stage4' | 'stage5' | 'final' | 'boss' | 'lastboss' | 'ending' | 'clear' | 'over';
+export type BgmName = 'title' | 'select' | 'stage1' | 'stage2' | 'stage3' | 'stage4' | 'stage5' | 'final' | 'boss' | 'lastboss' | 'ending' | 'clear' | 'over' | 'opening';
 
 const BGM: Record<BgmName, { vol: number; loop?: number[] }> = {
   title: { vol: 0.6, ...LOOPS.title },
@@ -31,6 +31,8 @@ const BGM: Record<BgmName, { vol: number; loop?: number[] }> = {
   ending: { vol: 0.6, ...LOOPS.ending },
   clear: { vol: 0.66 },
   over: { vol: 0.66 },
+  /** 오프닝 시네마틱 (약 34초 · 반복 없음 · tools/sky-audio/opening.py) */
+  opening: { vol: 0.9 },
 };
 
 /** 효과음 표: 볼륨 · 동시 재생 최대 수 · 같은 소리 최소 간격(초) */

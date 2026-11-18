@@ -21,8 +21,8 @@ const [s0, s1] = RANGE.split('-').map(Number);
   await page.goto(url);
   await page.waitForSelector('.ttl-start');
   await page.tap('.ttl-start');
-  await page.waitForSelector('.sel-art, .opening-skip');
-  if (await page.$('.opening-skip')) await page.tap('.opening-skip');
+  await page.waitForSelector('.sel-art, .opening-skip, .oc-skip');
+  if (await page.$('.opening-skip')) await page.tap('.opening-skip'); if (await page.$('.oc-skip')) { await page.waitForTimeout(800); await page.tap('.oc-skip'); await page.waitForSelector('.sel-art'); }
   await page.waitForSelector('.sel-art');
   await page.tap(`.sel-roster li:nth-child(${ORDER.indexOf(FAM) + 1}) button`);
   await page.waitForTimeout(150);

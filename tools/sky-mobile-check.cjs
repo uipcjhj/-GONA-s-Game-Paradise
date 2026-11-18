@@ -34,8 +34,8 @@ const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/6
     await p.waitForTimeout(1200);
     await shot('01-title'); await noHScroll('타이틀');
     await p.tap('.ttl-start');
-    await p.waitForSelector('.sel-art, .opening-skip');
-    if (await p.$('.opening-skip')) { await p.waitForTimeout(600); await shot('02-opening'); await p.tap('.opening-skip'); }
+    await p.waitForSelector('.sel-art, .opening-skip, .oc-skip');
+    if (await p.$('.opening-skip')) { await p.waitForTimeout(600); await shot('02-opening'); await p.tap('.opening-skip'); } if (await p.$('.oc-skip')) { await p.waitForTimeout(1500); await shot('02-opening'); await p.tap('.oc-skip'); await p.waitForSelector('.sel-art'); }
     await p.waitForSelector('.sel-art'); await p.waitForTimeout(500);
     await shot('03-select'); await noHScroll('선택'); await inView('.sky-btn-go', '출격 버튼');
     await p.tap('.sky-btn-go');

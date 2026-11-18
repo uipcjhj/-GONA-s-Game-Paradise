@@ -305,3 +305,52 @@ canvas.talk-face { width: 72px; height: 72px; }
 .bark-body b { font-size: 10px; color: #ffd34a; letter-spacing: 1px; }
 .sky-bark.foe .bark-body b { color: #ff8ab0; }
 .bark-body span { font-size: 12px; line-height: 1.35; color: #fff8e4; text-shadow: 0 1px 0 #000; word-break: keep-all; }
+
+/* ───── 오프닝 시네마틱 (응가 테마) — 전체 화면 · HUD 없음 · 금빛 서사체 자막 ───── */
+.sky.oc { background: #000; padding: 0; justify-content: flex-start; cursor: default; }
+.oc-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.oc-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #8a7a5a; font-size: 12px; letter-spacing: 4px; }
+.oc-subs {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 22% 7% 13%; display: flex; flex-direction: column; align-items: center; gap: 0.35em;
+  pointer-events: none; text-align: center;
+  /* 밝은 장면에서도 읽히게: 아래쪽 어두운 영화 자막 띠 */
+  background: linear-gradient(to top, rgba(4, 2, 10, 0.88) 0%, rgba(4, 2, 10, 0.62) 55%, rgba(4, 2, 10, 0) 100%);
+  font-family: 'AppleMyungjo', 'Nanum Myeongjo', 'NanumMyeongjo', 'Noto Serif KR', 'Noto Serif CJK KR', 'Batang', serif;
+}
+.oc-subs.center { top: 0; bottom: 0; justify-content: center; gap: 0.6em; padding: 0 7% 8%; background: none; }
+.oc-line {
+  margin: 0; font-size: clamp(16px, 4.6vw, 22px); line-height: 1.45; font-weight: 700; letter-spacing: 0.04em; word-break: keep-all;
+  color: #fbe7b0;
+  text-shadow: 0 0 2px #000, 0 2px 0 #2a1604, 0 0 10px rgba(0, 0, 0, 0.9), 0 0 22px rgba(255, 190, 90, 0.35);
+  -webkit-text-stroke: 0.4px rgba(60, 30, 0, 0.6);
+  animation: oc-in 0.9s ease-out both;
+}
+.oc-line.strong { color: #ffd77a; }
+.oc-line.big { font-size: clamp(22px, 7vw, 32px); letter-spacing: 0.08em; }
+.oc-line.chron { font-size: clamp(18px, 5.4vw, 25px); color: #f6d58a; letter-spacing: 0.12em; }
+.oc-line.chron.big { font-size: clamp(25px, 8vw, 36px); background: linear-gradient(#fff4cf, #e9b648 55%, #a8701c); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; filter: drop-shadow(0 2px 0 #2a1604) drop-shadow(0 0 12px rgba(255, 200, 100, 0.45)); }
+.oc-line.out { animation: oc-out 0.5s ease-in both; }
+@keyframes oc-in { from { opacity: 0; transform: translateY(6px); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes oc-out { to { opacity: 0; transform: translateY(-4px); } }
+.oc-subs.s5 { padding-bottom: 7%; }
+.oc-subs.s6 { padding-bottom: 10%; }
+.oc-title {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 5% 18%; text-align: center; pointer-events: none;
+  font-family: 'AppleMyungjo', 'Nanum Myeongjo', 'NanumMyeongjo', 'Noto Serif KR', 'Noto Serif CJK KR', 'Batang', serif;
+  animation: oc-shake 0.5s linear 1 both;
+}
+.oc-title h1 {
+  margin: 0; display: flex; flex-direction: column; line-height: 1.05; font-size: clamp(38px, 12.5vw, 64px); font-weight: 900; letter-spacing: 0.02em;
+  background: linear-gradient(180deg, #fffbe6 0%, #ffe08a 35%, #e0a02c 62%, #8a4e10 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 3px 0 #3a1c04) drop-shadow(0 0 2px #000) drop-shadow(0 0 18px rgba(255, 190, 80, 0.55));
+  animation: oc-slam 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+.oc-en { margin: 14px 0 0; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: 700; font-size: clamp(12px, 3.6vw, 16px); color: #fff0c8; letter-spacing: 0.06em; text-shadow: 0 2px 0 #000, 0 0 8px #000; animation: oc-in 0.8s 0.5s ease-out both; }
+.oc-copy { margin: 10px 0 0; font-size: clamp(15px, 4.6vw, 20px); font-weight: 700; color: #ffe9b0; text-shadow: 0 2px 0 #3a1c04, 0 0 10px #000; animation: oc-in 0.8s 0.95s ease-out both; }
+.oc-press { position: absolute; bottom: 10%; margin: 0; font-family: Galmuri11, sans-serif; font-size: 13px; color: #fff4d6; text-shadow: 0 2px 0 #000; animation: oc-in 0.5s both, talk-blink 1s steps(2) 0.5s infinite; }
+@keyframes oc-slam { 0% { transform: scale(2.8); opacity: 0; } 55% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes oc-shake { 0%, 100% { transform: none; } 10% { transform: translate(-6px, 4px); } 25% { transform: translate(5px, -5px); } 40% { transform: translate(-4px, 3px); } 60% { transform: translate(3px, -2px); } 80% { transform: translate(-1px, 1px); } }
+.oc-skip {
+  position: absolute; top: max(10px, env(safe-area-inset-top)); right: 10px; z-index: 5; height: 28px; padding: 0 10px; font-family: Galmuri11, sans-serif; font-size: 11px; font-weight: 700;
+  color: #f6e6c0; background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(246, 214, 138, 0.6); cursor: pointer;
+}

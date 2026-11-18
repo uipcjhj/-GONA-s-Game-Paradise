@@ -24,8 +24,8 @@ const [url, out, W = '393', H = '636'] = process.argv.slice(2);
   console.log('터치 후', JSON.stringify(await A()));
   await page.tap('.ttl-start');
   // 응가 팩: 첫 실행 오프닝 → 건너뛰기
-  await page.waitForSelector('.sel-art, .opening-skip');
-  if (await page.$('.opening-skip')) { await shot('01b-opening'); await page.tap('.opening-skip'); }
+  await page.waitForSelector('.sel-art, .opening-skip, .oc-skip');
+  if (await page.$('.opening-skip')) { await shot('01b-opening'); await page.tap('.opening-skip'); } if (await page.$('.oc-skip')) { await page.waitForTimeout(1500); await shot('02-opening'); await page.tap('.oc-skip'); await page.waitForSelector('.sel-art'); }
   await page.waitForSelector('.sel-art');
   await page.waitForTimeout(900);
   console.log('선택 화면', JSON.stringify(await A()));

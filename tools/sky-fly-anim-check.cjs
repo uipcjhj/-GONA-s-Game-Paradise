@@ -14,7 +14,7 @@ const ORDER = ['mom', 'dad', 'imo', 'halmeoni', 'halabeoji', 'samchon'];
   page.on('response', (r) => r.status() >= 400 && bad.push(r.status() + ' ' + r.url()));
   await page.goto(url);
   await page.waitForSelector('.ttl-start'); await page.tap('.ttl-start');
-  await page.waitForSelector('.sel-art, .opening-skip'); if (await page.$('.opening-skip')) await page.tap('.opening-skip');
+  await page.waitForSelector('.sel-art, .opening-skip, .oc-skip'); if (await page.$('.opening-skip')) await page.tap('.opening-skip'); if (await page.$('.oc-skip')) { await page.waitForTimeout(800); await page.tap('.oc-skip'); await page.waitForSelector('.sel-art'); }
   await page.waitForSelector('.sel-art');
   for (const f of famArg.split(',')) {
     await page.tap(`.sel-roster li:nth-child(${ORDER.indexOf(f) + 1}) button`); await page.waitForTimeout(150);

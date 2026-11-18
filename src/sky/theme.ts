@@ -47,14 +47,8 @@ const POOP: ThemePack = {
   id: 'poop',
   titleLine: 'The Great Poo Escape! · 고나의 응가 대탈출 대작전',
   copy: '6 STAGES · 신규 세계관 테스트',
-  opening: [
-    { img: 'family', text: '따뜻한 오후. 고나가 가족들과 첫 이유식을 먹고 있어요.' },
-    { img: 'v2/chars/gona/illust.png', text: '꾸르르르륵……? 고나의 배에서 이상한 소리가 나요.' },
-    { img: 'family', text: '엄마: "어머, 우리 고나 왜 그래?"  아빠: "응가하려는 거 아니야?"' },
-    { img: 'v2/chars/gona/illust.png', text: '끙끙대던 고나가 결국 울음을 터뜨리고, 지쳐서 잠이 들어요.' },
-    { img: 'v2/title/keyart.jpg', text: '배 속을 상상하며 꾸는 꿈. 눈을 뜨자 하늘에 거대한 숟가락이 떠 있었어요!' },
-    { img: 'family', text: '음식물 괴물들이 왕국의 길을 막고 응가 열차를 세웠어요. 가족들이 함께 출격합니다!' },
-  ],
+  // 오프닝은 시네마틱(OpeningCinematic.tsx)으로 교체 — 기존 정지 일러스트 슬라이드 제거
+  opening: [],
   ending: [
     { img: 'v2/title/keyart.jpg', text: '변비마왕 꽉막혀가 쓰러지자, 막혔던 소화왕국의 길이 열렸다.' },
     { img: 'v2/chars/gona/illust.png', text: '응가 열차가 출발하고, 왕국 전체가 환호한다. 고나: "해냈고나!"' },

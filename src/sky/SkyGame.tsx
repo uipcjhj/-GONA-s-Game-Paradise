@@ -11,6 +11,7 @@ import { packPath } from './artpack';
 import { talkLines, talkMode, type TalkKey } from './story';
 import { TalkBox, BarkBox, resolveLines, type TalkLine } from './TalkBox';
 import { PoopEnding } from './PoopEnding';
+import { OpeningCinematic } from './OpeningCinematic';
 import './sky.css';
 
 const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
@@ -41,6 +42,8 @@ function saveRecords(r: Records): void {
 const ENDING = THEME.ending;
 const CREDITS = THEME.credits;
 const OPENED_KEY = `${NS}.opened`;
+/** 오프닝이 있는 테마인지 (응가 = 시네마틱 · 다른 테마 = 슬라이드가 있을 때) */
+const HAS_OPENING = THEME.id === 'poop' || THEME.opening.length > 0;
 const SP_DESC: Record<FamilyId, string> = {
   mom: '거대한 하트 마법진 + 유도 하트 파상 공격',
   dad: '적 탄을 지우는 초고압 증기 레이저',
@@ -89,10 +92,12 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
   const [count, setCount] = useState(9);
   const [slide, setSlide] = useState(0);
   /** 오프닝 종료: 다음부터는 자동 재생하지 않음 (타이틀의 '오프닝'으로 다시 볼 수 있음) */
+  /** 오프닝을 어디서 열었는지: 첫 시작(→ 선택 화면) · 타이틀의 '오프닝 다시보기'(→ 타이틀) */
+  const openingFrom = useRef<'start' | 'title'>('start');
   const finishOpening = (): void => {
     try { localStorage.setItem(OPENED_KEY, '1'); } catch { /* 무시 */ }
     setSlide(0);
-    setPhase('select');
+    setPhase(openingFrom.current === 'title' ? 'title' : 'select');
   };
   const best = Math.max(records.easy.score, records.normal.score, records.hard.score);
   const [mute, setMute] = useState(isMuted);
@@ -272,7 +277,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
 
   // 오프닝 슬라이드 자동 넘김 (터치하면 바로 넘어감)
   useEffect(() => {
-    if (phase !== 'opening') return;
+    if (phase !== 'opening' || THEME.id === 'poop') return; // 응가 테마는 시네마틱이 직접 진행
     const id = window.setTimeout(() => (slide < THEME.opening.length - 1 ? setSlide(slide + 1) : finishOpening()), 5200);
     return () => window.clearTimeout(id);
   }, [phase, slide]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -360,6 +365,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
     );
   }
 
+  if (phase === 'opening' && THEME.id === 'poop') return <OpeningCinematic onDone={finishOpening} />;
   if (phase === 'opening') {
     const sl = THEME.opening[Math.min(slide, THEME.opening.length - 1)];
     const next = () => (slide < THEME.opening.length - 1 ? setSlide(slide + 1) : finishOpening());
@@ -431,7 +437,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
         // 응가 대탈출 팩은 첫 플레이 때 오프닝을 자동으로 보여 줌 (스킵 가능 · 타이틀의 '오프닝'으로 다시 보기)
         let seen = true;
         try { seen = localStorage.getItem(OPENED_KEY) === '1'; } catch { /* 무시 */ }
-        if (THEME.opening.length && !seen) { setSlide(0); setPhase('opening'); } else setPhase('select');
+        if (HAS_OPENING && !seen) { openingFrom.current = 'start'; setSlide(0); setPhase('opening'); } else setPhase('select');
       }, 520);
     };
     // 타이틀 전용 구도: 로고(위) · 캐릭터 띠(가운데, 원화의 인물 영역 33%~100%를 통째로) · 메뉴(아래, 별도 영역)
@@ -461,7 +467,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
         <div className="ttl-menu" style={{ height: menuH }}>
           <div className="ttl-row">
             <button type="button" className="ttl-start" onClick={go}>PRESS START</button>
-            {THEME.opening.length > 0 && <button type="button" className="ttl-map" onClick={() => { sfx('menuMove'); setSlide(0); setPhase('opening'); }}>오프닝</button>}
+            {HAS_OPENING && <button type="button" className="ttl-map" onClick={() => { unlockAudio(); sfx('menuMove'); openingFrom.current = 'title'; setSlide(0); setPhase('opening'); }}>{THEME.id === 'poop' ? '오프닝 다시보기' : '오프닝'}</button>}
             {DEV && THEME.id === 'poop' && <button type="button" className="ttl-map ttl-test" onClick={() => { sfx('menuMove'); setSlide(0); playBgm('ending', 1.2); setPhase('ending'); }}>엔딩</button>}
             <button type="button" className="ttl-map" onClick={() => { sfx('menuMove'); onExit(); }}>월드맵</button>
           </div>
