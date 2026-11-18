@@ -350,7 +350,17 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
     sfx('menuMove');
   };
 
-  if (err) return <div className="sky"><div className="sky-panel">{err}<button className="sky-btn" onClick={onExit}>월드맵으로</button></div></div>;
+  if (err)
+    return (
+      <div className="sky">
+        <div className="sky-panel">
+          <p>그림을 받아 오지 못했어요.<br />인터넷 연결을 확인하고 다시 시도해 주세요.</p>
+          <p className="sky-err-detail">{err.replace(/^Error:\s*/, '')}</p>
+          <button className="sky-btn sky-btn-go" onClick={() => location.reload()}>다시 시도</button>
+          <button className="sky-btn" onClick={onExit}>월드맵으로</button>
+        </div>
+      </div>
+    );
 
   if (phase === 'loading' || phase === 'prep') {
     const st = runOpts ? STAGES[runOpts.stage - 1] : null;

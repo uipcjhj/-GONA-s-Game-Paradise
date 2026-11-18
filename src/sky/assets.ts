@@ -41,8 +41,8 @@ export interface Assets {
   flash: Map<CanvasImageSource, HTMLCanvasElement>;
 }
 
-function loadUrl(url: string, optional: boolean): Promise<HTMLImageElement | null> {
-  return new Promise((res, rej) => {
+function loadOnce(url: string): Promise<HTMLImageElement | null> {
+  return new Promise((res) => {
     const im = new Image();
     im.decoding = 'async';
     im.onload = () => {
@@ -50,9 +50,22 @@ function loadUrl(url: string, optional: boolean): Promise<HTMLImageElement | nul
       if (im.decode) im.decode().then(() => res(im), () => res(im));
       else res(im);
     };
-    im.onerror = () => (optional ? res(null) : rej(new Error(`이미지를 불러오지 못했어요: ${url}`)));
+    im.onerror = () => res(null);
     im.src = url;
   });
+}
+
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** GitHub Pages 가 가끔 잠깐 503 을 돌려주므로, 실패하면 주소를 살짝 바꿔 몇 번 더 받아 본다 */
+const RETRY_MS = [500, 1500, 3000];
+async function loadUrl(url: string, optional: boolean): Promise<HTMLImageElement | null> {
+  let im = await loadOnce(url);
+  for (let i = 0; !im && i < RETRY_MS.length; i++) {
+    await wait(RETRY_MS[i]);
+    im = await loadOnce(`${url}${url.includes('?') ? '&' : '?'}retry=${i + 1}`);
+  }
+  if (im || optional) return im;
+  throw new Error(`이미지를 불러오지 못했어요: ${url}`);
 }
 
 let cache: Promise<Assets> | null = null;
@@ -79,6 +92,8 @@ export function loadAssets(): Promise<Assets> {
     CUTIN_IDS.forEach((n, i) => (cutin[n] = cutins[i]));
     return { img, gonaSheet: gonaSheet!, v2, cutin, extra, flash: new Map() };
   })();
+  // 실패하면 기억하지 않음 → 다시 들어오면 처음부터 다시 받기
+  cache.catch(() => (cache = null));
   return cache;
 }
 
@@ -117,6 +132,7 @@ export function loadStageArt(key: StageDef['art']): Promise<StageArt> {
       return out;
     });
     stageCache.set(key, p);
+    p.catch(() => stageCache.delete(key));
   }
   return p;
 }

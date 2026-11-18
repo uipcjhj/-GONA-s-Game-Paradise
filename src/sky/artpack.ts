@@ -47,14 +47,20 @@ let loading: Promise<Manifest> | null = null;
 export function loadArtPack(base: string): Promise<Manifest> {
   loading ??= (async () => {
     if (THEME_ID !== 'poop') return manifest;
-    try {
-      const r = await fetch(`${base}${PACK_DIR}manifest.json`, { cache: 'no-cache' });
-      if (r.ok) {
-        const m = (await r.json()) as Manifest;
-        if (m && typeof m.files === 'object') manifest = m;
+    // 잠깐 503 이 나도 기존 그림으로 바뀌지 않게 몇 번 다시 받아 봄 (404 = 팩 없음 → 바로 기존 그림)
+    for (let i = 0; i < 4; i++) {
+      try {
+        const r = await fetch(`${base}${PACK_DIR}manifest.json`, { cache: 'no-cache' });
+        if (r.ok) {
+          const m = (await r.json()) as Manifest;
+          if (m && typeof m.files === 'object') manifest = m;
+          break;
+        }
+        if (r.status === 404) break;
+      } catch {
+        /* 네트워크 오류 → 다시 시도 */
       }
-    } catch {
-      /* 팩이 없으면 기존 그림 사용 */
+      await new Promise((ok) => setTimeout(ok, [500, 1500, 3000][i] ?? 0));
     }
     return manifest;
   })();

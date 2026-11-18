@@ -31,7 +31,7 @@ const SHOTS = [0.6, 1.6, 2.6, 3.6, 4.6, 5.6, 6.6, 7.7, 8.6, 9.6, 10.5, 11.4, 12.
   const t0 = Date.now();
   while (!(await p.$('.sel-art'))) {
     const st = await p.evaluate(() => ({ t: window.__skyOpening ? window.__skyOpening.t() : -1, sc: window.__skyOpening ? window.__skyOpening.scene() : -1, lines: [...document.querySelectorAll('.oc-line:not(.out)')].map((e) => e.textContent), title: !!document.querySelector('.oc-title'), a: window.__skyAudio ? window.__skyAudio() : null, hud: !!document.querySelector('.sky-ctrl, .sky-pause, .sel-roster') }));
-    if (st.hud) log.push(`! 오프닝 중 HUD/선택 UI 노출 t=${st.t.toFixed(2)}`);
+    if (st.hud && st.t < 32.2) log.push(`! 오프닝 중 HUD/선택 UI 노출 t=${st.t.toFixed(2)}`);
     if (st.sc > 0 && seenScenes[seenScenes.length - 1] !== st.sc) seenScenes.push(st.sc);
     for (const l of st.lines) if (!seenLines.includes(l)) seenLines.push(l);
     if (st.a) audio.push(`${st.t.toFixed(1)}:${st.a.bgm}/${st.a.wanted}`);

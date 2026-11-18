@@ -117,7 +117,12 @@ function loadImg(src: string): Promise<Img> {
     const im = new Image();
     const to = window.setTimeout(() => res(null), 8000); // 느린 망: 8초 넘으면 그 그림만 빼고 진행
     im.onload = () => { window.clearTimeout(to); res(im); };
-    im.onerror = () => { window.clearTimeout(to); res(null); };
+    im.onerror = () => {
+      window.clearTimeout(to);
+      // 잠깐 실패(503)일 수 있어 한 번만 더 받아 봄 · 그래도 없으면 그 그림만 빼고 진행
+      if (src.includes('retry=')) res(null);
+      else window.setTimeout(() => loadImg(`${src}${src.includes('?') ? '&' : '?'}retry=1`).then(res), 700);
+    };
     im.src = src;
   });
 }
