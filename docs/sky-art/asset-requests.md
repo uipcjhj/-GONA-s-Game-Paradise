@@ -109,3 +109,48 @@ HUD · 체력바 · 충돌 판정 · 탄막 패턴 · 단순 이펙트(스파크
 | `chars/*/cutin.jpg` 6종 | 선택 원화를 잘라 쓴 임시본 | 고나 컷인과 같은 2:1 필살기 컷인 원화 |
 
 공통: 세로 2:3 전신, 투명 배경, 머리·발·모자·무기·망토가 모두 캔버스 안에 들어오고 사방 여백 6~8%.
+
+---
+
+## 오프닝 컷신 「고나의 응가 대탈출 대작전」 신규 그림 (2026-11-20 · 사용자가 ChatGPT 로 제작)
+
+Canva AI 무료 사용량으로 고나 4장(떡뻥 먹기 · 배 두드리기 · 멈칫 · 힘주기)을 만들어 이미 컷신에 넣었어요 (`public/assets/sky/v3-poop/opening2/gona-*.png`).
+아래 11장은 아직 없어서 **임시 대체**로 돌아가고 있어요. 파일만 채팅에 보내 주시면 Claude 가 배경 제거·픽셀 정리(약 200px)·manifest 등록까지 해서 바로 그 장면에 들어가요 (코드 수정 없음).
+
+### 공통 (11장 모두)
+- **참고 이미지 2장 첨부**: ① 승인 원화 `public/assets/sky/v2/chars/gona/illust.png` ② 새 픽셀 그림 `art-src/sky/opening2/canva-gona-strain.png` (화풍·도트 기준)
+- **화풍**: 1990년대 일본 코믹 판타지 아케이드 슈팅게임의 고품질 픽셀아트, 굵고 진한 외곽선, 참고 그림과 같은 색·명암
+- **고나 고정 특징**: 연두색 익룡(공룡) 후드 + 후드 위 큰 만화 눈 + 노란 볏, 주황 박쥐형 날개, 빨간 스카프, 고글, 갈색 머리 한 가닥, 작은 이목구비 — 바꾸지 말 것
+- **응가 빌런**: 귀엽고 우스꽝스럽게 (사실적·혐오스러운 배설물 묘사 금지). 기존 뽀글이(보라 거품)·꾸덕이(카키 프로펠러 모자)와 겹치지 않게
+- **배경**: 단색 평면 — 고나·갈색 빌런은 마젠타 `#FF00FF`, 보라색 마왕은 초록 `#00FF00` (투명 PNG 도 좋음). 글자·워터마크 없음
+- **규격**: 정사각 1024×1024 이상, 몸 전체가 잘리지 않게 여백
+
+| # | 파일명 (`opening2/…`) | 장면 · 사용 시점 · 동작 | 게임 표시 | 지금 임시 대체 |
+|---|---|---|---|---|
+| 1 | `gona-cry.png` | 4장 운명의 사투 18.2~20.6초: 힘주기 실패 뒤 울먹임 (흐느낌·눈물은 코드로 더함) | 화면 폭 약 80% | 멈칫 그림 + 눈물 효과 |
+| 2 | `gona-strain2.png` | 4장 14~17.6초: 힘주기 최고조 (힘주기 그림과 번갈아 → 실제 프레임 변화) | 〃 | 힘주기 1장 |
+| 3 | `gona-sleep.png` | 5장 20.6~23초 + 7장 배경: 지쳐 잠듦 (숨쉬기·Zzz 는 코드) | 〃 | 배 두드리기 그림(눈 감음) |
+| 4 | `gona-hero.png` | 8장 38~41초: 꿈속 익룡 영웅 각성·비상 | 〃 | 기존 승인 원화 |
+| 5 | `v-soldier.png` | 5장 23~28초: 똥돌이 병사 14명이 행진 (걷기 흔들림은 코드) | 약 60px | 뽀글이·꾸덕이 무리 |
+| 6 | `v-golem.png` | 5장 25초: 딱딱똥 골렘이 쿵! 떨어져 선로를 막음 | 약 210px | STAGE 1 보스 실루엣 |
+| 7 | `v-ghost.png` | 5장 24~28초: 응가 유령 2마리 둥실둥실 | 약 60px | 없음(생략) |
+| 8 | `v-knight.png` | 6장 28.8초~: 똥기사단장이 성문 앞을 지킴 | 약 110px | 없음(생략) |
+| 9 | `v-king.png` | 6장 29.2~31.5초: 변비마왕 꽉막혀가 성 뒤에서 솟아 웃음 | 약 300px | 구름 속 눈·입 빛 |
+| 10 | `bg-castle.png` | 6장: 안개 속에서 솟는 응가 성 | 약 310px | 기존 섬 위의 성 |
+| 11 | `bg-home.png` (선택) | 2~4장 배경: 따뜻한 아기방 (세로 9:16, 배경이라 단색 배경 불필요) | 화면 전체 | 빛 효과 배경 |
+
+### 프롬프트 (영문 그대로 복사 · 참고 이미지 2장 첨부)
+1. **gona-cry** — `Same exact character as the reference images (baby boy Gona in a lime-green dinosaur hood suit with a big cartoon eye on the hood, yellow spiky crest, orange bat-like wings, red scarf, aviator goggles, one small brown hair strand, small cute facial features). Full body, front view, sitting on the floor, exhausted and about to cry after failing: big glossy eyes brimming with tears, a tear rolling down each cheek, wobbly trembling lower lip, sad eyebrows, shoulders slumped, small hands resting on his tummy. Sad but cute. High-quality 1990s Japanese arcade game pixel art, bold dark outlines, same colors and rendering style as the reference. Plain flat solid magenta (#FF00FF) background, no scenery, no text.`
+2. **gona-strain2** — `(같은 첫 문장) Full body, front view, sitting on the floor, at the peak of straining with all his might: face completely bright red, eyes squeezed shut into tight lines, teeth gritted, anger marks on forehead, little steam puffs from his head, both arms bent with tiny fists clenched hard at his sides, whole body shaking with bold vibration lines. Comedic and cute, not gross. (같은 마지막 두 문장)`
+3. **gona-sleep** — `(같은 첫 문장) Side view, lying curled up asleep on a soft round cushion, wings folded around him like a blanket, eyes peacefully closed, a dried tear mark on his cheek, small snot bubble from his nose. Peaceful and cute. (같은 마지막 두 문장)`
+4. **gona-hero** — `(같은 첫 문장) Full body, front view, heroic awakening: floating upward with orange wings spread wide, red scarf whipping in the wind, determined brave face with sparkling eyes and a confident smile, one fist raised high, glowing golden aura and light particles around him. Epic but cute. (같은 마지막 두 문장)`
+5. **v-soldier** — `A cute comedic villain foot soldier for a 1990s Japanese arcade shoot-em-up: a small brown soft-serve swirl shaped poop creature (cartoon, clean, not gross) wearing a tiny dented iron helmet and holding a small spear, determined silly face with angry eyebrows and big eyes, marching pose, side 3/4 view, full body. High-quality 1990s Japanese arcade game pixel art, bold dark outlines, warm brown and caramel palette with steel gray helmet. Plain flat solid magenta (#FF00FF) background, no text.`
+6. **v-golem** — `A large comedic stone golem monster for a 1990s Japanese arcade shoot-em-up, made of hardened dark-brown swirl poop rock boulders (cartoon, clean, not gross), heavy blocky body with glowing orange cracks, tiny angry glowing eyes, huge fists, stomping pose, front view, full body. Heavy and slow looking. High-quality 1990s Japanese arcade game pixel art, bold dark outlines, dark brown and umber palette with orange crack glow. Plain flat solid magenta (#FF00FF) background, no text.`
+7. **v-ghost** — `A cute but eerie translucent ghost made of a light-brown swirl (soft-serve swirl shape, cartoon, clean, not gross), wavy wispy tail, mischievous strange grin, floating, front view. High-quality 1990s Japanese arcade game pixel art, bold dark outlines, semi-transparent caramel and pale purple glow. Plain flat solid magenta (#FF00FF) background, no text.`
+8. **v-knight** — `A comedic knight commander villain: armored warrior whose helmet is a brown swirl poop shape (cartoon, clean, not gross), holding a giant round shield with a swirl emblem and a lance, standing guard pose, stern face, front view, full body, matching a 'iron wall poop knight' boss design. High-quality 1990s Japanese arcade game pixel art, bold dark outlines, bronze, brown and dark steel palette. Plain flat solid magenta (#FF00FF) background, no text.`
+9. **v-king** — `The final boss 'Constipation Demon King': a huge imposing yet slightly funny villain, wearing a giant brown swirl poop shaped crown with gold ornaments, dark purple heavy armor with gold trim, flowing cape, evil laughing face with glowing eyes, arms raised, upper body, front view. The silhouette alone should read as a poop-themed king. High-quality 1990s Japanese arcade game pixel art, bold dark outlines, dark purple, black and gold palette. Plain flat solid green (#00FF00) background, no text.`
+10. **bg-castle** — `A floating fantasy castle shaped like a giant brown swirl (soft-serve poop shape, cartoon, clean, not gross) with dark purple spires, gold trims, glowing windows and a huge closed gate, sitting on a floating rock island, ominous but comedic. High-quality 1990s Japanese arcade game pixel art, bold dark outlines, dark purple, brown and gold palette. Plain flat solid magenta (#FF00FF) background, no text.`
+11. **bg-home** — `A cozy warm baby nursery room interior at golden afternoon, soft play mat on the floor in the center, toys, a window with warm sunlight beams, no characters, vertical 9:16 composition with empty space in the center-bottom for a character. High-quality 1990s Japanese arcade game pixel art, warm amber palette, no text.`
+
+### 받은 뒤 Claude 가 하는 일
+`art-src/sky/opening2/` 에 원본 보관 → 배경 제거·축소(약 200px)·팔레트 정리·1px 외곽선 → `public/assets/sky/v3-poop/opening2/<파일명>` + manifest 등록 → 컷신 해당 장면 재캡처·녹화로 검수

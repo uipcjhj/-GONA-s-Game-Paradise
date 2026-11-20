@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 const [url, out, W = '393', H = '636', VIDEO = '0'] = process.argv.slice(2);
 const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
-const SHOTS = [0.6, 1.6, 2.6, 3.6, 4.6, 5.6, 6.6, 7.7, 8.6, 9.6, 10.5, 11.4, 12.3, 12.75, 13.3, 13.65, 14.4, 15.0, 15.6, 16.4, 17.2, 18.4, 19.2, 19.85, 20.45, 21.05, 21.65, 22.25, 22.85, 23.5, 24.6, 25.5, 26.2, 26.7, 27.6, 28.3, 28.8, 29.2, 30.0, 31.5, 32.6];
+const SHOTS = [1.0, 3.0, 5.0, 6.5, 7.6, 9.0, 10.1, 10.6, 11.8, 13.0, 14.3, 15.3, 16.2, 17.0, 17.7, 18.1, 18.8, 19.8, 21.0, 22.5, 23.6, 24.5, 25.1, 26.4, 27.5, 28.8, 29.6, 30.2, 31.3, 32.5, 33.3, 34.5, 35.7, 36.8, 37.6, 38.1, 39.0, 40.5, 41.0, 42.0, 43.5, 44.6];
 (async () => {
   fs.mkdirSync(out, { recursive: true });
   const b = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
@@ -29,9 +29,11 @@ const SHOTS = [0.6, 1.6, 2.6, 3.6, 4.6, 5.6, 6.6, 7.7, 8.6, 9.6, 10.5, 11.4, 12.
   const seenScenes = [], seenLines = [], audio = [];
   let k = 0;
   const t0 = Date.now();
+  const artState = await p.evaluate(() => window.__skyOpening.art && window.__skyOpening.art());
+  const fontOk = await p.evaluate(() => window.__skyOpening.font && window.__skyOpening.font());
   while (!(await p.$('.sel-art'))) {
     const st = await p.evaluate(() => ({ t: window.__skyOpening ? window.__skyOpening.t() : -1, sc: window.__skyOpening ? window.__skyOpening.scene() : -1, lines: [...document.querySelectorAll('.oc-line:not(.out)')].map((e) => e.textContent), title: !!document.querySelector('.oc-title'), a: window.__skyAudio ? window.__skyAudio() : null, hud: !!document.querySelector('.sky-ctrl, .sky-pause, .sel-roster') }));
-    if (st.hud && st.t < 32.2) log.push(`! 오프닝 중 HUD/선택 UI 노출 t=${st.t.toFixed(2)}`);
+    if (st.hud && st.t < 44.4) log.push(`! 오프닝 중 HUD/선택 UI 노출 t=${st.t.toFixed(2)}`);
     if (st.sc > 0 && seenScenes[seenScenes.length - 1] !== st.sc) seenScenes.push(st.sc);
     for (const l of st.lines) if (!seenLines.includes(l)) seenLines.push(l);
     if (st.a) audio.push(`${st.t.toFixed(1)}:${st.a.bgm}/${st.a.wanted}`);
@@ -39,10 +41,12 @@ const SHOTS = [0.6, 1.6, 2.6, 3.6, 4.6, 5.6, 6.6, 7.7, 8.6, 9.6, 10.5, 11.4, 12.
       await p.screenshot({ path: `${out}/${tag}-op-${String(k).padStart(2, '0')}-${SHOTS[k].toFixed(2)}s.png` });
       k++;
     }
-    if (Date.now() - t0 > 60000) { log.push('! 시간 초과'); break; }
+    if (Date.now() - t0 > 75000) { log.push('! 시간 초과'); break; }
     await p.waitForTimeout(40);
   }
   log.push(`장면 순서: ${seenScenes.join(' → ')}`);
+  log.push(`그림 칸: ${(artState || []).join(' · ')}`);
+  log.push(`자막 글꼴(고운바탕) 적용: ${fontOk}`);
   log.push(`자막 ${seenLines.length}줄: ${seenLines.join(' / ')}`);
   const bgms = [...new Set(audio.map((x) => x.split(':')[1]))];
   log.push(`BGM 상태 변화: ${bgms.join(' → ')}`);
