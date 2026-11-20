@@ -99,8 +99,8 @@ type Slot = (typeof SLOTS)[number];
 /** 칸이 비었을 때 쓰는 임시 대체 (보고·테스트용 설명) */
 export const FALLBACK: Partial<Record<Slot, string>> = {
   'gona-strain2': '힘주기 1장으로 (프레임 교대 없음)',
-  'gona-cry': '멈칫 그림 + 눈물 효과',
-  'gona-sleep': '배 두드리기 그림(눈 감음) + 숨쉬기·Zzz',
+  'gona-cry': '스포트라이트 아래 작은 실루엣 + 흐느낌·눈물 반짝임 (표정은 보여 주지 않음)',
+  'gona-sleep': '달빛 테두리 실루엣 + 숨쉬기·Zzz (표정은 보여 주지 않음)',
   'gona-hero': '기존 승인 고나 원화(주먹 든 자세)',
   'v-soldier': '기존 뽀글이·꾸덕이 무리',
   'v-golem': 'STAGE 1 보스 그림을 어두운 실루엣으로',
@@ -436,6 +436,15 @@ class Painter {
     }
     return (px, py) => [x + (px - iw / 2) * k * sx, y - (bottom - py) * k * sy];
   }
+  /** 잠든 고나: 그림이 오면 그대로, 없으면 테두리 빛만 있는 실루엣 (배 두드리는 웃는 얼굴이 보이지 않게) */
+  sleeper(x: number, y: number, w: number, a: number, rim: string): void {
+    const sl = this.a.op['gona-sleep'];
+    if (sl) { this.gonaAt(sl, x, y, w, { a, shadow: 0 }); return; }
+    const im = this.a.op['gona-pat'];
+    if (!im) return;
+    this.gonaAt(this.silOf(im, rim) as unknown as HTMLImageElement, x + 1, y - 2, w, { a: a * 0.8, shadow: 0 });
+    this.gonaAt(this.silOf(im, '#0a0812') as unknown as HTMLImageElement, x, y, w, { a, shadow: 0 });
+  }
   /** 픽셀 글꼴 의성어 (게임 안 효과 글자) */
   ptext(s: string, x: number, y: number, size: number, col: string, a: number, rot = 0): void {
     if (a <= 0) return;
@@ -745,9 +754,41 @@ class Painter {
     const u = t - T.cry;
     const slump = 1 - 0.07 * Math.exp(-u * 3) * Math.cos(u * 9);
     const sob = Math.max(0, Math.sin(u * 2.6 * TAU)) * lin(t, T.cry + 0.6, T.cry + 1.0) * 1.5;
-    const z = 1.2 - 0.12 * eIO(lin(t, T.cry, T.s5));
-    this.cam(cx, fy - 150, z, () => {
+    // 그림이 없으면 카메라를 넓게 빼서 작고 외로운 실루엣으로
+    const z = cry ? 1.2 - 0.12 * eIO(lin(t, T.cry, T.s5)) : 1.2 - 0.32 * eIO(lin(t, T.cry, T.cry + 0.9)) - 0.06 * lin(t, T.cry + 0.9, T.s5);
+    this.cam(cx, fy - 150 + (cry ? 0 : 40 * eIO(lin(t, T.cry, T.cry + 0.9))), z, () => {
       this.glow(cx, fy - 160, 160, 'rgba(120,140,255,0.35)', 0.6);
+      if (!cry && im) {
+        // 임시(울먹임 그림 없음): 표정을 억지로 그리지 않고 뒤에서 빛을 받은 작은 실루엣으로 —
+        // 어깨가 들썩이는 흐느낌 + 푸른 테두리 빛 + 떨어지는 눈물 반짝임만
+        const dk = eIO(lin(t, T.cry, T.cry + 0.5));
+        const w = 300 - 90 * dk;
+        // 위에서 내려오는 한 줄기 스포트라이트 + 바닥의 빛 웅덩이
+        this.rays(cx, fy - 420, 5, 520, Math.PI / 2, 0.35 * dk, '170,190,255');
+        const gg = this.g;
+        gg.save();
+        gg.globalAlpha = 0.35 * dk;
+        gg.fillStyle = '#8fa8ff';
+        gg.beginPath();
+        gg.ellipse(cx, fy + 2, 120, 16, 0, 0, TAU);
+        gg.fill();
+        gg.restore();
+        this.gonaAt(im, cx, fy - sob, w, { sy: slump, sx: 2 - slump, a: 1 - dk });
+        const o = { sy: slump, sx: 2 - slump, shadow: 0 };
+        this.gonaAt(this.silOf(im, '#8fb4ff') as unknown as HTMLImageElement, cx - 2, fy - sob - 3, w, { ...o, a: dk * 0.85 });
+        this.gonaAt(this.silOf(im, '#0b0f22') as unknown as HTMLImageElement, cx, fy - sob, w, { ...o, a: dk });
+        const map0 = this.gonaAt(im, cx, fy - sob, w, { ...o, a: 0 });
+        for (const [i, e] of [SPOT.eyeL, SPOT.eyeR].entries()) {
+          const [ex, ey] = map0(e[0], e[1] + 6);
+          for (let n = 0; n < 3; n++) {
+            const st = 0.7 + n * 0.55 + i * 0.25;
+            const d = u - st;
+            if (d < 0 || d > 1.0) continue;
+            this.star(ex + (i ? 4 : -4), ey + d * 60 + d * d * 40, 5, (1 - d) * dk, '#e4f0ff');
+          }
+        }
+        return;
+      }
       const map = this.gonaAt(im, cx, fy - sob, 300, { sy: slump, sx: 2 - slump });
       // 눈물: 고이고(반짝) → 볼을 타고 → 뚝
       const well = eOut(lin(t, T.cry + 0.3, T.cry + 1.1));
@@ -796,9 +837,16 @@ class Painter {
       let by = fy - 80;
       // 배 쪽으로 들어가기 (카메라가 배를 향해 빨려 들어감)
       this.cam(cx, fy - 120 + 60 * dz, 1.05 + dz * 5, () => {
-        const map = this.gonaAt(im, cx, fy, 300, { sy: 1 + 0.012 * breathe, sx: 1 - 0.006 * breathe, a: eIO(lin(t, T.s5, T.s5 + 0.5)) });
+        const o = { sy: 1 + 0.012 * breathe, sx: 1 - 0.006 * breathe, a: eIO(lin(t, T.s5, T.s5 + 0.5)) };
+        let map;
+        if (!sl && im) {
+          // 임시(잠든 그림 없음): 어둠 속 달빛 실루엣 + 느린 숨결 (앉아 웃는 표정이 보이지 않게)
+          this.rays(cx + 60, fy - 420, 5, 520, Math.PI / 2 + 0.15, 0.3, '170,190,255');
+          this.gonaAt(this.silOf(im, '#a9bcff') as unknown as HTMLImageElement, cx + 2, fy - 3, 210, { ...o, a: o.a * 0.8, shadow: 0 });
+          map = this.gonaAt(this.silOf(im, '#0a0e22') as unknown as HTMLImageElement, cx, fy, 210, o);
+          map = this.gonaAt(im, cx, fy, 210, { ...o, a: 0 });
+        } else map = this.gonaAt(im, cx, fy, 300, o);
         [bx, by] = map(...(SPOT.belly as unknown as [number, number]));
-        if (!sl) this.fill('#0a1030', 0.25);
         for (let i = 0; i < 3; i++) {
           const life = ((t - T.s5) * 0.6 + i / 3) % 1;
           this.ptext('Z', cx + 70 + life * 40 + i * 6, fy - 230 - life * 70, 11 + i * 3 + life * 6, '#c8d4ff', (1 - life) * (1 - dz));
@@ -1009,11 +1057,10 @@ class Painter {
     const g = this.g;
     const cx = W / 2;
     const cy = H * 0.46;
-    const im = this.a.op['gona-sleep'] ?? this.a.op['gona-pat'];
     if (t < T.cutins) {
       const u = t - T.s7;
       this.fill('#05040c');
-      this.gonaAt(im, cx, H * 0.66, 170, { a: eOut(lin(u, 0, 0.4)) * 0.85, shadow: 0 });
+      this.sleeper(cx, H * 0.66, 170, eOut(lin(u, 0, 0.4)), '#c8b8ff');
       this.glow(cx, H * 0.58, 90, 'rgba(255,220,160,0.5)', 0.6);
       for (let i = 0; i < 6; i++) {
         const k = lin(u, 0.1 + i * 0.12, 0.3 + i * 0.12);
@@ -1061,7 +1108,7 @@ class Painter {
     // 여섯 빛이 잠든 고나에게 모임
     const u = t - 36.6;
     this.fill('#05040c');
-    this.gonaAt(im, cx, H * 0.66, 170, { a: 0.85, shadow: 0 });
+    this.sleeper(cx, H * 0.66, 170, 1, '#ffe2a0');
     for (let i = 0; i < 6; i++) {
       const k = eIn(clamp(u / 0.4));
       const a = (i / 6) * TAU - Math.PI / 2 + k * 2;
@@ -1170,7 +1217,6 @@ class Painter {
   private s8(t: number): void {
     const { W, H } = this;
     const cx = W / 2;
-    const sleep = this.a.op['gona-sleep'] ?? this.a.op['gona-pat'];
     const hero = this.a.op['gona-hero'];
     const heroIm = hero ?? this.a.gona;
     const heroW = hero ? 300 : 250;
@@ -1181,7 +1227,7 @@ class Painter {
       this.dust(t, 50, '#ffe7a8', 0.7, 20);
       this.glow(cx, H * 0.55, 220, 'rgba(255,214,140,0.7)', 0.6 + 0.4 * lin(t, T.s8, T.wake));
       const k = eIO(lin(t, T.wake - 0.25, T.wake + 0.15));
-      this.gonaAt(sleep, cx, H * 0.66, 170 + 30 * k, { a: 1 - k, shadow: 0 });
+      this.sleeper(cx, H * 0.66, 170 + 30 * k, 1 - k, '#ffd88a');
       if (heroIm && k > 0) {
         const spread = eOut(lin(t, T.wake, T.rise));
         this.img(this.silOf(heroIm, '#ffd88a'), cx, H * 0.5, heroW * 1.05, { a: k * (1 - spread * 0.7), sx: 0.85 + 0.15 * spread });
