@@ -45,7 +45,7 @@ const CAKE: ThemePack = {
 
 const POOP: ThemePack = {
   id: 'poop',
-  titleLine: 'The Great Poo Escape! · 고나의 응가 대탈출 대작전',
+  titleLine: '응가 대탈출 대작전',
   copy: '6 STAGES · 신규 세계관 테스트',
   // 오프닝은 시네마틱(OpeningCinematic.tsx)으로 교체 — 기존 정지 일러스트 슬라이드 제거
   opening: [],
@@ -58,8 +58,8 @@ const POOP: ThemePack = {
     { img: 'v2/title/keyart.jpg', text: '세상에서 가장 작은 영웅의, 가장 위대한 탈출.' },
   ],
   credits: [
-    ["GONA's Sky Adventure", 'The Great Poo Escape!'], ['기획 · 원작', '고나네 가족'], ['캐릭터', '고나 · 엄마 · 아빠 · 이모 · 할머니 · 할아버지 · 삼촌'],
-    ['게임 프로그래밍 · 사운드 합성', 'Claude Code'], ['음악 · 효과음', '오리지널 합성 (tools/sky-audio)'], ['원화 · 스프라이트', '가족 원화·비행 스프라이트 · STAGE 1 신규 그래픽 (STAGE 2~6 은 임시 그래픽 — 정식 그림 제작 전)'],
+    ["GONA's SKY ADVENTURE", '응가 대탈출 대작전'], ['기획 · 원작', '고나네 가족'], ['캐릭터', '고나 · 엄마 · 아빠 · 이모 · 할머니 · 할아버지 · 삼촌'],
+    ['게임 프로그래밍 · 사운드 합성', 'Claude Code'], ['음악 · 효과음', '오리지널 합성 (tools/sky-audio)'], ['원화 · 스프라이트', '가족 원화 · 비행 스프라이트 · STAGE 1~6 그래픽 · 타이틀 · 오프닝 · 엔딩 일러스트'],
     ['스페셜 땡스', '게임천국에 놀러 와 준 모든 친구들'], ['', 'THANK YOU FOR PLAYING!'],
   ],
   stages: [

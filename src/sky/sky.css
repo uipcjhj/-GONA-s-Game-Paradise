@@ -368,3 +368,58 @@ canvas.talk-face { width: 72px; height: 72px; }
 .pe-gona.px, .pe-f.px { image-rendering: pixelated; }
 .pe-hugart .pe-bg { object-position: 50% 20%; filter: none; animation: pe-hugzoom 6s ease-out both; }
 @keyframes pe-hugzoom { from { transform: scale(1.08); } to { transform: scale(1); } }
+
+/* ═══ 응가 대탈출 타이틀 (리마스터): 세로 키아트 전체 + 영문 아케이드 로고 + 하단 HUD ═══ */
+.ttl2 { background: #120a26; overflow: hidden; }
+.ttl2-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; animation: ttl2-drift 18s ease-in-out infinite alternate; }
+@keyframes ttl2-drift { from { transform: scale(1.04) translateY(0); } to { transform: scale(1.08) translateY(-1.5%); } }
+.ttl2-shade { position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(18, 8, 40, 0.55) 0%, rgba(18, 8, 40, 0) 26%, rgba(18, 8, 40, 0) 52%, rgba(14, 6, 30, 0.78) 76%, rgba(10, 4, 22, 0.96) 100%); }
+.ttl2-logo { position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top) + 2.2vh); display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+.ttl2-logo img { width: min(90vw, 440px); height: auto; filter: drop-shadow(0 4px 0 rgba(20, 8, 40, 0.85)) drop-shadow(0 0 14px rgba(255, 190, 80, 0.35));
+  animation: ttl2-logo-in 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.2) 0.2s both, ttl2-float 3.2s ease-in-out 1.2s infinite; }
+.ttl2-logo p { margin: -0.2em 0 0; font-family: 'Gowun Batang', 'AppleMyungjo', serif; font-weight: 700; font-size: clamp(15px, 4.6vw, 20px); letter-spacing: 0.18em; color: #fff1cc;
+  padding: 3px 14px 4px; background: linear-gradient(90deg, rgba(30, 10, 50, 0), rgba(30, 10, 50, 0.72) 18%, rgba(30, 10, 50, 0.72) 82%, rgba(30, 10, 50, 0));
+  text-shadow: 0 1px 0 #2a1238, 0 0 8px rgba(0, 0, 0, 0.8); animation: ttl2-fade 0.8s ease-out 0.9s both; }
+@keyframes ttl2-logo-in { from { opacity: 0; transform: scale(1.35) translateY(-10px); } to { opacity: 1; transform: none; } }
+@keyframes ttl2-float { 50% { transform: translateY(3px); } }
+@keyframes ttl2-fade { from { opacity: 0; } to { opacity: 1; } }
+.ttl2-menu { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 16px calc(env(safe-area-inset-bottom) + 10px); display: flex; flex-direction: column; align-items: center; gap: 9px; }
+.ttl2-start { width: min(86vw, 340px); min-height: 56px; border: 3px solid #ffd76a; border-radius: 0; font-family: 'Galmuri11', monospace; font-size: 22px; font-weight: 700; letter-spacing: 3px; color: #2a1206;
+  background: linear-gradient(#ffe9a0, #ffc23c 55%, #e98a1a); box-shadow: 0 4px 0 #7a3a0a, 0 0 0 2px #2a1238, 0 0 22px rgba(255, 190, 80, 0.45); cursor: pointer;
+  animation: ttl2-pulse 1.6s ease-in-out infinite; }
+@keyframes ttl2-pulse { 50% { box-shadow: 0 4px 0 #7a3a0a, 0 0 0 2px #2a1238, 0 0 34px rgba(255, 200, 90, 0.75); } }
+.ttl2-row { display: flex; gap: 8px; width: min(92vw, 380px); }
+.ttl2-btn { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 6px; white-space: nowrap; font-family: 'Galmuri11', monospace; font-size: clamp(11px, 3.3vw, 13px); font-weight: 700; color: #fff2d6;
+  background: linear-gradient(rgba(46, 26, 88, 0.92), rgba(24, 12, 52, 0.92)); border: 2px solid #b69cff; box-shadow: 0 3px 0 #0c0618; cursor: pointer; }
+.ttl2-btn:active, .ttl2-start:active { transform: translateY(2px); }
+.ttl2-foot { margin: 0; min-height: 14px; font-size: 10px; color: #cfc4ff; text-align: center; white-space: nowrap; } .ttl2-foot b { color: #ffd84a; margin-right: 6px; }
+/* 응가판 타이틀·오프닝·엔딩에서는 세로 BETA 띠를 숨김 (게임 화면에서는 유지) */
+body:has(.sky.poop) .beta-badge, body:has(.sky.oc) .beta-badge, body:has(.sky.end.pe) .beta-badge { display: none; }
+@media (max-height: 680px) { .ttl2-start { min-height: 50px; font-size: 20px; } .ttl2-btn { min-height: 40px; } }
+/* 오프닝 끝 타이틀 (리마스터): 아케이드 로고 이미지 + 작은 한글 부제 — 메인 타이틀과 같은 구성 */
+.oc-title .oc-logo { width: min(88vw, 430px); height: auto; filter: drop-shadow(0 4px 0 rgba(20, 8, 40, 0.85)) drop-shadow(0 0 18px rgba(255, 190, 80, 0.45)); animation: oc-slam 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
+.oc-title .oc-sub { margin: 4px 0 0; padding: 3px 14px 4px; font-weight: 700; font-size: clamp(15px, 4.6vw, 20px); letter-spacing: 0.18em; color: #fff1cc;
+  background: linear-gradient(90deg, rgba(30, 10, 50, 0), rgba(30, 10, 50, 0.72) 18%, rgba(30, 10, 50, 0.72) 82%, rgba(30, 10, 50, 0)); text-shadow: 0 1px 0 #2a1238; animation: oc-in 0.8s 0.5s ease-out both; }
+/* ═══ 엔딩 리마스터: 장면 전체 일러스트 + 카메라 이동 (대화창 위 영역) ═══ */
+.pe-full { position: absolute; inset: 0 0 30%; overflow: hidden; background: #0c0618; }
+.pe-full .pe-bg { filter: none; }
+.pe-full::after { content: ''; position: absolute; inset: auto 0 0; height: 22%; background: linear-gradient(to bottom, rgba(12, 6, 24, 0), rgba(12, 6, 24, 0.9)); pointer-events: none; }
+.pe-pan-up .pe-bg { object-position: 50% 100%; animation: pe-panup 9s ease-in-out both; }
+@keyframes pe-panup { from { transform: scale(1.18); object-position: 50% 100%; } to { transform: scale(1.02); object-position: 50% 30%; } }
+.pe-pan-x .pe-bg { object-position: 0% 40%; animation: pe-panx 11s ease-in-out both; }
+@keyframes pe-panx { 0% { object-position: 20% 40%; transform: scale(1.12); } 100% { object-position: 80% 40%; transform: scale(1.04); } }
+.pe-real .pe-bg { object-position: 50% 82%; transform: scale(1.35); transform-origin: 50% 78%; animation: pe-realin 3s ease-out both; }
+@keyframes pe-realin { from { transform: scale(1.6); filter: brightness(1.6) saturate(0.6); } to { transform: scale(1.35); filter: none; } }
+.pe-kid { position: absolute; left: 50%; bottom: 10%; width: min(52%, 260px); transform: translateX(-50%); image-rendering: pixelated; filter: drop-shadow(0 6px 4px rgba(60, 30, 10, 0.35)); animation: pe-breath 2.4s ease-in-out infinite; }
+.pe-kid.hard { animation: pe-shake 0.08s steps(2) infinite; }
+.pe-kid.relief { width: min(60%, 290px); animation: pe-jolt 0.4s steps(3) 1 both; }
+@keyframes pe-breath { 50% { transform: translateX(-50%) scale(1.012, 0.99); } }
+.pe-real .pe-boom { z-index: 2; }
+.pe-hug2 .pe-bg { object-position: 50% 30%; animation: pe-hugout 9s ease-out both; }
+@keyframes pe-hugout { from { transform: scale(1.22); } to { transform: scale(1.02); } }
+.pe-hug2.framed { box-shadow: inset 0 0 0 6px #2a1238, inset 0 0 0 9px #e6c27a, inset 0 0 0 11px #2a1238, inset 0 0 60px rgba(255, 210, 140, 0.45); transition: box-shadow 1.2s ease; }
+.pe-hug2.framed .pe-bg { animation-play-state: paused; filter: saturate(1.06) brightness(1.04); transition: filter 1.2s; }
+.pe-sparkle { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 60% 30%, rgba(255, 240, 200, 0.35), rgba(255, 240, 200, 0) 45%); animation: ttl2-fade 2s ease-out both; }
+.cred-line b { max-width: 90vw; word-break: keep-all; overflow-wrap: anywhere; }
+.pe-kid.relief { width: min(50%, 250px); bottom: 8%; }

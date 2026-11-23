@@ -78,10 +78,21 @@ export function PoopEnding({ onDone }: { onDone: () => void }) {
   const hugImg = P('ending/hug.jpg');
   const hard = scene.id === 'strain' && who.includes('끄으으으으');
   const roomImg = scene.id === 'fart' ? reliefImg ?? gonaImg : (hard ? strain2Img : strainImg) ?? gonaImg;
+  // 리마스터 그림 (있으면 우선): 마왕성 붕괴+열차 · 아침 아기방 · 고나 연속동작 · 가족 환호 · 최종 포옹
+  const collapse = P('ending/collapse.jpg');
+  const morn = P('opening3/room-morn.jpg');
+  const family = P('ending/family.jpg');
+  const hug2 = P('ending/hug2.jpg');
+  const wake = who.startsWith('|현실');
+  const kidImg = scene.id === 'fart' ? reliefImg : wake || !who ? P('opening3/b-rub.png') : hard ? P('opening3/n-strain2.png') : P('opening3/n-strain.png');
+  const lastLine = scene.id === 'hug' && who.includes('가장 위대한 탈출');
   return (
     <div className={`sky end pe pes-${scene.id}`}>
       <div className="pe-stage" key={scene.id}>
-        {scene.id === 'train' && (
+        {scene.id === 'train' && collapse && (
+          <div className="pe-full pe-pan-up"><img className="pe-bg" src={collapse} alt="무너지는 변비마왕성과 성문을 뚫고 출발하는 응가 열차" /><i className="pe-sparkle" /></div>
+        )}
+        {scene.id === 'train' && !collapse && (
           <>
             <img className="pe-bg" src={castleBg ?? `${BASE}${packPath('title/keyart.jpg')}`} alt="" />
             {train && <img className="pe-train" src={train} alt="응가 열차" />}
@@ -89,7 +100,19 @@ export function PoopEnding({ onDone }: { onDone: () => void }) {
           </>
         )}
         {scene.id === 'white' && <div className="pe-white" />}
-        {(scene.id === 'strain' || scene.id === 'fart') && (
+        {(scene.id === 'strain' || scene.id === 'fart') && morn && kidImg && (
+          <div className="pe-full pe-real">
+            <img className="pe-bg" src={morn} alt="아침 햇살이 드는 아기방" />
+            <img className={`pe-kid${hard ? ' hard' : ''}${scene.id === 'fart' ? ' relief' : ''}`} src={kidImg} alt="고나" />
+            {scene.id === 'fart' && (
+              <>
+                <b className="pe-boom">뿡!</b>
+                {['a', 'b', 'c'].map((k) => <i key={k} className={`pe-puff ${k}`} style={{ backgroundImage: `url(${BASE}${packPath('fx/steam-puff.png')})` }} />)}
+              </>
+            )}
+          </div>
+        )}
+        {(scene.id === 'strain' || scene.id === 'fart') && !(morn && kidImg) && (
           <div className="pe-room">
             <img className={`pe-gona${hard ? ' hard' : ''}${roomImg !== gonaImg ? ' px' : ''}`} src={roomImg} alt="고나" />
             {scene.id === 'fart' && (
@@ -100,13 +123,22 @@ export function PoopEnding({ onDone }: { onDone: () => void }) {
             )}
           </div>
         )}
-        {scene.id === 'hug' && hugImg && (
+        {scene.id === 'success' && family && (
+          <div className="pe-full pe-pan-x"><img className="pe-bg" src={family} alt="가족 여섯 명이 고나의 성공에 저마다 환호하는 그림" /></div>
+        )}
+        {scene.id === 'hug' && hug2 && (
+          <div className={`pe-full pe-hug2${lastLine ? ' framed' : ''}`}>
+            <img className="pe-bg" src={hug2} alt="온 가족이 고나를 가운데 두고 꼭 끌어안은 그림" />
+            <div className="pe-hearts">{Array.from({ length: 9 }, (_, i) => <i key={i} style={{ left: `${8 + i * 10}%`, animationDelay: `${(i % 4) * 0.35}s`, backgroundImage: `url(${BASE}${packPath('fx/heal-heart.png', 'v2/fx/heart-p.png')})` }} />)}</div>
+          </div>
+        )}
+        {scene.id === 'hug' && hugImg && !hug2 && (
           <div className="pe-family hug pe-hugart">
             <img className="pe-bg" src={hugImg} alt="온 가족이 고나를 꼭 안아 주는 그림" />
             <div className="pe-hearts">{Array.from({ length: 9 }, (_, i) => <i key={i} style={{ left: `${8 + i * 10}%`, animationDelay: `${(i % 4) * 0.35}s`, backgroundImage: `url(${BASE}${packPath('fx/heal-heart.png', 'v2/fx/heart-p.png')})` }} />)}</div>
           </div>
         )}
-        {(scene.id === 'success' || (scene.id === 'hug' && !hugImg)) && (
+        {((scene.id === 'success' && !family) || (scene.id === 'hug' && !hugImg && !hug2)) && (
           <div className={`pe-family${scene.id === 'hug' ? ' hug' : ''}`}>
             {FAMILY.map((f, i) => (
               <img key={f} className={`pe-f f${i}${who.startsWith(`${nm(f)}|`) ? ' talk' : ''}`} src={`${BASE}${packPath(`chars/${f}/illust.png`)}`} alt={nm(f)} />

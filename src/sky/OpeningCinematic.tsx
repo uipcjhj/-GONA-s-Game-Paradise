@@ -115,7 +115,14 @@ interface Art {
   fam: Record<FamilyId, Img>;
   splash: Img; prune: Img; pruneSplash: Img; heart: Img; hex: Img; flame: Img; probio: Img; circle: Img; dome: Img;
   op: Record<Slot, Img>;
+  /** 리마스터 그림 (opening3/ · title/) — 이름 → 그림 */
+  r3: Record<string, Img>;
 }
+/** 리마스터 그림 목록: 아기방(저녁·흐림·밤) · 꿈 터널 · 마왕성 · 고나 연속동작 프레임 · 세로 키아트 */
+const R3 = ['opening3/room-eve.jpg', 'opening3/room-eve-blur.jpg', 'opening3/room-night.jpg', 'opening3/dream.jpg', 'opening3/castle.jpg', 'title/keyart-tall.jpg',
+  ...['bite', 'chew', 'full', 'pat', 'clutch', 'drowsy'].map((n) => `opening3/a-${n}.png`),
+  ...['strain0', 'sleep', 'wake', 'fly', 'rub', 'giggle'].map((n) => `opening3/b-${n}.png`),
+  ...['eat2', 'startle', 'strain', 'strain2', 'cry'].map((n) => `opening3/n-${n}.png`)];
 function loadImg(src: string): Promise<Img> {
   return new Promise((res) => {
     const im = new Image();
@@ -142,12 +149,15 @@ async function loadArt(): Promise<Art> {
     P('chars/samchon/probiotic.png'), R('v2/fx/sp-circle.png'), R('v2/fx/sp-dome.png'),
     ...FAMILY.map((f) => P(`chars/${f}/illust.png`)),
     ...SLOTS.map(O),
+    ...R3.map((rel) => (hasPack(rel) ? R(`v3-poop/${rel}`) : Promise.resolve(null))),
   ]);
   const famRec = {} as Record<FamilyId, Img>;
   FAMILY.forEach((f, i) => (famRec[f] = rest[i]));
   const op = {} as Record<Slot, Img>;
   SLOTS.forEach((n, i) => (op[n] = rest[FAMILY.length + i]));
-  return { keyart, bg, train, castle, cloud, gona, puff, duo, boss, splash, prune, pruneSplash, heart, hex, flame, probio, circle, dome, fam: famRec, op };
+  const r3: Record<string, Img> = {};
+  R3.forEach((rel, i) => (r3[rel.replace(/^.*\//, '').replace(/\.(png|jpg)$/, '')] = rest[FAMILY.length + SLOTS.length + i]));
+  return { keyart, bg, train, castle, cloud, gona, puff, duo, boss, splash, prune, pruneSplash, heart, hex, flame, probio, circle, dome, fam: famRec, op, r3 };
 }
 
 /** 고나 그림(200px) 안의 얼굴·배 위치 (그림 좌표 → 장면 좌표 변환용) */
@@ -561,15 +571,215 @@ class Painter {
     g.fillStyle = '#000';
     g.fillRect(-40, -40, W + 80, this.H + 80);
     const sc = sceneAt(t);
-    if (sc === 1) this.s1(t);
+    if (t < T.kingdom && this.a.r3['room-eve']) this.real(t);
+    else if (sc === 1) this.s1(t);
     else if (sc === 2) this.s2(t);
     else if (sc === 3) this.s3(t);
     else if (sc === 4) this.s4(t);
     else if (sc === 5) this.s5(t);
     else if (sc === 6) this.s6(t);
     else if (sc === 7) this.s7(t);
-    else if (t < TITLE_AT) this.s8(t);
+    else if (t < TITLE_AT) { if (this.a.r3['b-fly']) this.s8r(t); else this.s8(t); }
     else this.title(t);
+  }
+
+  // ═════════ 리마스터: 현실 세계 (0 ~ 23.2초) — 아기방 안의 고나, 하나로 이어진 카메라 ═════════
+  private tintCache = new Map<string, HTMLCanvasElement>();
+  /** 조명 색을 입힌 스프라이트 사본 (방 조명과 캐릭터 색을 맞춤) */
+  private tinted(im: HTMLImageElement, col: string, a: number): HTMLCanvasElement | HTMLImageElement {
+    if (a <= 0.01) return im;
+    const q = Math.round(a * 20) / 20;
+    const k = `${im.src}|${col}|${q}`;
+    let c = this.tintCache.get(k);
+    if (!c) {
+      c = document.createElement('canvas');
+      c.width = im.width;
+      c.height = im.height;
+      const g = c.getContext('2d')!;
+      g.drawImage(im, 0, 0);
+      g.globalCompositeOperation = 'source-atop';
+      g.globalAlpha = q;
+      g.fillStyle = col;
+      g.fillRect(0, 0, c.width, c.height);
+      if (this.tintCache.size > 160) this.tintCache.clear();
+      this.tintCache.set(k, c);
+    }
+    return c;
+  }
+  /** 방 좌표계: 방 그림 = 가로 360 · 세로 360×(그림 비율). 고나는 매트 가운데 (GX, GY) 에 앉음 */
+  private static GX = 180;
+  private static GY = 468;
+  private static GW = 116;
+  /** 고나 프레임(200px 칸, 발 밑 196) 그리기 → 그림 좌표 → 방 좌표 변환 */
+  private kid(name: string, a: number, tint: [string, number], o: { sx?: number; sy?: number; dx?: number; dy?: number } = {}): (px: number, py: number) => [number, number] {
+    const im = this.a.r3[name] ?? (this.a.op as Record<string, Img>)[name];
+    const { GX, GY, GW } = Painter;
+    const x = GX + (o.dx ?? 0);
+    const y = GY + (o.dy ?? 0);
+    const k = GW / 200;
+    if (im && a > 0) {
+      const g = this.g;
+      g.save();
+      g.globalAlpha *= a;
+      g.fillStyle = 'rgba(30,12,4,0.32)';
+      g.beginPath();
+      g.ellipse(x, y - 2, GW * 0.34 * (o.sx ?? 1), GW * 0.06, 0, 0, TAU);
+      g.fill();
+      g.translate(x, y);
+      g.scale(o.sx ?? 1, o.sy ?? 1);
+      g.imageSmoothingEnabled = false;
+      const src = this.tinted(im, tint[0], tint[1]);
+      g.drawImage(src, -(im.width * k) / 2, -(im.height * k) + (200 - 196) * k, im.width * k, im.height * k);
+      g.restore();
+    }
+    const iw = im ? im.width : 200;
+    return (px, py) => [x + (px - iw / 2) * k * (o.sx ?? 1), y - (196 - py) * k * (o.sy ?? 1)];
+  }
+  /** 0~23.2초 카메라 경로 (방 좌표 · 줌) — 구간마다 부드러운 가감속, 멈칫 순간만 빠르게 */
+  private roomCam(t: number): [number, number, number] {
+    const K: [number, number, number, number, number?][] = [
+      [0, 214, 118, 2.9], [1.0, 212, 130, 2.75], [3.9, 180, 360, 1.1], [5.4, 180, 402, 1.85], [6.9, 182, 406, 1.75],
+      [9.6, 180, 408, 1.66], [T.startle, 180, 408, 1.7], [T.startle + 0.28, 180, 398, 2.45, 1], [T.s4, 180, 396, 2.6],
+      [T.peak, 180, 392, 3.25], [T.cry, 180, 398, 3.0], [T.s5, 180, 420, 1.5], [T.dolly, 178, 438, 1.75], [T.kingdom, 186, 448, 16, 2],
+    ];
+    for (let i = 0; i < K.length - 1; i++) {
+      const [t0, x0, y0, z0] = K[i];
+      const [t1, x1, y1, z1, mode] = K[i + 1];
+      if (t <= t1) {
+        const r = lin(t, t0, t1);
+        const e = mode === 1 ? eOut(r) : mode === 2 ? eIn(r) : eIO(r);
+        // 줌은 곱셈으로 보간 (가까이 갈수록 일정한 속도감)
+        return [x0 + (x1 - x0) * e, y0 + (y1 - y0) * e, z0 * Math.pow(z1 / z0, e)];
+      }
+    }
+    const L = K[K.length - 1];
+    return [L[1], L[2], L[3]];
+  }
+  /** 이 시각의 고나 프레임 (이전 프레임과 겹치는 시간 0~0.2초) */
+  private kidFrame(t: number, push: number): [string, string | null, number] {
+    const tr: [number, string, number][] = [
+      [0, 'a-bite', 0], [5.4, 'n-eat2', 0.18], [6.9, 'a-full', 0.2], [9.6, 'a-full', 0], [T.startle, 'n-startle', 0.06], [11.4, 'a-clutch', 0.16],
+      [T.s4, 'b-strain0', 0.08], [15.0, 'n-strain', 0.14], [T.puff, 'n-strain2', 0], [T.cry, 'n-cry', 0.16], [19.9, 'a-drowsy', 0.3], [T.s5, 'b-sleep', 0.5],
+    ];
+    let i = 0;
+    while (i < tr.length - 1 && t >= tr[i + 1][0]) i++;
+    let cur = tr[i][1];
+    // 오물오물 (0.42초마다 입에 가져가 → 씹기) · 배 통통 (0.5초마다 손이 배에) · 끄응! 순간엔 두 주먹 번쩍
+    if (t >= 4.0 && t < 5.4) cur = (t - 4.0) % 0.42 < 0.2 ? 'a-bite' : 'a-chew';
+    if (t >= 6.9 && t < 9.4) cur = (t - 6.9) % 0.5 < 0.16 ? 'a-pat' : 'a-full';
+    if (t >= 14.2 && t < T.puff && push > 0.3) cur = 'n-strain2';
+    const t0 = tr[i][0];
+    const xf = tr[i][2];
+    const prev = i > 0 && xf > 0 && t - t0 < xf ? tr[i - 1][1] : null;
+    return [cur, prev, prev ? (t - t0) / xf : 1];
+  }
+  private real(t: number): void {
+    const { W, H } = this;
+    const g = this.g;
+    const r = this.a.r3;
+    const roomH = 360 * ((r['room-eve']?.height ?? 1910) / (r['room-eve']?.width ?? 1080));
+    // 끄응! 순간 (카메라가 쏠리고 몸이 눌림)
+    let push = 0;
+    let pi = -1;
+    for (const [i, p] of PUSHES.entries()) { const d = t - p; if (d >= 0 && d < 0.6 && Math.exp(-d * 5) > push) { push = Math.exp(-d * 5); pi = i; } }
+    const heat = lin(t, T.s4, T.peak) * (t < T.cry ? 1 : 0);
+    let [cx, cy, z] = this.roomCam(t);
+    if (pi >= 0) { cx += [-6, 7, -4, 0][pi] * push; z *= 1 + (0.02 + 0.012 * pi) * push; }
+    // 조명 (저녁 → 힘주기 붉은 열기 → 울먹임 푸른 그늘 → 달밤)
+    const nightK = eIO(lin(t, T.cry + 0.2, 20.2));
+    const tint: [string, number] = t < T.s4 ? ['#ffb070', 0.1] : t < T.cry ? ['#ff5a30', 0.06 + 0.16 * heat] : t < T.s5 ? ['#4a64c8', 0.08 + 0.22 * nightK] : ['#2f44a8', 0.34];
+    const [frame, prev, xk] = this.kidFrame(t, push);
+    // 몸의 작은 움직임: 숨쉬기 · 씹기 · 통통 · 부들부들 · 흐느낌 · 잠든 숨
+    let sx = 1;
+    let sy = 1;
+    let dx = 0;
+    let dy = 0;
+    const br = Math.sin(t * 2.4);
+    sy = 1 + 0.008 * br;
+    if (t >= 4.0 && t < 5.4) { const c = Math.max(0, Math.sin(((t - 4.0) / 0.42) * TAU)); sy -= 0.02 * c; sx += 0.012 * c; }
+    if (t >= 6.9 && t < 9.4) { const h = Math.exp(-(((t - 6.9) % 0.5) / 0.5) * 6); sx += 0.02 * h; sy -= 0.02 * h; }
+    if (t >= T.s4 && t < T.cry) { const tr = (0.4 + 1.6 * heat) * (t < T.puff ? 1 : 0.2); dx = Math.sin(t * 73) * tr; dy = Math.cos(t * 61) * tr * 0.4; sx += 0.035 * push; sy -= 0.05 * push; }
+    if (t >= T.cry && t < 19.9) { const u = t - T.cry; dy = -Math.max(0, Math.sin(u * 2.6 * TAU)) * 1.2 * lin(t, T.cry + 0.5, T.cry + 0.9); sy *= 1 - 0.05 * Math.exp(-u * 3) * Math.cos(u * 9); }
+    if (t >= T.s5) { const b = Math.sin((t - T.s5) * 1.9); sy = 1 + 0.018 * b; sx = 1 - 0.008 * b; }
+    let face: [number, number] = [Painter.GX, 300];
+    let belly: [number, number] = [Painter.GX, 420];
+    this.cam(cx, cy, z, () => {
+      // 방 (저녁 → 힘주기 땐 초점이 고나에게 → 밤)
+      const draw = (im: Img, a: number) => { if (im && a > 0) { g.save(); g.globalAlpha *= a; g.imageSmoothingEnabled = true; g.drawImage(im, 0, 0, 360, roomH); g.restore(); } };
+      draw(r['room-eve'], 1 - nightK * (t >= T.cry ? 1 : 0));
+      draw(r['room-eve-blur'], eIO(lin(t, T.s4, T.s4 + 0.7)) * (1 - eIO(lin(t, T.cry - 0.3, T.cry + 0.4))));
+      if (t >= T.cry) draw(r['room-night'], nightK);
+      if (t < T.s4) this.rays(214, 96, 8, 330, 1.15, 0.22, '255,214,150');
+      if (t >= T.s5) this.rays(220, 110, 6, 360, 1.2, 0.16, '170,190,255');
+      // 힘주기: 몸 주변 붉은 열기 (방은 그대로 보이게)
+      if (heat > 0) this.glow(Painter.GX, Painter.GY - 60, 90 + 30 * push, 'rgba(255,70,40,0.55)', 0.25 + 0.45 * heat);
+      if (prev) this.kid(prev, 1 - xk, tint, { sx, sy, dx, dy });
+      const map = this.kid(frame, prev ? xk : 1, tint, { sx, sy, dx, dy });
+      face = map(100, 86);
+      belly = frame === 'b-sleep' ? map(112, 150) : map(100, 140);
+      // 장면별 작은 효과
+      if (t >= 4.0 && t < 5.4) {
+        const n0 = Math.floor((t - 4.0) / 0.42);
+        const life = ((t - 4.0) % 0.42) / 0.42;
+        for (let i = 0; i < 7; i++) {
+          const an = -Math.PI / 2 + (hash(n0 * 7 + i) - 0.5) * 2.6;
+          const sp = 10 + hash(n0 * 13 + i) * 16;
+          g.fillStyle = hash(i + n0) > 0.5 ? '#fff6dc' : '#f2d9a6';
+          g.globalAlpha = 1 - life;
+          g.fillRect(face[0] + 6 + Math.cos(an) * sp * life, face[1] + 14 + Math.sin(an) * sp * life + 26 * life * life, 1.4, 1.4);
+        }
+        g.globalAlpha = 1;
+      }
+      if (t >= 6.9 && t < 9.4) {
+        const h = Math.exp(-(((t - 6.9) % 0.5) / 0.5) * 6);
+        if (h > 0.55) this.ptext('통', belly[0] + 30, belly[1] - 6, 7, '#fff2c8', (h - 0.55) * 2.5);
+        for (let i = 0; i < 3; i++) { const life = ((t - 6.9 + i * 0.7) % 2.1) / 2.1; this.img(this.a.heart, belly[0] + (i - 1) * 16, belly[1] - 30 - life * 50, 7, { a: (1 - life) * 0.9, smooth: false }); }
+      }
+      if (t >= 9.95 && t < T.s4) {
+        const k = lin(t, 9.95, T.startle);
+        const rumble = t >= 11.6 ? Math.exp(-(t - 11.6) * 3) : 0;
+        this.vortex(belly[0], belly[1], 10 + 16 * k + 14 * rumble, t, 0.25 + 0.5 * k);
+        if (t < 10.8) this.ptext('꾸르륵…', belly[0] + 34, belly[1] - 2 + Math.sin(t * 30) * 0.6, 7, '#d9b8ff', lin(t, 10.05, 10.15) * (1 - lin(t, 10.6, 10.8)), -0.12);
+        if (rumble > 0.05) this.ptext('꾸르르륵!', belly[0] - 34, belly[1] + 4, 8 + 2 * rumble, '#d9b8ff', Math.min(1, rumble * 3), 0.15);
+        const sw = lin(t, T.startle + 0.2, T.startle + 2.4);
+        this.drop(face[0] + 20, face[1] - 8 + sw * 12, 2.2, Math.min(1, sw * 6) * (1 - lin(t, 13.0, 13.5)));
+      }
+      if (t >= T.s4 && t < T.cry) {
+        for (const p of PUSHES) {
+          const d = t - p;
+          if (d < 0 || d > 0.9) continue;
+          if (this.a.puff) this.img(this.a.puff, face[0] + (p % 2 ? 16 : -16), face[1] - 34 - d * 26, 16 + d * 16, { frame: [32 * Math.min(2, Math.floor(d * 3.3)), 0, 32, 32], a: 1 - d / 0.9, smooth: false });
+          for (let i = 0; i < 4; i++) { const an = -Math.PI / 2 + (i - 1.5) * 0.7; this.drop(face[0] + Math.cos(an) * (16 + d * 48), face[1] - 4 + Math.sin(an) * (12 + d * 32) + d * d * 80, 1.5, 1 - d / 0.9); }
+          this.ptext('끄응!', face[0] + (p % 2 ? 44 : -44), face[1] - 46 - d * 6, 8, '#ffb08a', (1 - d / 0.9) * 1.3, p % 2 ? 0.18 : -0.18);
+        }
+        if (t >= T.puff && this.a.puff) {
+          const d = t - T.puff;
+          this.img(this.a.puff, Painter.GX + 26, Painter.GY - 4 - d * 8, 10 + d * 12, { frame: [32 * Math.min(2, Math.floor(d * 6)), 0, 32, 32], a: clamp(1 - d / 0.3), smooth: false });
+          this.ptext('…뿌웅?', Painter.GX + 40, Painter.GY - 16, 6, '#e8dcc0', clamp(d * 8) * clamp(1 - (d - 0.15) / 0.12));
+        }
+      }
+      if (t >= T.cry && t < 19.9) this.ptext('훌쩍…', face[0] + ((Math.floor((t - T.cry) / 0.8) % 2) ? 40 : -40), face[1] - 40, 7, '#bcd2ff', 0.8 * lin(t, T.cry + 0.5, T.cry + 0.8));
+      if (t >= T.s5) {
+        for (let i = 0; i < 3; i++) { const life = ((t - T.s5) * 0.6 + i / 3) % 1; this.ptext('Z', face[0] + 26 + life * 16 + i * 2, face[1] - 30 - life * 28, 5 + i + life * 3, '#c8d4ff', (1 - life) * (1 - lin(t, T.dolly, T.dolly + 0.4))); }
+        const dz = eIn(lin(t, T.dolly, T.kingdom));
+        this.vortex(belly[0], belly[1], 6 + 40 * dz, t, 0.2 + 0.8 * dz, '255,200,120', 6);
+      }
+    });
+    // 꿈 터널: 배 속으로 빨려 들어가며 화면 전체가 꿈으로
+    const dk = eIO(lin(t, T.dolly + 0.5, T.kingdom - 0.15));
+    if (dk > 0) {
+      g.save();
+      g.globalAlpha = dk;
+      if (r.dream) this.cover(r.dream, W / 2, H / 2, 1 + 0.25 * lin(t, T.dolly + 0.5, T.kingdom) + 0.1 * Math.sin(t));
+      else this.fill('#140a30');
+      g.restore();
+      this.vortex(W / 2, H / 2, 40 + 220 * dk, t, dk, '255,210,140', 7);
+    }
+    this.dust(t, 30, t < T.s4 ? '#fff2c8' : t < T.s5 ? '#ffb08a' : '#c8d4ff', 0.35, 6, 1.6);
+    this.vignette(t < T.s4 ? 0.45 : t < T.cry ? 0.55 + 0.3 * heat : 0.7, t < T.s4 ? '40,16,0' : t < T.cry ? '50,0,0' : '0,4,24');
+    this.fill('#000', 1 - eOut(lin(t, 0, 1.1)));
+    this.fill('#1a0a04', 0.42 * (1 - eIO(lin(t, 2.6, 4.0))));
+    this.fill('#fff0d0', eIn(lin(t, T.kingdom - 0.35, T.kingdom)) * 0.9);
   }
 
   /** 1 · 서기 2026년: 어둠 속 금빛 점 → 새벽빛 하늘로 천천히 내려옴 → 따뜻한 빛으로 번지며 다음 장면 */
@@ -870,22 +1080,33 @@ class Painter {
     // 꿈속 소화왕국
     const u = t - T.kingdom;
     const pan = eIO(lin(t, T.kingdom, T.s6));
-    this.cam(cx + 10 - 20 * pan, H / 2 + 20 - 30 * pan, 1.04 - 0.04 * pan, () => {
-      this.cover(this.a.bg, cx, H / 2, 1.15);
-      this.fill('#1e0a33', 0.62); // 꿈속 · 불길한 보랏빛
-      this.glow(cx, H * 0.3, 260, 'rgba(160,70,255,0.45)', 0.7);
-      // 선로 (화면 아래쪽 가로)
-      const ry = H * 0.66;
-      g.fillStyle = '#2a1a12';
-      g.fillRect(-60, ry, W + 120, 6);
-      g.fillStyle = '#6b4a2a';
-      for (let x = -60; x < W + 60; x += 18) g.fillRect(x, ry + 6, 10, 4);
+    const castle = this.a.r3.castle;
+    const cH = castle ? (360 * castle.height) / castle.width : H;
+    // 리마스터: 마왕성 그림 위로 — 둑길(아래)에서 성문 쪽으로 카메라가 천천히 올라감 (다음 장면의 성 꼭대기까지 이어짐)
+    const camK = castle ? [180, cH * (0.86 - 0.18 * pan), 1.5 - 0.22 * pan] : [cx + 10 - 20 * pan, H / 2 + 20 - 30 * pan, 1.04 - 0.04 * pan];
+    this.cam(camK[0], camK[1], camK[2], () => {
+      if (castle) {
+        g.drawImage(castle, 0, 0, 360, cH);
+        this.fill('#1e0a33', 0.12);
+      } else {
+        this.cover(this.a.bg, cx, H / 2, 1.15);
+        this.fill('#1e0a33', 0.62); // 꿈속 · 불길한 보랏빛
+        this.glow(cx, H * 0.3, 260, 'rgba(160,70,255,0.45)', 0.7);
+      }
+      // 선로 (기존 판: 화면 아래쪽 가로 · 리마스터 판: 성문 앞 둑길)
+      const ry = castle ? cH * 0.9 : H * 0.66;
+      if (!castle) {
+        g.fillStyle = '#2a1a12';
+        g.fillRect(-60, ry, W + 120, 6);
+        g.fillStyle = '#6b4a2a';
+        for (let x = -60; x < W + 60; x += 18) g.fillRect(x, ry + 6, 10, 4);
+      }
       // 응가 열차: 달려오다 막힌 선로 앞에서 급정거
       const tr = this.a.train;
       const tk = lin(t, 25.3, T.trainStop);
       const tx = -150 + 210 * eOut(tk);
       const stopped = t >= T.trainStop;
-      if (tr && t > 25.2) {
+      if (tr && t > 25.2 && !castle) {
         const jolt = stopped ? Math.sin((t - T.trainStop) * 30) * Math.exp(-(t - T.trainStop) * 5) * 0.1 : 0;
         this.img(tr, tx, ry - 40, 140, { rot: jolt, smooth: false });
         if (stopped && this.a.puff) for (let i = 0; i < 3; i++) {
@@ -900,7 +1121,7 @@ class Painter {
       const gol = this.a.op['v-golem'];
       if (gk > 0) {
         const stomp = t >= T.golem ? Math.exp(-(t - T.golem) * 6) : 0;
-        if (gol) this.img(gol, gx, gyy, 170, { ay: 0.95, smooth: false, sy: 1 - 0.06 * stomp, sx: 1 + 0.04 * stomp });
+        if (gol) this.img(gol, gx, gyy, castle ? 118 : 170, { ay: 0.95, smooth: false, sy: 1 - 0.06 * stomp, sx: 1 + 0.04 * stomp });
         else if (this.a.boss) {
           // 임시: 거대한 그림자 몸 + 갈라진 틈의 빛 + 빛나는 두 눈
           const sil = this.silOf(this.a.boss, '#2e1c12');
@@ -936,11 +1157,12 @@ class Painter {
         const start = T.kingdom + 0.2 + row * 0.18;
         const k = eOut(lin(t, start, start + 1.4));
         if (k <= 0) continue;
-        const homeX = cx + side * (36 + (row % 4) * 40) - (row >= 4 ? side * 18 : 0);
+        // 리마스터(마왕성): 선로 양옆에 원근감 있게 줄지어 섬 (앞줄일수록 크게·아래로)
+        const homeX = castle ? cx + side * (44 + (row % 4) * 22 + (row >= 4 ? 30 : 0)) : cx + side * (36 + (row % 4) * 40) - (row >= 4 ? side * 18 : 0);
         const x = homeX + side * (1 - k) * 280;
-        const y = ry - 2 + (row >= 4 ? 40 : 0) - (row % 2) * 10;
+        const y = castle ? ry - (row % 4) * 16 + (row >= 4 ? 22 : 0) : ry - 2 + (row >= 4 ? 40 : 0) - (row % 2) * 10;
         const step = Math.abs(Math.sin((t - start) * 9)) * 5 * (k < 1 ? 1 : 0.3);
-        if (sol) this.img(sol, x, y - step, 60, { ay: 0.95, smooth: false, sx: side > 0 ? -1 : 1 });
+        if (sol) this.img(sol, x, y - step, castle ? 36 : 60, { ay: 0.95, smooth: false, sx: side > 0 ? -1 : 1 });
         else if (duo) {
           const fr = Math.floor(t * 6 + i) % 2;
           this.img(duo, x, y - step, 54, { ay: 0.95, smooth: false, frame: [64 * fr, i % 4 < 2 ? 0 : 64, 64, 64], sx: side > 0 ? -1 : 1 });
@@ -979,7 +1201,13 @@ class Painter {
     g.fillStyle = bg;
     g.fillRect(-40, -40, W + 80, H + 80);
     const z = 1 + 0.08 * eIO(lin(t, T.s6, T.gate));
-    this.cam(cx, H / 2, z, () => {
+    const castleBg = this.a.r3.castle;
+    const cH = castleBg ? (360 * castleBg.height) / castleBg.width : H;
+    // 리마스터: 앞 장면(성문)에서 이어서 성 꼭대기까지 카메라가 올라감
+    const ck = eIO(lin(t, T.s6, T.laugh));
+    const cam6: [number, number, number] = castleBg ? [180, cH * (0.68 - 0.36 * ck), 1.28 - 0.14 * ck + 0.06 * lin(t, T.laugh, T.gate)] : [cx, H / 2, z];
+    this.cam(cam6[0], cam6[1], cam6[2], () => {
+      if (castleBg) g.drawImage(castleBg, 0, 0, 360, cH);
       // 번개 (마왕 웃음 앞뒤)
       for (const [bt, seed] of [[29.0, 11], [30.6, 37]] as [number, number][]) {
         const d = t - bt;
@@ -995,11 +1223,11 @@ class Painter {
       const kingK = eOut(lin(t, 29.2, 30.0));
       const laugh = t >= T.laugh ? Math.abs(Math.sin((t - T.laugh) * 11)) * Math.exp(-(t - T.laugh) * 0.8) : 0;
       const king = this.a.op['v-king'];
-      const ky = H * 0.22 + (1 - kingK) * 120 - laugh * 4;
+      const ky = (castleBg ? cH * 0.1 + (1 - kingK) * 90 : H * 0.22 + (1 - kingK) * 120) - laugh * 4;
       if (king) {
         this.glow(cx, ky, 200, 'rgba(150,60,255,0.5)', kingK);
         const k2 = this.a.op['v-king2'];
-        this.img(t >= T.laugh && k2 ? k2 : king, cx, ky + 34, 228, { a: kingK, smooth: false, sy: 1 + laugh * 0.03 });
+        this.img(t >= T.laugh && k2 ? k2 : king, cx, ky + 34, castleBg ? 176 : 228, { a: kingK, smooth: false, sy: 1 + laugh * 0.03 });
       } else if (kingK > 0) {
         // 임시: 구름 속에서 빛나는 두 눈과 웃는 입
         if (this.a.cloud) this.img(this.silOf(this.a.cloud, '#120624'), cx, ky + 10, 420, { a: kingK });
@@ -1026,7 +1254,7 @@ class Painter {
       // 응가 성 (안개 속에서 솟아오름)
       const rise = eOut(lin(t, T.s6, T.s6 + 1.3));
       const cs = this.a.op['bg-castle'] ?? this.a.castle;
-      if (cs) {
+      if (cs && !castleBg) {
         const cy = H * 0.56 + (1 - rise) * 160;
         this.glow(cx, cy, 200, 'rgba(160,60,255,0.45)', rise);
         this.img(this.silOf(cs, '#b070ff'), cx, cy - 3, 316, { a: rise * 0.7 });
@@ -1035,7 +1263,7 @@ class Painter {
       }
       // 기사단장 (오면 성문 앞을 지킴)
       const kn = this.a.op['v-knight'];
-      if (kn) this.img(kn, cx, H * 0.84, 110, { a: eOut(lin(t, 28.8, 29.6)), smooth: false, ay: 1 });
+      if (kn) this.img(kn, cx, castleBg ? cH * 0.62 : H * 0.84, castleBg ? 60 : 110, { a: eOut(lin(t, 28.8, 29.6)), smooth: false, ay: 1 });
     });
     // 안개
     const cl = this.a.cloud;
@@ -1275,13 +1503,82 @@ class Painter {
     this.fill('#fff2d8', eIn(lin(t, TITLE_AT - 0.5, TITLE_AT)) * 0.85);
   }
 
+  /** 8 · 운명의 출격 (리마스터): 꿈의 빛 속 잠든 고나 → 눈을 뜸 → 날개를 펴고 솟구침 → 화면 쪽으로 */
+  private s8r(t: number): void {
+    const { W, H } = this;
+    const cx = W / 2;
+    const g = this.g;
+    const r = this.a.r3;
+    const spr = (name: string, x: number, y: number, w: number, a = 1, rot = 0) => {
+      const im = r[name];
+      if (!im || a <= 0) return;
+      g.save();
+      g.globalAlpha *= a;
+      g.translate(x, y);
+      g.rotate(rot);
+      g.imageSmoothingEnabled = false;
+      g.drawImage(im, -w / 2, -w / 2, w, w);
+      g.restore();
+    };
+    if (t < T.rise) {
+      if (r.dream) this.cover(r.dream, cx, H / 2, 1.15 - 0.08 * lin(t, T.s8, T.rise));
+      else this.fill('#140c08');
+      this.fill('#1a0c04', 0.35);
+      this.rays(cx, H * 0.48, 16, H, t * 0.3, 0.3 + 0.4 * lin(t, T.s8, T.wake), '255,220,150');
+      this.glow(cx, H * 0.52, 200, 'rgba(255,214,140,0.7)', 0.6 + 0.4 * lin(t, T.s8, T.wake));
+      // 여섯 빛이 모여 고나를 감쌈
+      for (let i = 0; i < 6; i++) {
+        const k = eIn(lin(t, T.s8, T.s8 + 0.7));
+        const a = (i / 6) * TAU + t * 1.2;
+        this.glow(cx + Math.cos(a) * 140 * (1 - k), H * 0.52 + Math.sin(a) * 140 * (1 - k), 26, FAM_COL[FAMILY[i]], 0.9 * (1 - lin(t, T.wake, T.rise)));
+      }
+      const wk = eIO(lin(t, T.wake - 0.2, T.wake + 0.1));
+      const br = 1 + 0.015 * Math.sin(t * 2);
+      spr('b-sleep', cx, H * 0.52, 250 * br, 1 - wk);
+      spr('b-wake', cx, H * 0.52, 250, wk);
+      this.glow(cx, H * 0.5, 240, 'rgba(255,244,210,0.95)', Math.max(0, 1 - Math.abs(t - (T.rise - 0.12)) / 0.18) * 0.9);
+      this.dust(t, 50, '#ffe7a8', 0.7, 20);
+      this.vignette(0.55, '20,10,0');
+      return;
+    }
+    const sky = r['keyart-tall'];
+    const skyDraw = (zoom: number, yShift: number) => {
+      if (!sky) { this.fill('#2a1850'); return; }
+      const sw = sky.width;
+      const sh = sky.height * 0.3;
+      const s = Math.max(W / sw, H / sh) * zoom;
+      g.drawImage(sky, 0, 0, sw, sh, W / 2 - (sw * s) / 2, H / 2 - (sh * s) / 2 + yShift, sw * s, sh * s);
+    };
+    if (t < T.toward) {
+      const k = eIO(lin(t, T.rise, T.toward));
+      skyDraw(1.25, -40 + k * 200);
+      this.fill('#0a0614', 0.25 - 0.15 * k);
+      this.rays(cx, -30, 12, H * 1.1, Math.PI / 2, 0.4, '255,230,170');
+      this.speed(t, 1, 0.35 + 0.5 * k, '255,240,200', 40, 1.4);
+      const y = H * 0.7 - k * H * 0.24 + Math.sin(t * 5) * 4;
+      for (let i = 3; i >= 1; i--) spr('b-fly', cx, y + i * 22, 240, 0.12 * i);
+      spr('b-fly', cx, y, 240, 1, Math.sin(t * 3) * 0.05);
+      this.vignette(0.5);
+      return;
+    }
+    const k = lin(t, T.toward, TITLE_AT);
+    skyDraw(1.4 + k * 0.5, 160);
+    this.fill('#0a0614', 0.2);
+    this.speed(t, 2, 0.4 + 0.5 * k, '255,240,200', 50, 1 + k * 2);
+    this.glow(cx, H * 0.42, 140 + 260 * k, 'rgba(255,220,150,0.7)', 0.4 + 0.5 * k);
+    spr('b-fly', cx, H * 0.46 + eIn(k) * 60, 240 * (1 + eIn(k) * 3.2), 1, Math.sin(t * 6) * 0.03);
+    this.vignette(0.5);
+    this.fill('#fff2d8', eIn(lin(t, TITLE_AT - 0.5, TITLE_AT)) * 0.85);
+  }
+
   /** 타이틀: 따뜻한 빛이 걷히며 (금빛 파편 · 작은 흔들림) — 글자는 DOM */
   private title(t: number): void {
     const { W, H } = this;
     const g = this.g;
     const cx = W / 2;
     const u = t - TITLE_AT;
-    if (this.a.keyart) this.cover(this.a.keyart, cx, H / 2, 1.08 - 0.04 * clamp(u / 4));
+    const ka = this.a.r3['keyart-tall'] ?? this.a.keyart;
+    if (ka) this.cover(ka, cx, H / 2, 1.08 - 0.04 * clamp(u / 4));
     this.fill('#0a0614', 0.7);
     const back = g.createRadialGradient(cx, H * 0.4, 20, cx, H * 0.4, W * 0.75);
     back.addColorStop(0, 'rgba(6,3,12,0.7)');
@@ -1411,8 +1708,8 @@ export function OpeningCinematic({ onDone }: { onDone: () => void }) {
       )}
       {titleOn && (
         <div className="oc-title">
-          <h1><span>고나의 응가</span><span>대탈출 대작전</span></h1>
-          <p className="oc-en">GONA&apos;s Sky Adventure — The Great Poo Escape</p>
+          <img className="oc-logo" src={`${BASE}${packPath('title/logo.png')}`} alt="GONA's SKY ADVENTURE" />
+          <p className="oc-sub">응가 대탈출 대작전</p>
           <p className="oc-copy">“막힌 운명을 뚫어라!”</p>
           {t >= OPENING_END && <p className="oc-press">▶ 터치하여 시작</p>}
         </div>

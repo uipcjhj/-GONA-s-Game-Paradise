@@ -450,6 +450,33 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
         if (HAS_OPENING && !seen) { openingFrom.current = 'start'; setSlide(0); setPhase('opening'); } else setPhase('select');
       }, 520);
     };
+    // 응가 대탈출: 세로 키아트를 화면 전체에 깔고 로고(위) · 버튼 HUD(아래, 그라데이션으로 이어짐)
+    if ((THEME.id as string) === 'poop') {
+      const sub = (f: () => void) => () => { unlockAudio(); sfx('menuMove'); f(); };
+      return (
+        <div className={`sky ttl ttl2 poop${leaving ? ' out' : ''}`} onPointerDown={() => { unlockAudio(); setSoundOn(true); }}>
+          <img className="ttl2-art" src={`${BASE}${packPath('title/keyart-tall.jpg', 'v2/title/keyart.jpg')}`} alt="고나와 가족 여섯 명이 노을 진 하늘로 출격하는 그림" />
+          <div className="ttl2-shade" aria-hidden />
+          <div className="ttl-sparks" aria-hidden>
+            {Array.from({ length: 10 }, (_, i) => <i key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.37) % 2.6}s`, animationDuration: `${2.2 + (i % 4) * 0.5}s` }} />)}
+          </div>
+          <header className="ttl2-logo">
+            <img src={`${BASE}${packPath('title/logo.png')}`} alt="GONA's SKY ADVENTURE" />
+            <p>응가 대탈출 대작전</p>
+          </header>
+          <div className="ttl2-menu">
+            <button type="button" className="ttl2-start ttl-start" onClick={go}>PRESS START</button>
+            <div className="ttl2-row">
+              {HAS_OPENING && <button type="button" className="ttl2-btn" onClick={sub(() => { openingFrom.current = 'title'; setSlide(0); setPhase('opening'); })}>오프닝 다시보기</button>}
+              {DEV && <button type="button" className="ttl2-btn ttl-test" onClick={sub(() => { setSlide(0); playBgm('ending', 1.2); setPhase('ending'); })}>엔딩</button>}
+              <button type="button" className="ttl2-btn" onClick={sub(() => onExit())}>월드맵</button>
+            </div>
+            <p className="ttl2-foot">{!soundOn ? '♪ 화면을 터치하면 음악이 켜져요' : <>{best > 0 && <b>HI-SCORE {String(best).padStart(8, '0')}</b>} 6 STAGES · {BETA ? '공개 테스트판' : '개발판'}</>}</p>
+          </div>
+          <div className="ttl-wipe" aria-hidden />
+        </div>
+      );
+    }
     // 타이틀 전용 구도: 로고(위) · 캐릭터 띠(가운데, 원화의 인물 영역 33%~100%를 통째로) · 메뉴(아래, 별도 영역)
     const ART_W = 688;
     const ART_H = 1024;
