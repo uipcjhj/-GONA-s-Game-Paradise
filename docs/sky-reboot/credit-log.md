@@ -43,3 +43,24 @@
 | STAGE 2~6 배경 ×5 | low · 참고 1 | 3.75 |
 | 엔딩: 가족 포옹 · 마왕성 붕괴 · 시원한/만세 고나 | medium·low·medium | 2.75 |
 | **합계** | 26장 | **23.75** |
+
+---
+
+## 2026-11-23 (2차) · 타이틀·오프닝·엔딩 프리미엄 리마스터 (사용자 승인 예산: 60, 최대 80)
+시작 잔액 152 → 끝 잔액 **126.5** · **사용 25.5** (거래 내역과 견적 일치). 모델 GPT Image 2.6 · 참고 이미지는 저장소의 확정 원화를 자동 업로드
+
+| 파일 (원본 art-src/sky-poop/remaster/) | 종류 · 설정 | 참고 원본 | 적용 | 실제 |
+|---|---|---|---|---|
+| keyart.png → title/keyart-tall.jpg | 타이틀 키아트 · xhigh 2k 9:16 | 고나·가족 6 원화 · 빌런 시트 | 타이틀 배경 · 오프닝 끝 타이틀 · 출격 하늘 | 3.5 |
+| logo.png → title/logo.png | 영문 로고 · high 1k (철자 확인) | 없음 | 타이틀 · 오프닝 끝 | 1.25 |
+| nursery.png → opening3/room-eve.jpg (+흐림본) | 아기방 저녁 · high 2k | 고나 픽셀 4종 | 오프닝 0~18초 | 2 |
+| night.png → opening3/room-night.jpg | 아기방 달밤 · high 2k (같은 방 편집) | 아기방 저녁 | 오프닝 18~23초 | 2 |
+| morning.png → opening3/room-morn.jpg | 아기방 아침 · high 2k (같은 방 편집) | 아기방 저녁 | 엔딩 현실 귀환·뿡 | 2 |
+| dream.png → opening3/dream.jpg | 꿈 터널 · high 1k | 아기방 | 오프닝 22~23초 · 37~38초 | 1.25 |
+| castle.png → opening3/castle.jpg | 마왕성·병사·골렘 · high 2k | 빌런 시트 · STAGE1 배경 | 오프닝 23~32초 | 2 |
+| gonaA.png → opening3/a-*.png | 고나 6프레임 · high 1k | 고나 픽셀·시트·원화 | 먹기·씹기·배부름·통통·움켜쥠·졸림 | 1.25 |
+| gonaB.png → opening3/b-*.png | 고나 6프레임 · high 1k | 〃 | 힘주기 시작·잠·깸·비행·눈 비비기·웃음 | 1.25 |
+| family.png → ending/family.jpg | 가족 환호 · xhigh 2k | 고나·가족 6 원화 | 엔딩 성공 장면 | 3.5 |
+| hug.png → ending/hug2.jpg | 최종 포옹 · xhigh 2k | 고나·가족 6 원화 | 엔딩 마지막 장면 | 3.5 |
+| collapse.png → ending/collapse.jpg | 마왕성 붕괴+열차 · high 2k | 빌런 시트 · 열차 | 엔딩 첫 장면 | 2 |
+| **합계** | 12장 | | | **25.5** |
