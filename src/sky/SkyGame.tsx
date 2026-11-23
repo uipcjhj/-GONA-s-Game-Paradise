@@ -453,7 +453,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
     // 타이틀 전용 구도: 로고(위) · 캐릭터 띠(가운데, 원화의 인물 영역 33%~100%를 통째로) · 메뉴(아래, 별도 영역)
     const ART_W = 688;
     const ART_H = 1024;
-    const BAND = 0.33; // 원화에서 가족 일러스트가 시작하는 높이 비율
+    const BAND = THEME.id === 'poop' ? 0.2 : 0.33; // 원화에서 가족 일러스트가 시작하는 높이 비율 (응가판 새 키아트는 인물이 더 위에서 시작)
     const logoW = Math.round(Math.min(vp.w * 0.62, 300, (vp.h * 0.2) / 0.672));
     const logoH = Math.round(logoW * 0.672);
     const top = 10 + logoH + 2;
@@ -473,7 +473,14 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
         <div className="ttl-sparks" aria-hidden>
           {Array.from({ length: 12 }, (_, i) => <i key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.37) % 2.6}s`, animationDuration: `${2.2 + (i % 4) * 0.5}s` }} />)}
         </div>
-        <img className="ttl-logo" style={{ width: logoW }} src={`${BASE}${packPath('title/logo.png')}`} alt="GONA's Sky Adventure" />
+        {THEME.id === 'poop' ? (
+          <div className="ttl-logo ttl-logo-text" style={{ width: Math.min(vp.w - 24, 360), height: logoH }}>
+            <h1><span>고나의 응가</span><span>대탈출 대작전</span></h1>
+            <p>GONA&apos;s Sky Adventure — The Great Poo Escape</p>
+          </div>
+        ) : (
+          <img className="ttl-logo" style={{ width: logoW }} src={`${BASE}${packPath('title/logo.png')}`} alt="GONA's Sky Adventure" />
+        )}
         <div className="ttl-menu" style={{ height: menuH }}>
           <div className="ttl-row">
             <button type="button" className="ttl-start" onClick={go}>PRESS START</button>

@@ -92,6 +92,47 @@
     "opening2/gona-strain.png": {
       "src": "canva",
       "note": "오프닝 고나 표정 (Canva AI · 200px 픽셀 정리)"
-    }
+    },
+    "opening2/gona-cry.png": {
+      "src": "higgsfield",
+      "note": "오프닝 컷신 그림"
+    },
+    "opening2/gona-sleep.png": {
+      "src": "higgsfield",
+      "note": "오프닝 컷신 그림"
+    },
+    "opening2/gona-strain2.png": {
+      "src": "higgsfield",
+      "note": "오프닝 컷신 그림"
+    },
+    "opening2/gona-eat2.png": {
+      "src": "higgsfield",
+      "note": "오프닝 컷신 그림"
+    },
+    "opening2/v-soldier.png": {
+      "src": "higgsfield",
+      "note": "오프닝 컷신 그림"
+    },
+    "opening2/v-ghost.png": {
+      "src": "higgsfield",
+      "note": "오프닝 컷신 그림"
+    },
+    "opening2/v-golem.png": {
+      "src": "higgsfield",
+      "note": "오프닝 컷신 그림"
+    },
+    "opening2/v-knight.png": {
+      "src": "higgsfield",
+      "note": "오프닝 컷신 그림"
+    },
+    "opening2/v-king.png": {
+      "src": "higgsfield",
+      "note": "오프닝 컷신 그림"
+    },
+    "opening2/v-king2.png": {
+      "src": "higgsfield",
+      "note": "오프닝 컷신 그림"
+    },
+    "title/keyart.jpg": {}
   }
 }

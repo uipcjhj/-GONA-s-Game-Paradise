@@ -37,18 +37,18 @@ export const OPENING_END = 44.4; // 이 시각에 '터치하여 시작' 표시, 
 interface Cue { t: number; end: number; text: string; cls: string }
 const CUES: Cue[] = [
   { t: 0.6, end: 3.7, text: '[[서기 2026년 11월…]]', cls: 'chron' },
-  { t: 1.8, end: 3.7, text: '고나가 7개월이 되던 해.', cls: 'chron sub' },
-  { t: 4.5, end: 9.3, text: '떡뻥과 이유식을 마음껏 즐기던 고나.', cls: '' },
+  { t: 1.8, end: 3.7, text: '고나가 생후 7개월을 맞이한 해.', cls: 'chron sub' },
+  { t: 4.5, end: 9.3, text: '떡뻥과 이유식을 즐기던 작은 영웅, 고나.', cls: '' },
   { t: 6.4, end: 9.3, text: '그 평화로운 나날은 영원할 것만 같았다.', cls: '' },
   { t: 10.4, end: 13.3, text: '그러나…', cls: '' },
-  { t: 11.4, end: 13.3, text: '작은 배 속에서 심상치 않은 기운이 깨어나기 시작했다.', cls: '' },
-  { t: 14.0, end: 20.2, text: '그것은 일곱 달 인생에서 마주한…', cls: '' },
+  { t: 11.4, end: 13.3, text: '작은 배 속 깊은 곳에서, 불길한 기운이 깨어나고 있었다.', cls: '' },
+  { t: 14.0, end: 20.2, text: '그것은 생후 일곱 달 인생에서 마주한…', cls: '' },
   { t: 16.2, end: 20.2, text: '[[가장 혹독한 시련]]이었다.', cls: '' },
   { t: 23.6, end: 27.9, text: '막힘은 번지고, 가스는 차오르며…', cls: '' },
-  { t: 25.4, end: 27.9, text: '소화왕국은 깊은 혼란에 빠졌다.', cls: '' },
+  { t: 25.4, end: 27.9, text: '꿈속의 소화왕국은 깊은 혼란에 빠졌다.', cls: '' },
   { t: 28.6, end: 31.7, text: '모든 것의 배후에는…', cls: '' },
   { t: 29.9, end: 31.7, text: '[[변비마왕 꽉막혀]]가 있었다.', cls: '' },
-  { t: 32.3, end: 36.7, text: '그러나 고나는 혼자가 아니었다.', cls: '' },
+  { t: 32.3, end: 36.7, text: '그러나 작은 영웅은 혼자가 아니었다.', cls: '' },
   { t: 37.3, end: 41.0, text: '지금, 세상에서 가장 작은 영웅의…', cls: '' },
   { t: 38.9, end: 41.0, text: '[[가장 위대한 탈출 작전]]이 시작된다!', cls: '' },
 ];
@@ -93,8 +93,8 @@ function bolt(seed: number, x0: number, y0: number, x1: number, y1: number): [nu
 
 type Img = HTMLImageElement | null;
 /** 오프닝 전용 그림 칸 (opening2/<이름>.png) — 앞 4장은 있음, 나머지는 받으면 채워짐 */
-const SLOTS = ['gona-eat', 'gona-pat', 'gona-startle', 'gona-strain', 'gona-strain2', 'gona-cry', 'gona-sleep', 'gona-hero',
-  'v-soldier', 'v-golem', 'v-ghost', 'v-knight', 'v-king', 'bg-castle', 'bg-home'] as const;
+const SLOTS = ['gona-eat', 'gona-eat2', 'gona-pat', 'gona-startle', 'gona-strain', 'gona-strain2', 'gona-cry', 'gona-sleep', 'gona-hero',
+  'v-soldier', 'v-golem', 'v-ghost', 'v-knight', 'v-king', 'v-king2', 'bg-castle', 'bg-home'] as const;
 type Slot = (typeof SLOTS)[number];
 /** 칸이 비었을 때 쓰는 임시 대체 (보고·테스트용 설명) */
 export const FALLBACK: Partial<Record<Slot, string>> = {
@@ -216,7 +216,7 @@ class Painter {
     const im = this.a.keyart;
     if (!im || a <= 0) return;
     const sw = im.width;
-    const sh = im.height * 0.36;
+    const sh = im.height * 0.22; // 새 키아트: 위 22% 가 하늘·마왕성 (그 아래는 가족 인물)
     const s = Math.max(this.W / sw, this.H / sh) * zoom;
     const g = this.g;
     g.save();
@@ -599,14 +599,21 @@ class Painter {
     this.mood(t, '#f6c48a', '#7a3e1c', '255,236,190', 0.45, '#fff2c8', 0.55);
     const eat = this.a.op['gona-eat'];
     const pat = this.a.op['gona-pat'];
+    const eat2 = this.a.op['gona-eat2'];
     const cross = eIO(lin(t, T.pat - 0.2, T.pat + 0.15));
+    const mid = eat2 ? eIO(lin(t, 5.3, 5.6)) : 0; // 떡뻥 → 이유식 한 숟갈
     const z = t < T.pat ? 1.0 + 0.07 * eIO(lin(t, T.s2, T.pat)) : 1.07 - 0.05 * eIO(lin(t, T.pat, T.s3));
     this.cam(cx, fy - 120, z, () => {
       // 떡뻥 먹기: 0.42초마다 오물 (몸 살짝 눌림 + 부스러기)
       if (cross < 1) {
         const ph = (u / 0.42) % 1;
         const chew = Math.max(0, Math.sin(ph * TAU));
-        const map = this.gonaAt(eat, cx, fy, 300, { a: 1 - cross, sy: 1 - 0.025 * chew, sx: 1 + 0.015 * chew });
+        if (eat2 && mid > 0) {
+          // 이유식 한 숟갈씩 (0.55초마다 숟가락이 입으로 · 행복한 흔들림)
+          const sp = Math.max(0, Math.sin(((u - 1.3) / 0.55) * TAU));
+          this.gonaAt(eat2, cx, fy - sp * 3, 300, { a: mid * (1 - cross), sy: 1 + 0.02 * sp, sx: 1 - 0.01 * sp, rot: Math.sin(u * 2.2) * 0.02 });
+        }
+        const map = this.gonaAt(eat, cx, fy, 300, { a: (1 - cross) * (1 - mid), sy: 1 - 0.025 * chew, sx: 1 + 0.015 * chew });
         const [mx, my] = map(112, 100);
         for (let i = 0; i < 10; i++) {
           const n = Math.floor(u / 0.42) * 10 + i;
@@ -615,7 +622,7 @@ class Painter {
           const sp = 30 + hash(n * 7) * 40;
           const g = this.g;
           g.save();
-          g.globalAlpha = (1 - life) * (1 - cross);
+          g.globalAlpha = (1 - life) * (1 - cross) * (1 - mid);
           g.fillStyle = hash(n) > 0.5 ? '#fff6dc' : '#f2d9a6';
           g.fillRect(mx + Math.cos(an) * sp * life, my + Math.sin(an) * sp * life + 60 * life * life, 3, 3);
           g.restore();
@@ -699,14 +706,17 @@ class Painter {
       this.rays(cx, fy - 160, 14, H * 0.9, t * 0.15, 0.25 + 0.3 * heat, '255,110,60');
       // 끄응! 순간: 몸이 눌렸다 펴짐 · 충격 고리
       let push = 0;
-      for (const p of PUSHES) { const d = t - p; if (d >= 0 && d < 0.6) push = Math.max(push, Math.exp(-d * 5)); }
-      const z = 1 + 0.22 * eIO(lin(t, T.s4, T.peak + 0.3));
+      let pi = -1;
+      for (const [i, p] of PUSHES.entries()) { const d = t - p; if (d >= 0 && d < 0.6 && Math.exp(-d * 5) > push) { push = Math.exp(-d * 5); pi = i; } }
+      // 끄응마다 카메라가 다른 쪽으로 살짝 쏠리고 점점 세게 (같은 장면 반복 느낌 줄이기)
+      const camX = pi < 0 ? 0 : [-16, 18, -10, 0][pi] * push;
+      const z = 1 + 0.22 * eIO(lin(t, T.s4, T.peak + 0.3)) + (pi < 0 ? 0 : (0.02 + 0.015 * pi) * push);
       const trem = (0.6 + 2.2 * heat) * (t < T.puff ? 1 : 0.2);
-      this.cam(cx, fy - 150 - 20 * heat, z, () => {
+      this.cam(cx + camX, fy - 150 - 20 * heat, z, () => {
         const jx = Math.sin(t * 73) * trem;
         const jy = Math.cos(t * 61) * trem * 0.5;
         this.glow(cx, fy - 170, 120 + 60 * push, 'rgba(255,60,30,0.6)', 0.4 + 0.5 * heat);
-        const two = strain2 && push > 0.15 && Math.floor(t * 10) % 2 === 0;
+        const two = strain2 && push > 0.32; // 끄응! 순간엔 두 주먹 번쩍 · 빨개진 얼굴 그림으로
         const map = this.gonaAt(two ? strain2 : strain, cx + jx, fy + jy, 300, { sx: 1 + 0.04 * push, sy: 1 - 0.06 * push });
         const [fx, fyy] = map(...(SPOT.face as unknown as [number, number]));
         // 얼굴의 붉은 열기 (빛 덧칠)
@@ -792,7 +802,8 @@ class Painter {
       const map = this.gonaAt(im, cx, fy - sob, 300, { sy: slump, sx: 2 - slump });
       // 눈물: 고이고(반짝) → 볼을 타고 → 뚝
       const well = eOut(lin(t, T.cry + 0.3, T.cry + 1.1));
-      for (const [i, e] of [SPOT.eyeL, SPOT.eyeR].entries()) {
+      const eyes = cry ? [[90, 76], [117, 76]] : [SPOT.eyeL, SPOT.eyeR];
+      for (const [i, e] of eyes.entries()) {
         const [ex, ey] = map(e[0], e[1] + 4);
         if (!cry) {
           // 임시(울먹임 그림 없음): 눈가에 고인 눈물 + 볼을 타고 흐르는 눈물 줄기
@@ -814,7 +825,7 @@ class Painter {
           this.drop(ex + (i ? 6 : -6), ey + 8 + fall * 70 + fall * fall * 60, 5, 1 - fall);
         }
       }
-      if (!cry) this.ptext('훌쩍…', cx + (Math.floor(u / 0.8) % 2 ? 100 : -100), fy - 230, 14, '#bcd2ff', clamp(sob) * 0.9);
+      this.ptext('훌쩍…', cx + (Math.floor(u / 0.8) % 2 ? 100 : -100), fy - 230, 14, '#bcd2ff', clamp(sob) * 0.9);
     });
     this.dust(t, 40, '#9fb0ff', 0.25, -40, 1.2); // 내리는 빛 (차가운 비 느낌)
     this.vignette(0.85, '0,0,20');
@@ -846,7 +857,7 @@ class Painter {
           map = this.gonaAt(this.silOf(im, '#0a0e22') as unknown as HTMLImageElement, cx, fy, 210, o);
           map = this.gonaAt(im, cx, fy, 210, { ...o, a: 0 });
         } else map = this.gonaAt(im, cx, fy, 300, o);
-        [bx, by] = map(...(SPOT.belly as unknown as [number, number]));
+        [bx, by] = sl ? map(112, 145) : map(...(SPOT.belly as unknown as [number, number]));
         for (let i = 0; i < 3; i++) {
           const life = ((t - T.s5) * 0.6 + i / 3) % 1;
           this.ptext('Z', cx + 70 + life * 40 + i * 6, fy - 230 - life * 70, 11 + i * 3 + life * 6, '#c8d4ff', (1 - life) * (1 - dz));
@@ -987,7 +998,8 @@ class Painter {
       const ky = H * 0.22 + (1 - kingK) * 120 - laugh * 4;
       if (king) {
         this.glow(cx, ky, 200, 'rgba(150,60,255,0.5)', kingK);
-        this.img(king, cx, ky, 300, { a: kingK, smooth: false, sy: 1 + laugh * 0.03 });
+        const k2 = this.a.op['v-king2'];
+        this.img(t >= T.laugh && k2 ? k2 : king, cx, ky - 20, 250, { a: kingK, smooth: false, sy: 1 + laugh * 0.03 });
       } else if (kingK > 0) {
         // 임시: 구름 속에서 빛나는 두 눈과 웃는 입
         if (this.a.cloud) this.img(this.silOf(this.a.cloud, '#120624'), cx, ky + 10, 420, { a: kingK });
