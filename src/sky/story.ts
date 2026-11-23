@@ -75,7 +75,7 @@ const S2: StageStory = {
     { who: 'bbo', face: 2, text: '버섯대왕님! 저 꼬마가 너무 세요!' },
     { who: 'kku', face: 1, text: '대왕님 방귀 한 방이면 끝이에요~!' },
   ],
-  bossIn: [{ who: 'boss', text: '뿡! 이 숲은 내 가스로 가득하다!' }],
+  bossIn: [{ who: 'boss', text: '짐이 바로 숲의 지배자, 뿡뿡 버섯대왕이니라! 뿡!' }],
   bossP2: [{ who: 'boss', text: '갓이 갈라진다! 뿌우웅!' }],
   bossP3: [{ who: 'boss', text: '더, 더 부풀어 주마아아!' }],
   bossDown: [
@@ -101,7 +101,7 @@ const S3: StageStory = {
     { who: 'bbo', face: 2, text: '믹서님! 다 갈아 버려요!' },
     { who: 'kku', face: 2, text: '우, 우린 먼저 갈게요~!' },
   ],
-  bossIn: [{ who: 'boss', text: '갈아 버린다! 3000 RPM!' }],
+  bossIn: [{ who: 'boss', text: '공장장 명령이다! 전부 갈아 버린다, 3000 RPM!' }],
   bossP2: [{ who: 'boss', text: '뚜껑 오픈! 레이저 가동!' }],
   bossP3: [{ who: 'boss', text: '과열 모드! 멈출 수 없다!' }],
   bossDown: [
@@ -127,7 +127,7 @@ const S4: StageStory = {
     { who: 'bbo', face: 2, text: '크라켄님! 꼬마가 와요!' },
     { who: 'kku', face: 2, text: '말랑말랑하게 혼내 주세요~!' },
   ],
-  bossIn: [{ who: 'boss', text: '말랑말랑, 물은 다 내 거야!' }],
+  bossIn: [{ who: 'boss', text: '말랑말랑~ 이 바다의 물은 한 방울도 못 돌려준다!' }],
   bossP2: [{ who: 'boss', text: '흐물… 몸이 투명해진다!' }],
   bossP3: [{ who: 'boss', text: '거대 물결로 쓸어 주마!' }],
   bossDown: [
@@ -153,7 +153,7 @@ const S5: StageStory = {
     { who: 'kku', face: 2, text: '철벽 기사님! 저희 좀 지켜 주세요!' },
     { who: 'bbo', face: 2, text: '성문만큼은 꼭 막아요~!' },
   ],
-  bossIn: [{ who: 'boss', text: '이 성문은 아무도 못 지나간다, 딱!' }],
+  bossIn: [{ who: 'boss', text: '딱! 이 성문은 천 년 동안 단 한 번도 열린 적이 없다!' }],
   bossP2: [{ who: 'boss', text: '가, 갑옷에 금이…?!' }],
   bossP3: [{ who: 'boss', text: '갑옷을 벗고 폭주한다!' }],
   bossDown: [
@@ -181,17 +181,17 @@ const S6: StageStory = {
     { who: 'bbo', face: 2, text: '야, 같이 가! 나 두고 가지 마!' },
   ],
   bossIn: [
-    { who: 'boss', text: '흥, 누구도 이 길은 못 지나간다! 꽉!' },
+    { who: 'boss', text: '어리석은 아기 영웅이여… 세상의 모든 길은 이 꽉막혀가 막는다! 꽈악!' },
     P({ mom: '우리 고나 길은 엄마가 열어!', dad: '막힌 건 뚫으라고 있는 거다!', imo: '꽉막혀? 이름부터 답답하네.', halmeoni: '할미 약손 맛 좀 보거라!', halabeoji: '마지막 봉인, 방패로 버텨 주마!', samchon: '유산균 전원 출격!' }),
   ],
-  bossP2: [{ who: 'boss', text: '으아아, 막히고 막혔다!' }],
+  bossP2: [{ who: 'boss', text: '감히… 짐의 철벽 갑옷을…! 으아아, 막히고 막혔다!' }],
   bossP3: [
     { who: 'boss', text: '응가 운석으로 전부 막아 주마!' },
     { who: 'gona', text: '가족들아, 마지막 봉인을 깨자!' },
     P({ mom: '쏴아아아, 마지막 목욕 폭포!', dad: '수분 충전 최대치!', imo: '퍼플 버스트, 풀파워!', halmeoni: '할미 손은 약손이다!', halabeoji: '나쁜 세균은 못 지나간다!', samchon: '유산균 특공대, 전원 돌격!' }),
   ],
   bossDown: [
-    { who: 'boss', text: '뻥… 뚫…렸다…' },
+    { who: 'boss', text: '뻥… 뚫…렸다… 이것이… 가족의 힘이란 말인가…' },
   ],
 };
 

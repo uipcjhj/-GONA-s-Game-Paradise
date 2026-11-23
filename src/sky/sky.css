@@ -364,3 +364,7 @@ canvas.talk-face { width: 72px; height: 72px; }
   text-shadow: 0 2px 0 #2a1606, 0 0 3px #000, 0 0 2px #000, 0 0 18px rgba(20, 8, 30, 0.9); }
 .ttl-logo-text h1 span + span { color: #f0c870; }
 .ttl-logo-text p { margin: 6px 0 0; font-size: clamp(10px, 2.9vw, 12px); color: #fff2d6; letter-spacing: 0.04em; text-shadow: 0 1px 2px #000, 0 0 6px #000; }
+/* 엔딩 새 그림: 픽셀 표정 그림은 또렷하게 · 포옹 그림은 위쪽(얼굴) 기준으로 */
+.pe-gona.px, .pe-f.px { image-rendering: pixelated; }
+.pe-hugart .pe-bg { object-position: 50% 20%; filter: none; animation: pe-hugzoom 6s ease-out both; }
+@keyframes pe-hugzoom { from { transform: scale(1.08); } to { transform: scale(1); } }

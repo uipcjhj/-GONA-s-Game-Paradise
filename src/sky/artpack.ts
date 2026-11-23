@@ -95,6 +95,7 @@ export function applyPackToStages(stages: StageDef[]): void {
     }
     const boss = packMeta(`${dir}/boss.png`);
     if (boss) {
+      st.boss.art = 'boss'; // 새 보스 그림 (FINAL 은 원래 성 소품을 보스로 쓰던 것을 교체)
       st.boss.frames = boss.frames ?? st.boss.frames;
       if (boss.k) st.boss.k = boss.k;
       for (const p of st.boss.parts) {

@@ -68,12 +68,22 @@ export function PoopEnding({ onDone }: { onDone: () => void }) {
   };
   const gonaImg = `${BASE}${packPath('chars/gona/illust.png')}`;
   const train = hasPack('ending/train.png') ? `${BASE}${packPath('ending/train.png')}` : null;
+  // 엔딩 전용 그림 (있으면 사용): 마왕성 붕괴 · 힘주기(오프닝 표정) · 시원한 고나 · 만세 고나 · 가족 포옹
+  const P = (rel: string): string | null => (hasPack(rel) ? `${BASE}${packPath(rel)}` : null);
+  const castleBg = P('ending/castle.jpg');
+  const strainImg = P('opening2/gona-strain.png');
+  const strain2Img = P('opening2/gona-strain2.png');
+  const reliefImg = P('ending/gona-relief.png');
+  const cheerImg = P('ending/gona-cheer.png');
+  const hugImg = P('ending/hug.jpg');
+  const hard = scene.id === 'strain' && who.includes('끄으으으으');
+  const roomImg = scene.id === 'fart' ? reliefImg ?? gonaImg : (hard ? strain2Img : strainImg) ?? gonaImg;
   return (
     <div className={`sky end pe pes-${scene.id}`}>
       <div className="pe-stage" key={scene.id}>
         {scene.id === 'train' && (
           <>
-            <img className="pe-bg" src={`${BASE}${packPath('title/keyart.jpg')}`} alt="" />
+            <img className="pe-bg" src={castleBg ?? `${BASE}${packPath('title/keyart.jpg')}`} alt="" />
             {train && <img className="pe-train" src={train} alt="응가 열차" />}
             <div className="pe-cheer">{FAMILY.map((f) => <img key={f} src={`${BASE}${packPath(`chars/${f}/face.png`)}`} alt="" />)}</div>
           </>
@@ -81,7 +91,7 @@ export function PoopEnding({ onDone }: { onDone: () => void }) {
         {scene.id === 'white' && <div className="pe-white" />}
         {(scene.id === 'strain' || scene.id === 'fart') && (
           <div className="pe-room">
-            <img className={`pe-gona${scene.id === 'strain' && who.includes('끄으으으으') ? ' hard' : ''}`} src={gonaImg} alt="고나" />
+            <img className={`pe-gona${hard ? ' hard' : ''}${roomImg !== gonaImg ? ' px' : ''}`} src={roomImg} alt="고나" />
             {scene.id === 'fart' && (
               <>
                 <b className="pe-boom">뿡!</b>
@@ -90,12 +100,18 @@ export function PoopEnding({ onDone }: { onDone: () => void }) {
             )}
           </div>
         )}
-        {(scene.id === 'success' || scene.id === 'hug') && (
+        {scene.id === 'hug' && hugImg && (
+          <div className="pe-family hug pe-hugart">
+            <img className="pe-bg" src={hugImg} alt="온 가족이 고나를 꼭 안아 주는 그림" />
+            <div className="pe-hearts">{Array.from({ length: 9 }, (_, i) => <i key={i} style={{ left: `${8 + i * 10}%`, animationDelay: `${(i % 4) * 0.35}s`, backgroundImage: `url(${BASE}${packPath('fx/heal-heart.png', 'v2/fx/heart-p.png')})` }} />)}</div>
+          </div>
+        )}
+        {(scene.id === 'success' || (scene.id === 'hug' && !hugImg)) && (
           <div className={`pe-family${scene.id === 'hug' ? ' hug' : ''}`}>
             {FAMILY.map((f, i) => (
               <img key={f} className={`pe-f f${i}${who.startsWith(`${nm(f)}|`) ? ' talk' : ''}`} src={`${BASE}${packPath(`chars/${f}/illust.png`)}`} alt={nm(f)} />
             ))}
-            <img className={`pe-f pe-center${who.startsWith('고나|') ? ' talk' : ''}`} src={gonaImg} alt="고나" />
+            <img className={`pe-f pe-center${who.startsWith('고나|') ? ' talk' : ''}${cheerImg ? ' px' : ''}`} src={cheerImg ?? gonaImg} alt="고나" />
             {scene.id === 'hug' && <div className="pe-hearts">{Array.from({ length: 9 }, (_, i) => <i key={i} style={{ left: `${8 + i * 10}%`, animationDelay: `${(i % 4) * 0.35}s`, backgroundImage: `url(${BASE}${packPath('fx/heal-heart.png', 'v2/fx/heart-p.png')})` }} />)}</div>}
           </div>
         )}
