@@ -57,3 +57,9 @@
 | 다른 경로 | 정식 `index-Bm3i9mp0.js`·sky-test `index-DQ4aMbrJ.js` 배포 전과 동일 · dev 는 빌드 시각 표시만 변경 |
 | 실제 브라우저 확인 | 393×636 · 390×844 — 네 주소 정상 · sky-poop-test 오프닝 6장면·자막 14줄·선택→STAGE 1·재방문·다시보기·SKIP 3연타 모두 정상 · 콘솔 오류·실패 요청 0 |
 | 복구 | 이전 sky-poop-test 백업(74a3689) · Run workflow 에 `sky_ref=74a3689` |
+
+## 8. 완성형 테스트판 배포 (2026-11-23)
+- 소스 `claude/gonas-sky-poop-dev` `11364e7` → GoNa sky-test `3418dd8 → bff7afd` (sky-poop-test/ 만) · 통합 워크플로 run #28 `45129434168` 성공
+- 정식 `index-Bm3i9mp0.js` · sky-test `index-DQ4aMbrJ.js` 배포 전과 동일 · dev 는 빌드 시각만 변경 · 네 주소 200
+- 실제 Pages 확인: 오프닝 8장면·다시보기·SKIP·선택·STAGE 1 (393×636 · 390×844) · STAGE 2 전 구간(390×844) — 콘솔 오류·실패 요청 0
+- 복구: Run workflow `sky_ref=3418dd8`
