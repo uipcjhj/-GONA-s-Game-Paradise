@@ -999,7 +999,7 @@ class Painter {
       if (king) {
         this.glow(cx, ky, 200, 'rgba(150,60,255,0.5)', kingK);
         const k2 = this.a.op['v-king2'];
-        this.img(t >= T.laugh && k2 ? k2 : king, cx, ky - 20, 250, { a: kingK, smooth: false, sy: 1 + laugh * 0.03 });
+        this.img(t >= T.laugh && k2 ? k2 : king, cx, ky + 34, 228, { a: kingK, smooth: false, sy: 1 + laugh * 0.03 });
       } else if (kingK > 0) {
         // 임시: 구름 속에서 빛나는 두 눈과 웃는 입
         if (this.a.cloud) this.img(this.silOf(this.a.cloud, '#120624'), cx, ky + 10, 420, { a: kingK });
