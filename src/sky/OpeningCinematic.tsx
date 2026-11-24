@@ -1615,7 +1615,7 @@ function Line({ text }: { text: string }) {
 /**
  * 오프닝 화면. onDone 은 SKIP · 끝 · 터치 중 먼저 오는 한 번만 불림.
  */
-export function OpeningCinematic({ onDone }: { onDone: () => void }) {
+export function OpeningCinematic({ onDone, startAt = 0 }: { onDone: () => void; startAt?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const done = useRef(false);
@@ -1653,8 +1653,8 @@ export function OpeningCinematic({ onDone }: { onDone: () => void }) {
       fit();
       setReady(true);
       unlockAudio();
-      playBgm('opening', 0.3, 0.05);
-      t0 = performance.now();
+      playBgm('opening', 0.3, 0.05, startAt);
+      t0 = performance.now() - startAt * 1000; // 테스트 허브: 원하는 장면부터
       let lastUi = -1;
       const loop = (ms: number): void => {
         if (!alive || !painter) return;

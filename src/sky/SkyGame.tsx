@@ -12,6 +12,7 @@ import { talkLines, talkMode, type TalkKey } from './story';
 import { TalkBox, BarkBox, resolveLines, type TalkLine } from './TalkBox';
 import { PoopEnding } from './PoopEnding';
 import { OpeningCinematic } from './OpeningCinematic';
+import { HUB, HubBack, TestHub, type HubGo } from './TestHub';
 import './sky.css';
 
 const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
@@ -53,11 +54,24 @@ const SP_DESC: Record<FamilyId, string> = {
   samchon: '거대 발명 메카의 미사일 연사 + 드릴 돌진',
 };
 
-type Phase = 'loading' | 'title' | 'opening' | 'select' | 'prep' | 'play' | 'tally' | 'continue' | 'gameover' | 'ending' | 'credits';
+type Phase = 'loading' | 'hub' | 'title' | 'opening' | 'select' | 'prep' | 'play' | 'tally' | 'continue' | 'gameover' | 'ending' | 'credits';
 
 /** GONA's Sky Adventure 화면 전체 (타이틀 → 동료 선택 → 플레이 → 결과). 월드맵과는 onExit 한 줄로만 연결됨 */
+/** 테스트 허브(#hub)일 때만 어느 화면에서든 '◀ 테스트 목록' 버튼을 띄움 */
 export default function SkyGame({ onExit }: { onExit: () => void }) {
+  return (
+    <>
+      <SkyGameMain onExit={onExit} />
+      {HUB && THEME.id === 'poop' && <HubBack />}
+    </>
+  );
+}
+
+function SkyGameMain({ onExit }: { onExit: () => void }) {
   const [phase, setPhase] = useState<Phase>('loading');
+  const [hubOpen, setHubOpen] = useState(0); // 오프닝 시작 시각 (테스트 허브)
+  const [hubEnd, setHubEnd] = useState(0); // 엔딩 시작 장면 (테스트 허브)
+  const hubJump = useRef<'' | 'midboss' | 'boss'>('');
   const [assets, setAssets] = useState<Assets | null>(null);
   const [fam, setFam] = useState<FamilyId>(() => {
     try {
@@ -120,7 +134,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
     Promise.all([loadAssets(), fonts])
       .then(([a]) => {
         setAssets(a);
-        setPhase('title');
+        setPhase(HUB && THEME.id === 'poop' ? 'hub' : 'title');
         void preloadAudio('game');
       })
       .catch((e: unknown) => setErr(String(e)));
@@ -220,6 +234,12 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
       }
       else eng.endTalk();
     };
+    // 테스트 허브: 중간보스·보스 바로 가기 (무적 · 최대 파워)
+    if (hubJump.current) {
+      const j = hubJump.current;
+      hubJump.current = '';
+      window.setTimeout(() => { eng.cheat('god'); eng.cheat('power'); eng.cheat(j); }, 900);
+    }
     if (location.search.includes('skytest')) (window as unknown as { __sky: SkyEngine }).__sky = eng;
     return () => {
       setTalk(null);
@@ -315,6 +335,23 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
     setPractice(stage > 1);
     beginStage({ stage, diff: d, fam: f, hp: 5, bombs: DIFF[d].bombs, power: stage > 1 ? 3 : 1, score: 0 });
   }, [beginStage]);
+  // 테스트 허브에서 고른 장면으로 이동
+  const hubGo = (g: HubGo) => {
+    unlockAudio();
+    sfx('menuOk');
+    if (g.to === 'title') setPhase('title');
+    else if (g.to === 'select') setPhase('select');
+    else if (g.to === 'credits') setPhase('credits');
+    else if (g.to === 'opening') { setHubOpen(g.at); setPhase('opening'); }
+    else if (g.to === 'ending') { setHubEnd(g.scene); setSlide(0); playBgm('ending', 0.6); setPhase('ending'); }
+    else if (g.to === 'stage') { hubJump.current = g.jump; start(fam, 'normal', g.stage); }
+  };
+  useEffect(() => {
+    if (!HUB) return;
+    const back = () => { setPaused(false); setTalk(null); setBarks([]); stopBgm(0.3); setPhase('hub'); };
+    window.addEventListener('sky-hub', back);
+    return () => window.removeEventListener('sky-hub', back);
+  }, []);
   const nextStage = () => {
     if (!result || !runOpts) return;
     sfx('menuOk');
@@ -375,7 +412,8 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
     );
   }
 
-  if (phase === 'opening' && THEME.id === 'poop') return <OpeningCinematic onDone={finishOpening} />;
+  if (phase === 'hub') return <TestHub go={hubGo} />;
+  if (phase === 'opening' && THEME.id === 'poop') return <OpeningCinematic key={hubOpen} startAt={hubOpen} onDone={() => { setHubOpen(0); if (HUB) { stopBgm(0.4); setPhase('hub'); } else finishOpening(); }} />;
   if (phase === 'opening') {
     const sl = THEME.opening[Math.min(slide, THEME.opening.length - 1)];
     const next = () => (slide < THEME.opening.length - 1 ? setSlide(slide + 1) : finishOpening());
@@ -396,7 +434,7 @@ export default function SkyGame({ onExit }: { onExit: () => void }) {
 
   if (phase === 'ending' || phase === 'credits') {
     const sl = ENDING[Math.min(slide, ENDING.length - 1)];
-    if (phase === 'ending' && THEME.id === 'poop') return <PoopEnding onDone={() => setPhase('credits')} />;
+    if (phase === 'ending' && THEME.id === 'poop') return <PoopEnding key={hubEnd} startScene={hubEnd} onDone={() => { setHubEnd(0); setPhase('credits'); }} />;
     if (phase === 'ending') {
       return (
         <div className="sky end" onClick={() => (slide < ENDING.length - 1 ? setSlide(slide + 1) : setPhase('credits'))}>

@@ -49,8 +49,8 @@ const SCENES: { id: SceneId; lines: TalkLine[] }[] = [
 
 if (location.search.includes('skytest')) Object.assign(window, { __skyEndingExpected: SCENES.flatMap((s) => s.lines.map((l) => l.text)) });
 
-export function PoopEnding({ onDone }: { onDone: () => void }) {
-  const [sc, setSc] = useState(0);
+export function PoopEnding({ onDone, startScene = 0 }: { onDone: () => void; startScene?: number }) {
+  const [sc, setSc] = useState(startScene);
   const [who, setWho] = useState<string>('');
   const scene = SCENES[sc];
   const nextScene = () => {

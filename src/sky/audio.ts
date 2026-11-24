@@ -396,7 +396,7 @@ function fadeOutAndStop(p: Playing, sec: number): void {
 }
 
 /** BGM 전환: 같은 곡이면 그대로, 다른 곡이면 이전 곡 fadeOut 초 동안 줄이고 새 곡 fadeIn (항상 1곡만) */
-export function playBgm(name: BgmName, fadeOut = 0.6, fadeIn = 0.05): void {
+export function playBgm(name: BgmName, fadeOut = 0.6, fadeIn = 0.05, at = 0): void {
   if (wanted === name && curName === name) return;
   wanted = name;
   const info = BGM[name];
@@ -410,7 +410,7 @@ export function playBgm(name: BgmName, fadeOut = 0.6, fadeIn = 0.05): void {
       a.src = url;
       a.loop = !!info.loop;
       a.volume = info.vol;
-      a.currentTime = info.loop ? info.loop[0] : 0;
+      a.currentTime = info.loop ? info.loop[0] : at;
       if (!muted) void a.play().catch((e: unknown) => note(`BGM 재생 거부(HTML5): ${String(e)}`));
     });
     return;
@@ -437,7 +437,7 @@ export function playBgm(name: BgmName, fadeOut = 0.6, fadeIn = 0.05): void {
       s.loopEnd = Math.min(info.loop[1], buf.duration);
     }
     s.connect(g);
-    s.start(t, info.loop ? info.loop[0] : 0);
+    s.start(t, info.loop ? info.loop[0] : Math.min(at, Math.max(0, buf.duration - 0.1)));
     const me: Playing = { name, src: s, gain: g };
     s.onended = () => {
       if (cur === me) cur = null;
