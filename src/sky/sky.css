@@ -456,3 +456,10 @@ body:has(.sky.poop) .beta-badge, body:has(.sky.oc) .beta-badge, body:has(.sky.en
   color: #2a1206; background: linear-gradient(#ffe9a0, #ffc23c); border: 2px solid #2a1238; box-shadow: 0 2px 0 #0c0618; cursor: pointer; opacity: 0.92; }
 body:has(.sky.hub) .hub-back { display: none; }
 body:has(.hub-back) .beta-badge { display: none; }
+/* 응가판 선택 화면: 원화 칸이 남는 높이만 차지 → 화면이 짧아도(사파리 주소창·탭바) 출격 버튼까지 스크롤 없이 보임 */
+.sel.poop { justify-content: flex-start; }
+.sel.poop > .sel-head { margin-top: 0; } .sel.poop > .sel-btns { margin-bottom: 0; }
+.sel.poop .sel-main { flex: 1 1 auto; min-height: 0; align-items: stretch; }
+.sel.poop .sel-arrow { align-self: center; }
+.sel.poop .sel-art { height: auto; min-height: 140px; max-height: 470px; }
+.sel.poop > * { flex-shrink: 0; } .sel.poop > .sel-main { flex-shrink: 1; }

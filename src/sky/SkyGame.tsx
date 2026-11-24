@@ -571,7 +571,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     };
     const step = (d: number) => pick(FAMILY[(idx + d + FAMILY.length) % FAMILY.length]);
     return (
-      <div className="sky sel">
+      <div className={`sky sel${(THEME.id as string) === 'poop' ? ' poop' : ''}`}>
         <div className="sel-pattern" aria-hidden />
         <header className="sel-head">
           <span className="sel-stage">6 STAGES · 황혼의 부유왕국 → 하늘 끝의 마왕성</span>
