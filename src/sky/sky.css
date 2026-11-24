@@ -425,7 +425,8 @@ body:has(.sky.poop) .beta-badge, body:has(.sky.oc) .beta-badge, body:has(.sky.en
 .pe-kid.relief { width: min(50%, 250px); bottom: 8%; }
 
 /* ═══ 테스트 허브 (#hub) ═══ */
-.hub { justify-content: flex-start; padding: calc(env(safe-area-inset-top) + 8px) 12px calc(env(safe-area-inset-bottom) + 12px); overflow-y: auto; -webkit-overflow-scrolling: touch;
+.hub { justify-content: flex-start; padding: calc(env(safe-area-inset-top) + 8px) 12px calc(env(safe-area-inset-bottom) + 40px); overflow-y: auto; -webkit-overflow-scrolling: touch;
+  touch-action: pan-y; overscroll-behavior: contain; user-select: none;
   background: radial-gradient(circle at 50% 0%, #3a1c5c, #120a26 60%); color: #fff2d6; font-family: 'Galmuri11', monospace; }
 .hub-head { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; max-width: 520px; }
 .hub-head img { width: min(70vw, 300px); }
@@ -434,7 +435,7 @@ body:has(.sky.poop) .beta-badge, body:has(.sky.oc) .beta-badge, body:has(.sky.en
 .hub-head nav button { flex: 1; min-height: 38px; font: inherit; font-size: 12px; font-weight: 700; color: #fff2d6; background: #1c1038; border: 2px solid #6a5aa8; }
 .hub-head nav button.on { color: #2a1206; background: linear-gradient(#ffe9a0, #ffc23c); border-color: #ffd76a; }
 .hub-body { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
-.hub-body section { background: rgba(10, 4, 24, 0.55); border: 1px solid #4a3a80; padding: 8px; }
+.hub-body section { content-visibility: auto; contain-intrinsic-size: auto 300px; background: rgba(10, 4, 24, 0.55); border: 1px solid #4a3a80; padding: 8px; }
 .hub-body h2 { margin: 0 0 6px; font-size: 13px; color: #ffd84a; }
 .hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .hub-grid button, .hub-stage button { min-height: 40px; padding: 4px 6px; font: inherit; font-size: 12px; color: #fff2d6; text-align: left; background: linear-gradient(#2e1a58, #1a0e36); border: 2px solid #8a72d8; box-shadow: 0 2px 0 #0c0618; cursor: pointer; }
@@ -446,7 +447,7 @@ body:has(.sky.poop) .beta-badge, body:has(.sky.oc) .beta-badge, body:has(.sky.en
 .hub-note { margin: 0; font-size: 10px; color: #9a8ac8; text-align: center; }
 .hub-gal { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
 .hub-gal button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px; background: #1a0e36; border: 1px solid #4a3a80; color: #cfc4ff; cursor: pointer; }
-.hub-gal img { width: 100%; height: 96px; object-fit: contain; image-rendering: pixelated; background: repeating-conic-gradient(#241646 0 25%, #2c1c54 0 50%) 0 0 / 16px 16px; }
+.hub-gal img { width: 100%; height: 96px; object-fit: contain; background: repeating-conic-gradient(#241646 0 25%, #2c1c54 0 50%) 0 0 / 16px 16px; }
 .hub-gal small { font-size: 8px; word-break: break-all; }
 .hub-view { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: rgba(6, 2, 14, 0.94); padding: 12px; }
 .hub-view img { max-width: 100%; max-height: 82vh; object-fit: contain; image-rendering: pixelated; }

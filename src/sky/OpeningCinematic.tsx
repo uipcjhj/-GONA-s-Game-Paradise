@@ -127,7 +127,12 @@ function loadImg(src: string): Promise<Img> {
   return new Promise((res) => {
     const im = new Image();
     const to = window.setTimeout(() => res(null), 8000); // 느린 망: 8초 넘으면 그 그림만 빼고 진행
-    im.onload = () => { window.clearTimeout(to); res(im); };
+    im.onload = () => {
+      window.clearTimeout(to);
+      // 큰 그림은 미리 디코딩해 둠 (처음 그릴 때 끊김 방지) — 실패해도 그대로 진행
+      if (im.decode) im.decode().then(() => res(im), () => res(im));
+      else res(im);
+    };
     im.onerror = () => {
       window.clearTimeout(to);
       // 잠깐 실패(503)일 수 있어 한 번만 더 받아 봄 · 그래도 없으면 그 그림만 빼고 진행
@@ -172,6 +177,11 @@ class Painter {
   private sil = new Map<string, HTMLCanvasElement>();
   constructor(private c: HTMLCanvasElement, private a: Art) {
     this.g = c.getContext('2d', { alpha: false })!;
+    // 큰 배경을 한 번씩 작게 그려 GPU 에 올려 둠 (장면 전환 첫 프레임 끊김 방지)
+    const warm = document.createElement('canvas');
+    warm.width = warm.height = 4;
+    const wg = warm.getContext('2d');
+    for (const im of Object.values(a.r3)) if (im && wg) wg.drawImage(im, 0, 0, 4, 4);
   }
   resize(cssW: number, cssH: number, dpr: number): void {
     this.c.width = Math.round(cssW * dpr);

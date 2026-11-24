@@ -97,7 +97,18 @@ export function TestHub({ go }: { go: (g: HubGo) => void }) {
               <div className="hub-gal">
                 {files.map((f) => (
                   <button type="button" key={f} onClick={() => setView(f)}>
-                    <img src={`${BASE}${packPath(f)}`} alt={f} loading="lazy" onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none'; }} />
+                    <img
+                      src={`${BASE}v3-poop/thumbs/${f.replace(/\.(png|jpe?g)$/, '.webp')}`}
+                      alt={f}
+                      loading="lazy"
+                      decoding="async"
+                      onError={(e) => {
+                        // 미리보기가 없으면 원본 → 원본도 없으면 칸 숨김
+                        const im = e.currentTarget;
+                        if (!im.dataset.full) { im.dataset.full = '1'; im.src = `${BASE}${packPath(f)}`; }
+                        else (im.parentElement as HTMLElement).style.display = 'none';
+                      }}
+                    />
                     <small>{f.replace(/^.*\//, '')}</small>
                   </button>
                 ))}
