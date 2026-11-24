@@ -183,6 +183,12 @@ class Painter {
     warm.width = warm.height = 4;
     const wg = warm.getContext('2d');
     for (const im of Object.values(a.r3)) if (im && wg) wg.drawImage(im, 0, 0, 4, 4);
+    // 장면 중간에 처음 만들면 끊기는 실루엣 사본을 미리 만들어 둠 (여섯 수호자 · 잠든 고나 · 출격)
+    for (const f of FAMILY) { const im = a.fam[f]; if (im) { this.silOf(im, FAM_COL[f]); this.silOf(im, '#05030a'); } }
+    const pat = a.op['gona-pat'];
+    if (pat) for (const c of ['#c8b8ff', '#ffe2a0', '#ffd88a', '#0a0812', '#a9bcff', '#0a0e22']) this.silOf(pat, c);
+    const fly = a.r3['b-fly'] ?? a.gona;
+    if (fly) this.silOf(fly, '#ffd88a');
   }
   resize(cssW: number, cssH: number, dpr: number): void {
     this.c.width = Math.round(cssW * dpr);
@@ -1660,6 +1666,7 @@ export function OpeningCinematic({ onDone, startAt = 0 }: { onDone: () => void; 
     let raf = 0;
     let painter: Painter | null = null;
     let t0 = 0;
+    const drawMs: number[] = [];
     const fit = () => {
       const box = boxRef.current;
       const c = ref.current;
@@ -1684,7 +1691,10 @@ export function OpeningCinematic({ onDone, startAt = 0 }: { onDone: () => void; 
         if (!alive || !painter) return;
         const t = (ms - t0) / 1000;
         tRef.current = t;
+        const f0 = performance.now();
         painter.frame(Math.min(t, OPENING_END + 4));
+        drawMs.push(performance.now() - f0);
+        if (drawMs.length > 240) drawMs.shift();
         const ui = Math.floor(t * 10);
         if (ui !== lastUi) { lastUi = ui; setNow(t); }
         if (t > OPENING_END + 1.4) { finish(); return; }
@@ -1703,6 +1713,8 @@ export function OpeningCinematic({ onDone, startAt = 0 }: { onDone: () => void; 
           font: () => (document.fonts ? document.fonts.check('16px "Gowun Batang"', '고나') : false),
           /** 검수용: 컷신 시각을 바로 옮김 (음악은 그대로) */
           seek: (s: number) => { t0 = performance.now() - s * 1000; },
+          /** 검수용: 최근 그리기 시간(ms) 평균·최대 */
+          draw: () => { const a = [...drawMs].sort((x, y) => x - y); return { avg: +(a.reduce((x, y) => x + y, 0) / Math.max(1, a.length)).toFixed(2), p95: +(a[Math.floor(a.length * 0.95)] ?? 0).toFixed(2) }; },
         },
       });
     }

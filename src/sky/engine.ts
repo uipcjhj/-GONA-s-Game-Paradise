@@ -164,7 +164,7 @@ const CAP = { parts: 220, booms: 36, fx: 70, floats: 10, eb: 320 };
 const MEDALS = [100, 200, 300, 500, 800, 1000, 1500, 2000, 3000, 5000];
 /** 탄 종류 → 모양 */
 /** 스테이지 보스 필살기 이름 (예고 문구) */
-const SIG_NAME = ['쫀득 떡메치기', '뿡뿡 포자 대폭발', '3000RPM 블렌더 회오리', '대해일 촉수', '철벽 방패 대돌진', '대막힘 메테오'];
+const SIG_NAME = ['쫀득 떡메치기', '포자 대폭발', '블렌더 회오리', '대해일 촉수', '방패 대돌진', '대막힘 메테오'];
 const BOSS_BULLET_R: Record<EBKind, number> = { flask: 3.5, smell: 4.5, heart: 3.5, wave: 3, needle: 2.6, ring: 3.5, fire: 4 };
 /** 필살기 이름 (characters.ts 의 special 대신 이번 기획 이름) */
 export const SPECIAL_NAME: Record<FamilyId | 'gona', string> = {
@@ -554,6 +554,7 @@ export class SkyEngine {
       this.stepWait = 0;
       this.spawnQ.length = 0;
     }
+    if (cmd === 'sig' && this.bs) { this.bs.sigDue = true; this.bs.rest = Math.min(this.bs.rest, 0.1); }
     if (cmd === 'power') this.power = 4;
     if (cmd === 'god') this.hp = 99;
     if (cmd === 'hp1') this.hp = 1;
@@ -3138,7 +3139,7 @@ export class SkyEngine {
   private restOf(def: BossDef): number {
     const [, hh] = this.bossHalf(def);
     const bob = def.move === 'figure8' ? 12 : def.move === 'drift' ? 8 : 0;
-    return Math.max(def.restY, Math.round(40 + hh + bob + 2));
+    return Math.max(def.restY, Math.round(40 + hh + bob + 4));
   }
   /** 자동 검수(?skytest): 그림이 화면 밖으로 나간 최대 픽셀 (종류:그림 → [왼, 오른, 위, 아래]) */
   cropLog: Record<string, number[]> = CROPCHECK ? (((window as unknown as { __cropLog?: Record<string, number[]> }).__cropLog ??= {})) : {};
@@ -3489,7 +3490,10 @@ export class SkyEngine {
     g.fillStyle = '#3b2a3f';
     g.fillRect(0, y - 6, W, b.sub ? 40 : 28);
     g.globalAlpha = 1;
-    this.text(b.text, W / 2, y, b.col, 'center', 16);
+    // 글자가 화면 폭을 넘으면 크기를 줄여서 (양옆 잘림 방지)
+    let fs = 16;
+    while (fs > 10 && textImg(b.text, b.col, fs).width / R > W - 8) fs -= 1;
+    this.text(b.text, W / 2, y, b.col, 'center', fs);
     if (b.sub) this.text(b.sub, W / 2, y + 20, '#fff7dc', 'center', 11);
   }
 
