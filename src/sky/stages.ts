@@ -77,7 +77,9 @@ export type Step =
 // ───────── 보스 ─────────
 export type Attack =
   | 'fan' | 'aimBurst' | 'ringPulse' | 'ring' | 'spiral2' | 'spiral3' | 'spiral4' | 'crossSpiral' | 'dash' | 'rain' | 'flower' | 'flowerFast'
-  | 'wallGap' | 'laserAim' | 'laserSweep' | 'laserCross' | 'homing' | 'curtain' | 'snipeRain' | 'gatling' | 'bubbleRings' | 'waveCurtain' | 'sporeRain';
+  | 'wallGap' | 'laserAim' | 'laserSweep' | 'laserCross' | 'homing' | 'curtain' | 'snipeRain' | 'gatling' | 'bubbleRings' | 'waveCurtain' | 'sporeRain'
+  /** 보스 필살기 (스테이지마다 다른 시그니처 패턴 · 긴 예고 후 발동) */
+  | 'sig';
 export interface PartDef { art: ArtName; dx: number; dy: number; hp: number; hr: number; k: number; fire: 'aim' | 'ring' | 'needle' | 'homing'; cd: number }
 export interface BossDef {
   name: string;

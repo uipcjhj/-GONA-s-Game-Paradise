@@ -14,6 +14,7 @@
  * 진단: audioDiag() — 일시정지 메뉴에 상태 표시, '사운드 다시 활성화'(reviveAudio) · '테스트음'(testBeep) 제공.
  */
 import LOOPS from './audioLoops';
+import { buzz } from './settings';
 
 export type BgmName = 'title' | 'select' | 'stage1' | 'stage2' | 'stage3' | 'stage4' | 'stage5' | 'final' | 'boss' | 'lastboss' | 'ending' | 'clear' | 'over' | 'opening';
 
@@ -464,6 +465,8 @@ const lastAt = new Map<SfxName, number>();
 
 /** 효과음 재생. 반환값으로 나중에 멈출 수 있음(차지 충전음 등) */
 export function sfx(name: SfxName, vol = 1, rate = 1): AudioBufferSourceNode | null {
+  // 메뉴 버튼: 짧은 햅틱 (지원 기기에서만 · iPhone 은 iOS 18+ 톡)
+  if (name === 'menuOk') buzz(12, 120);
   if (muted) return null;
   const cfg = SFX[name];
   const now = performance.now() / 1000;

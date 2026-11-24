@@ -4,7 +4,7 @@ import { initAudio, preloadAudio, prepareBgm, playBgm, stopBgm, sfx, isMuted, se
 import { SkyEngine, SPECIAL_NAME, type EndInfo, type FamilyId, type RunOpts } from './engine';
 import { STAGES, DIFF, type Difficulty } from './stages';
 import { CHARACTERS } from './data/characters';
-import { settings, saveSettings, canVibrate } from './settings';
+import { settings, saveSettings, canVibrate, iosHaptic, buzz } from './settings';
 import { NS, BETA } from './ns';
 import { THEME, familyText } from './theme';
 import { packPath } from './artpack';
@@ -731,7 +731,10 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
               <div className="sky-opt">
                 <span>진동</span>
                 {canVibrate ? (
-                  <button type="button" className={opts.vibrate ? 'on' : ''} onClick={() => setOpt({ vibrate: !opts.vibrate })}>{opts.vibrate ? '켜짐' : '꺼짐'}</button>
+                  <>
+                    <button type="button" className={opts.vibrate ? 'on' : ''} onClick={() => { setOpt({ vibrate: !opts.vibrate }); if (!opts.vibrate) window.setTimeout(() => buzz([60, 80, 60], 0), 30); }}>{opts.vibrate ? '켜짐' : '꺼짐'}</button>
+                    {iosHaptic && <em>iPhone: 짧은 ‘톡’만 가능</em>}
+                  </>
                 ) : (
                   <em>이 브라우저 미지원</em>
                 )}

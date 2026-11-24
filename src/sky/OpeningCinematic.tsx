@@ -148,11 +148,12 @@ async function loadArt(): Promise<Art> {
   const R = (path: string): Promise<Img> => loadImg(`${BASE}${path}`);
   const O = (n: Slot): Promise<Img> => (hasPack(`opening2/${n}.png`) ? R(`v3-poop/opening2/${n}.png`) : Promise.resolve(null));
   const [keyart, bg, train, castle, cloud, gona, puff, duo, boss, splash, prune, pruneSplash, heart, hex, flame, probio, circle, dome, ...rest] = await Promise.all([
-    P('title/keyart.jpg'), P('stage1/bg-backdrop.png'), P('ending/train.png'), R('v2/stage1/island-castle.png'), R('v2/stage1/cloud-big.png'),
-    P('chars/gona/illust.png'), R('v2/fx/steam-puff.png'), P('villain/duo.png'), P('stage1/boss.png'),
+    hasPack('title/keyart-tall.jpg') ? Promise.resolve(null) : P('title/keyart.jpg'), P('stage1/bg-backdrop.png'), P('ending/train.png'), R('v2/stage1/island-castle.png'), R('v2/stage1/cloud-big.png'),
+    hasPack('opening3/b-fly.png') ? Promise.resolve(null) : P('chars/gona/illust.png'), R('v2/fx/steam-puff.png'), P('villain/duo.png'), P('stage1/boss.png'),
     P('fx/water-splash.png'), P('fx/prune-orb.png'), P('fx/prune-splash.png'), P('fx/heal-heart.png', 'v2/fx/heart-p.png'), P('fx/hex.png'), P('fx/flame.png'),
     P('chars/samchon/probiotic.png'), R('v2/fx/sp-circle.png'), R('v2/fx/sp-dome.png'),
-    ...FAMILY.map((f) => P(`chars/${f}/illust.png`)),
+    // 가족 컷인: 오프닝 전용 축소본(폭 420)이 있으면 그것을 (원본 900px PNG 6장 ≈ 4MB 절약)
+    ...FAMILY.map((f) => (hasPack(`opening3/fam-${f}.webp`) ? R(`v3-poop/opening3/fam-${f}.webp`) : P(`chars/${f}/illust.png`))),
     ...SLOTS.map(O),
     ...R3.map((rel) => (hasPack(rel) ? R(`v3-poop/${rel}`) : Promise.resolve(null))),
   ]);
@@ -464,6 +465,19 @@ class Painter {
     if (!im) return;
     this.gonaAt(this.silOf(im, rim) as unknown as HTMLImageElement, x + 1, y - 2, w, { a: a * 0.8, shadow: 0 });
     this.gonaAt(this.silOf(im, '#0a0812') as unknown as HTMLImageElement, x, y, w, { a, shadow: 0 });
+  }
+  /** 꿈속 배경 (잠든 고나 뒤 · 천천히 도는 꿈 터널을 어둡게) */
+  dreamBg(t: number, dark: number): void {
+    const d = this.a.r3.dream;
+    if (!d) { this.fill('#05040c'); return; }
+    const g = this.g;
+    g.save();
+    g.translate(this.W / 2, this.H / 2);
+    g.rotate(t * 0.05);
+    const s = Math.max(this.W / d.width, this.H / d.height) * 1.35;
+    g.drawImage(d, (-d.width * s) / 2, (-d.height * s) / 2, d.width * s, d.height * s);
+    g.restore();
+    this.fill('#05040c', dark);
   }
   /** 픽셀 글꼴 의성어 (게임 안 효과 글자) */
   ptext(s: string, x: number, y: number, size: number, col: string, a: number, rot = 0): void {
@@ -1309,7 +1323,7 @@ class Painter {
     const cy = H * 0.46;
     if (t < T.cutins) {
       const u = t - T.s7;
-      this.fill('#05040c');
+      this.dreamBg(t, 0.62);
       this.sleeper(cx, H * 0.66, 170, eOut(lin(u, 0, 0.4)), '#c8b8ff');
       this.glow(cx, H * 0.58, 90, 'rgba(255,220,160,0.5)', 0.6);
       for (let i = 0; i < 6; i++) {
@@ -1357,7 +1371,7 @@ class Painter {
     }
     // 여섯 빛이 잠든 고나에게 모임
     const u = t - 36.6;
-    this.fill('#05040c');
+    this.dreamBg(t, 0.55);
     this.sleeper(cx, H * 0.66, 170, 1, '#ffe2a0');
     for (let i = 0; i < 6; i++) {
       const k = eIn(clamp(u / 0.4));

@@ -21,6 +21,7 @@ import { settings, buzz } from './settings';
 
 export const W = 180;
 export const H = 320;
+const CROPCHECK = typeof location !== 'undefined' && location.search.includes('skytest');
 /** 캔버스 배율 (고정) */
 const R = 2;
 export type FamilyId = 'mom' | 'dad' | 'imo' | 'halmeoni' | 'halabeoji' | 'samchon';
@@ -96,6 +97,8 @@ interface EBullet {
   x: number; y: number; vx: number; vy: number; r: number; kind: EBKind; age: number; alive: boolean;
   /** 가감속(초당 배율) · 유도(초당 회전) · 좌우 흔들림 · 수명 */
   acc: number; hom: number; wob: number; ttl: number;
+  /** 수명이 다하면 이 개수의 원형탄으로 터짐 (필살기 포자) */
+  pop?: number;
 }
 type EKind = 'small' | 'boss' | 'part';
 interface Enemy {
@@ -122,6 +125,8 @@ interface BossState {
   mode: 'enter' | 'idle' | 'tele' | 'atk' | 'dying' | 'flee';
   atk: Attack | ''; at: number; rest: number; last: string; phase: number; n: number; tx: number; sub: number; minion: number; dyingT: number; teleT: number;
   cycle: number; mask: { w: number; h: number; m: Uint8Array }[]; life: number;
+  /** 다음 공격을 필살기로 (페이즈 전환 직후 · 마지막 페이즈에서 주기적으로) */
+  sigDue?: boolean;
 }
 
 /** 가족 필살기 진행 상태 */
@@ -158,6 +163,8 @@ const BOMB_T = 1.9;
 const CAP = { parts: 220, booms: 36, fx: 70, floats: 10, eb: 320 };
 const MEDALS = [100, 200, 300, 500, 800, 1000, 1500, 2000, 3000, 5000];
 /** 탄 종류 → 모양 */
+/** 스테이지 보스 필살기 이름 (예고 문구) */
+const SIG_NAME = ['쫀득 떡메치기', '뿡뿡 포자 대폭발', '3000RPM 블렌더 회오리', '대해일 촉수', '철벽 방패 대돌진', '대막힘 메테오'];
 const BOSS_BULLET_R: Record<EBKind, number> = { flask: 3.5, smell: 4.5, heart: 3.5, wave: 3, needle: 2.6, ring: 3.5, fire: 4 };
 /** 필살기 이름 (characters.ts 의 special 대신 이번 기획 이름) */
 export const SPECIAL_NAME: Record<FamilyId | 'gona', string> = {
@@ -279,6 +286,8 @@ export class SkyEngine {
   private bossRecoil = 0;
   private bossTrail = 1;
   private bossBarHit = 0;
+  /** 필살기 예고 (화면 가장자리 붉은 깜빡임) 남은 시간 */
+  private sigWarn = 0;
   private armorStage = 0;
   private smokeT = 0;
   private armorPts: number[][] = [];
@@ -638,7 +647,7 @@ export class SkyEngine {
     if (this.eb.length >= CAP.eb) return null;
     const b = this.ebPool.pop() ?? ({} as EBullet);
     b.x = x; b.y = y; b.vx = vx; b.vy = vy; b.r = r; b.kind = kind; b.age = age; b.alive = true;
-    b.acc = 0; b.hom = 0; b.wob = 0; b.ttl = 12;
+    b.acc = 0; b.hom = 0; b.wob = 0; b.ttl = 12; b.pop = 0;
     this.eb.push(b);
     return b;
   }
@@ -663,11 +672,16 @@ export class SkyEngine {
   private ehp(v: number): number {
     return Math.max(1, Math.round(v * this.dif.ehp * (1 + 0.1 * (this.st.id - 1))));
   }
+  /** 스테이지 난이도 곡선 (1 튜토리얼 → 2~3 패턴 증가 → 4~5 탄속·밀도 → FINAL 최고) */
+  private sk(): { spd: number; dens: number; cd: number } {
+    const i = Math.max(0, Math.min(5, this.st.id - 1));
+    return { spd: [0.86, 0.94, 1.0, 1.06, 1.11, 1.16][i], dens: [0.78, 0.9, 1.0, 1.07, 1.13, 1.2][i], cd: [1.18, 1.07, 1.0, 0.95, 0.9, 0.85][i] };
+  }
   private spd(v: number): number {
-    return v * this.dif.bspd * (1 + 0.035 * (this.st.id - 1));
+    return v * this.dif.bspd * this.sk().spd;
   }
   private cnt(n: number, odd = false): number {
-    let c = Math.max(1, Math.round(n * this.dif.dens));
+    let c = Math.max(1, Math.round(n * this.dif.dens * this.sk().dens));
     if (odd && c % 2 === 0) c++;
     return c;
   }
@@ -1392,7 +1406,7 @@ export class SkyEngine {
     const hp = Math.round(def.hp * this.dif.bhp);
     const e: Enemy = {
       id: this.nextId++, kind: 'boss', type: '', art: def.art, k: def.k, pat: 'boss', fireKind: 'none', x: W / 2, y: -60, x0: W / 2, vx: 0, vy: 0,
-      hp, max: hp, age: 0, flash: 0, fire: 0, dir: 1, hr: def.hr, score: def.mid ? 8000 : 30000, dead: false, ph: 0, burst: 0, holdY: def.restY,
+      hp, max: hp, age: 0, flash: 0, fire: 0, dir: 1, hr: def.hr, score: def.mid ? 8000 : 30000, dead: false, ph: 0, burst: 0, holdY: this.restOf(def),
     };
     this.en.push(e);
     for (const pd of def.parts) {
@@ -1550,7 +1564,7 @@ export class SkyEngine {
 
   private enemyFire(e: Enemy): void {
     const d = e.type ? ENEMIES[e.type] : null;
-    const cd = (d ? rand(d.cd[0], d.cd[1]) : 2) * this.dif.cd;
+    const cd = (d ? rand(d.cd[0], d.cd[1]) : 2) * this.dif.cd * this.sk().cd;
     const aim = this.aimAt(e.x, e.y);
     e.fire = cd;
     switch (e.fireKind) {
@@ -1635,7 +1649,7 @@ export class SkyEngine {
     if (b.mode === 'tele' || (b.mode === 'atk' && /^(laser|curtain|wallGap|gatling)/.test(b.atk))) return;
     e.fire -= dt;
     if (e.fire > 0) return;
-    e.fire = (e.partCd ?? 2) * this.dif.cd * rand(0.85, 1.15);
+    e.fire = (e.partCd ?? 2) * this.dif.cd * this.sk().cd * rand(0.85, 1.15);
     const aim = this.aimAt(e.x, e.y);
     switch (e.partFire) {
       case 'aim':
@@ -1671,6 +1685,7 @@ export class SkyEngine {
       this.bossFlashCd -= dt;
       this.bossRecoil = Math.max(0, this.bossRecoil - dt * 12);
       this.bossBarHit = Math.max(0, this.bossBarHit - dt);
+      this.sigWarn = Math.max(0, this.sigWarn - dt);
       this.bossTrail += (Math.max(0, frac) - this.bossTrail) * Math.min(1, dt * (this.bossBarHit > 0 ? 0.6 : 3.2));
       this.smokeT -= dt;
       if (this.smokeT <= 0 && this.armorStage + this.partSmoke.length > 0) {
@@ -1750,11 +1765,11 @@ export class SkyEngine {
       for (let i = 0; i < 6; i++) this.addBoom(e.x + rand(-30, 30), e.y + rand(-20, 30), 0.8, i * 0.08);
       this.debris(e.x, e.y, 18, ['#c02040', '#d8a040', '#5a5a66']);
       this.bossSay(phase === np ? `${def.name} 최종 형태!` : `장갑 파손! ${def.name} 분노`, '#ff7a8a');
-      if (!def.mid) this.talk(phase >= 3 ? 'bossP3' : 'bossP2');
+      if (!def.mid) { this.talk(phase >= 3 ? 'bossP3' : 'bossP2'); b.sigDue = true; }
     }
     if (b.mode === 'enter') {
-      e.y += (def.restY - e.y) * Math.min(1, dt * 1.6) + 10 * dt;
-      if (e.y > def.restY - 4) {
+      e.y += (this.restOf(def) - e.y) * Math.min(1, dt * 1.6) + 10 * dt;
+      if (e.y > this.restOf(def) - 4) {
         b.mode = 'idle';
         b.rest = 0.8;
         this.talk(def.mid ? 'midIn' : 'bossIn');
@@ -1773,11 +1788,14 @@ export class SkyEngine {
     const mv = b.mode === 'atk' && b.atk === 'dash' ? 0 : b.mode === 'atk' ? 0.4 : 1;
     if (mv > 0) {
       let tx = W / 2;
-      let ty = def.restY;
+      let ty = this.restOf(def);
       if (def.move === 'sway') tx = W / 2 + Math.sin(b.life * 0.9) * 46;
       else if (def.move === 'drift') { tx = W / 2 + Math.sin(b.life * 0.6) * 40; ty += Math.sin(b.life * 1.1) * 8; }
       else if (def.move === 'figure8') { tx = W / 2 + Math.sin(b.life * 0.7) * 50; ty += Math.sin(b.life * 1.4) * 12; }
       else tx = W / 2 + Math.sin(b.life * 0.4) * 10;
+      // 좌우로 움직여도 그림이 화면 밖으로 나가지 않게
+      const [hw] = this.bossHalf(def);
+      tx = clamp(tx, Math.min(W / 2, hw + 2), Math.max(W / 2, W - hw - 2));
       e.x += (tx - e.x) * Math.min(1, dt * 2.2 * mv);
       e.y += (ty - e.y) * Math.min(1, dt * 2.2 * mv);
     }
@@ -1798,6 +1816,8 @@ export class SkyEngine {
         let atk = pool[(b.cycle + Math.floor(b.life)) % pool.length];
         if (atk === b.last) atk = pool[(pool.indexOf(atk) + 1) % pool.length];
         if (atk === 'dash' && def.art !== 'boss') atk = 'fan';
+        const np2 = def.phases.length;
+        if (main && (b.sigDue || (b.phase === 1 && b.cycle === 3) || (b.phase === np2 && b.cycle > 0 && b.cycle % 4 === 0))) { atk = 'sig'; b.sigDue = false; }
         b.cycle++;
         b.atk = atk;
         b.last = atk;
@@ -1807,8 +1827,14 @@ export class SkyEngine {
         b.tx = this.px;
         // 공격 전조: 레이저는 경고선이 전조이므로 짧게
         b.mode = 'tele';
-        b.teleT = atk.startsWith('laser') ? 0.25 : 0.6;
-        sfx('gaugeFull', 0.35, 0.6);
+        b.teleT = atk.startsWith('laser') ? 0.25 : atk === 'sig' ? 1.25 : 0.6;
+        if (atk === 'sig') {
+          // 필살기 예고: 이름 · 경고음 · 화면 가장자리 붉은 깜빡임 (피할 준비 시간 1.25초)
+          this.bossSay(`필살! ${SIG_NAME[this.st.id - 1] ?? ''}`, '#ffd34a');
+          sfx('warn', 0.9);
+          this.sigWarn = 1.25;
+          buzz([40, 60, 40]);
+        } else sfx('gaugeFull', 0.35, 0.6);
       }
       return;
     }
@@ -1821,7 +1847,7 @@ export class SkyEngine {
     if (this.runAttack(e, b, dt)) {
       b.mode = 'idle';
       const base = def.mid ? 1.0 : 0.85;
-      b.rest = (base - (b.phase - 1) * 0.12) * this.dif.cd;
+      b.rest = (base - (b.phase - 1) * 0.12) * this.dif.cd * this.sk().cd;
     }
   }
 
@@ -1894,7 +1920,8 @@ export class SkyEngine {
         if (b.at < 0.9) {
           e.x += (b.tx - e.x) * Math.min(1, dt * 3);
           e.x += Math.sin(b.at * 60) * 0.5;
-          b.tx = this.px;
+          const [hw] = this.bossHalf(b.def);
+          b.tx = clamp(this.px, Math.min(W / 2, hw + 2), Math.max(W / 2, W - hw - 2));
         } else if (b.at < 1.5) {
           e.y += 270 * dt * (b.at < 1.3 ? 1 : 0);
           if (e.y > H - 90) e.y = H - 90;
@@ -1910,7 +1937,7 @@ export class SkyEngine {
             const c = this.cnt(10);
             for (let i = 0; i < c; i++) this.shoot(e.x, e.y - 10, Math.PI + (i / (c - 1)) * Math.PI, 50, kind);
           }
-          e.y += (b.def.restY - e.y) * Math.min(1, dt * 2.4);
+          e.y += (this.restOf(b.def) - e.y) * Math.min(1, dt * 2.4);
         } else return true;
         return false;
       }
@@ -2016,9 +2043,103 @@ export class SkyEngine {
         }
         return b.at > 3.6;
       }
+      case 'sig':
+        return this.runSig(e, b, my, dt);
       default:
         return true;
     }
+  }
+
+  /** 보스 필살기 — 스테이지 테마별 시그니처 (모두 빈틈이 보이는 '읽히는' 패턴) */
+  private runSig(e: Enemy, b: BossState, my: number, dt: number): boolean {
+    const kind = b.def.bullet;
+    const id = this.st.id;
+    const at = b.at;
+    const once = (k: number, t: number): boolean => { if (b.n < k && at >= t) { b.n = k; return true; } return false; };
+    if (id === 1) {
+      // 쫀득 떡메치기: 내려찍기 3번 → 매번 플레이어 쪽이 열린 반원 고리 + 마지막에 떡 비
+      for (let k = 1; k <= 3; k++) if (once(k, (k - 1) * 0.9)) {
+        this.kick(0.5, 0.06); sfx('boomS', 0.7);
+        const open = this.aimAt(e.x, my);
+        const c = this.cnt(22);
+        for (let i = 0; i < c; i++) {
+          const a = (i / c) * TAU;
+          let d = a - open; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU;
+          if (Math.abs(d) < 0.42) continue; // 빈틈
+          this.shoot(e.x, my, a, 44 + k * 6, kind);
+        }
+      }
+      if (once(4, 2.9)) for (let x = 14; x < W; x += 26) this.newEB(x + rand(-4, 4), 30, 0, this.spd(50), 4, kind);
+      return at > 3.8;
+    }
+    if (id === 2) {
+      // 뿡뿡 포자 대폭발: 포자 5개가 천천히 퍼진 뒤 1.6초 후 원형으로 터짐
+      if (once(1, 0)) for (let i = 0; i < 5; i++) {
+        const q = this.shoot(e.x, my, Math.PI / 2 + (i - 2) * 0.42, 34, 'smell', 6);
+        if (q) { q.acc = -0.6; q.ttl = 1.6 + i * 0.12; q.pop = this.cnt(9); }
+      }
+      if (once(2, 2.2)) for (let i = 0; i < 4; i++) {
+        const q = this.shoot(e.x, my, Math.PI / 2 + (i - 1.5) * 0.6, 40, 'smell', 6);
+        if (q) { q.acc = -0.6; q.ttl = 1.4; q.pop = this.cnt(8); }
+      }
+      return at > 4.4;
+    }
+    if (id === 3) {
+      // 3000RPM 블렌더 회오리: 칼날 레이저 2줄 회전 + 6갈래 반대방향 나선
+      if (once(1, 0)) for (let k = 0; k < 2; k++) this.addLaser(e.x, my, Math.PI / 2 + k * Math.PI + 0.6, 0.9, 3.0, 6, 0.55, e);
+      if (at > 0.9 && at < 3.9 && b.sub <= 0) {
+        b.sub = 0.16 * this.dif.cd;
+        for (let k = 0; k < 6; k++) this.shoot(e.x, my, -at * 1.6 + (k / 6) * TAU, 46, 'needle');
+      }
+      b.sub -= dt;
+      return at > 4.4;
+    }
+    if (id === 4) {
+      // 대해일 촉수: 양쪽 화면 끝에서 밀려오는 물결 줄 — 높이를 바꿔 가며 6줄, 가운데로 갈수록 느려짐
+      for (let k = 1; k <= 6; k++) if (once(k, (k - 1) * 0.55)) {
+        const y = 150 + ((k * 37) % 120);
+        const sd = k % 2 ? 1 : -1;
+        for (let j = 0; j < 5; j++) {
+          const q = this.newEB(sd > 0 ? -6 - j * 9 : W + 6 + j * 9, y + j * 3, sd * this.spd(62), 0, 3.5, 'ring');
+          if (q) { q.acc = -0.35; q.wob = 18; }
+        }
+      }
+      if (once(7, 3.4)) { const c = this.cnt(12); for (let i = 0; i < c; i++) this.shoot(e.x, my, (i / c) * TAU, 50, kind); }
+      return at > 4.4;
+    }
+    if (id === 5) {
+      // 철벽 방패 대돌진: 플레이어 줄로 돌진 예고선 → 돌진하며 양옆으로 방패 파편 → 뒤로 물러나며 벽
+      if (once(1, 0)) { const [hw] = this.bossHalf(b.def); b.tx = clamp(this.px, Math.min(W / 2, hw + 2), Math.max(W / 2, W - hw - 2)); this.addLaser(b.tx, 40, Math.PI / 2, 0.7, 0.01, 0, 0, null); }
+      if (at > 0.7 && at < 1.4) {
+        e.x += (b.tx - e.x) * 0.2;
+        e.y += (Math.min(H - 110, this.py - 60) - e.y) * 0.08;
+        if (b.sub <= 0) { b.sub = 0.1; for (const sd of [-1, 1]) this.shoot(e.x, e.y + 10, Math.PI / 2 + sd * 1.2, 60, 'needle'); }
+        b.sub -= dt;
+      }
+      if (once(2, 1.5)) { this.kick(0.7, 0.08); sfx('boomS', 0.8); const c = this.cnt(16); for (let i = 0; i < c; i++) this.shoot(e.x, e.y + 10, (i / c) * TAU, 52, kind); }
+      if (at > 1.6) e.y += (this.restOf(b.def) - e.y) * 0.05;
+      if (once(3, 2.4)) {
+        const gx = clamp(this.px + rand(-24, 24), 26, W - 26);
+        for (let x = 6; x < W; x += 11) if (Math.abs(x - gx) > 22) this.newEB(x, 28, 0, this.spd(66), 3, 'needle');
+      }
+      return at > 3.6;
+    }
+    // FINAL 대막힘 메테오: 위에서 떨어질 줄을 먼저 보여 주고(경고선) 굵은 기둥 낙하 3회 — 매번 한 줄은 비어 있음
+    for (let k = 1; k <= 3; k++) if (once(k, (k - 1) * 1.15)) {
+      const safe = Math.floor(rand(0, 5));
+      for (let c = 0; c < 5; c++) {
+        if (c === safe) continue;
+        this.addLaser(18 + c * 36, 34, Math.PI / 2, 0.85, 0.45, 16, 0, null);
+      }
+      sfx('warn', 0.5);
+    }
+    if (at > 3.4 && at < 4.6 && b.sub <= 0) {
+      b.sub = 0.14 * this.dif.cd;
+      for (let k = 0; k < 4; k++) this.shoot(e.x, my, at * 2.4 + (k / 4) * TAU, 50, kind);
+    }
+    b.sub -= dt;
+    if (once(4, 3.4)) this.kick(0.8, 0.1);
+    return at > 4.9;
   }
 
   private addLaser(x: number, y: number, ang: number, warn: number, life: number, w: number, rot: number, owner: Enemy | null): void {
@@ -2112,7 +2233,14 @@ export class SkyEngine {
       b.x += b.vx * dt + (b.wob ? Math.cos(b.age * 3) * b.wob * dt : 0);
       b.y += b.vy * dt;
       b.age += dt;
-      if (b.age > b.ttl || b.x < -20 || b.x > W + 20 || b.y < -24 || b.y > H + 20) b.alive = false;
+      if (b.age > b.ttl && b.pop) {
+        // 시한 폭발: 그 자리에서 원형탄으로 터짐 (터지기 직전 깜빡임은 그리기에서)
+        const n = b.pop;
+        b.pop = 0;
+        b.alive = false;
+        for (let i = 0; i < n; i++) this.shoot(b.x, b.y, (i / n) * TAU + b.age, 44, b.kind);
+        this.addFx('ring', b.x, b.y, 0.5, 0.25);
+      } else if (b.age > b.ttl || b.x < -20 || b.x > W + 20 || b.y < -24 || b.y > H + 20) b.alive = false;
       else if (guard) {
         const d2 = (b.x - gx) ** 2 + (b.y - gy) ** 2;
         if (d2 < 34 * 34 && b.y < gy + 4) {
@@ -3001,9 +3129,35 @@ export class SkyEngine {
     }
   }
 
+  /** 보스 그림 반폭·반높이 (화면 안에 머물도록 이동 범위 계산) */
+  private bossHalf(def: BossDef): [number, number] {
+    const im = this.art[def.art];
+    return [((im.width / def.frames) * def.k) / 2, (im.height * def.k) / 2];
+  }
+  /** 머무는 높이: 위쪽 상태 표시줄(40px) 아래로 그림 전체가 보이게 */
+  private restOf(def: BossDef): number {
+    const [, hh] = this.bossHalf(def);
+    const bob = def.move === 'figure8' ? 12 : def.move === 'drift' ? 8 : 0;
+    return Math.max(def.restY, Math.round(40 + hh + bob + 2));
+  }
+  /** 자동 검수(?skytest): 그림이 화면 밖으로 나간 최대 픽셀 (종류:그림 → [왼, 오른, 위, 아래]) */
+  cropLog: Record<string, number[]> = CROPCHECK ? (((window as unknown as { __cropLog?: Record<string, number[]> }).__cropLog ??= {})) : {};
+  private noteCrop(key: string, cx: number, cy: number, w: number, h: number): void {
+    const o = [Math.max(0, -(cx - w / 2)), Math.max(0, cx + w / 2 - W), Math.max(0, 40 - (cy - h / 2)), Math.max(0, cy + h / 2 - H)];
+    const c = (this.cropLog[key] ??= [0, 0, 0, 0]);
+    for (let i = 0; i < 4; i++) c[i] = Math.max(c[i], Math.round(o[i]));
+  }
   private drawEnemy(e: Enemy): void {
     const white = e.flash > 0;
     const im = this.art[e.art];
+    if (CROPCHECK && e.kind !== 'small') {
+      const b0 = e.kind === 'boss' ? this.bsOf(e) : null;
+      const pm = e.kind === 'part' && e.parent ? this.bsOf(e.parent).mode : '';
+      if (pm !== 'enter' && pm !== 'dying' && (!b0 || (b0.mode !== 'enter' && b0.mode !== 'dying'))) {
+        const fw0 = b0 ? im.width / b0.def.frames : im.width;
+        this.noteCrop(`${b0?.def.mid ? 'mid' : e.kind}:${this.st.art}/${e.art}`, e.x, e.y, fw0 * (b0 ? b0.def.k : e.k), im.height * (b0 ? b0.def.k : e.k));
+      }
+    }
     if (e.kind === 'small') {
       let rot = 0;
       if (e.pat === 'strafe') rot = (-e.dir * Math.PI) / 2;
@@ -3283,6 +3437,14 @@ export class SkyEngine {
   }
 
   private drawHud(): void {
+    if (this.sigWarn > 0) {
+      // 필살기 예고: 화면 가장자리 붉은 테두리 깜빡임
+      const g0 = this.g;
+      g0.globalAlpha = 0.35 + 0.35 * (Math.floor(this.sigWarn * 10) % 2);
+      g0.fillStyle = '#ff3a5a';
+      g0.fillRect(0, 0, W, 3); g0.fillRect(0, H - 3, W, 3); g0.fillRect(0, 0, 3, H); g0.fillRect(W - 3, 0, 3, H);
+      g0.globalAlpha = 1;
+    }
     const g = this.g;
     g.fillStyle = '#120a26';
     g.fillRect(0, 0, W, 25);

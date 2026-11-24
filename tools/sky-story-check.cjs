@@ -84,6 +84,10 @@ const [s0, s1] = RANGE.split('-').map(Number);
       await page.waitForTimeout(300);
     }
   }
+  // 잘림 검수: 보스·중간보스·포탑 그림이 화면(또는 위쪽 HUD 아래 40px 선) 밖으로 나간 최대 픽셀
+  const crop = await page.evaluate(() => window.__cropLog || {});
+  for (const [k, v] of Object.entries(crop)) if (v.some((x) => x > 0)) log.push(`CROP ${k} 왼${v[0]} 오른${v[1]} 위${v[2]} 아래${v[3]}`);
+  log.push(`CROP 검사 대상 ${Object.keys(crop).length}개`);
   // 최종 스테이지면 엔딩 → 크레딧까지 (장면마다 캡처 · 터치로 진행)
   if (s1 === 6) {
     await page.waitForSelector('.sky.end', { timeout: 20000 });

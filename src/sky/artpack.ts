@@ -98,10 +98,14 @@ export function applyPackToStages(stages: StageDef[]): void {
       st.boss.art = 'boss'; // 새 보스 그림 (FINAL 은 원래 성 소품을 보스로 쓰던 것을 교체)
       st.boss.frames = boss.frames ?? st.boss.frames;
       if (boss.k) st.boss.k = boss.k;
-      for (const p of st.boss.parts) {
-        if (typeof boss.partDx === 'number') p.dx = Math.sign(p.dx) * boss.partDx;
-        if (typeof boss.partDy === 'number') p.dy = boss.partDy;
-      }
+      // 포탑 위치: 새 보스 그림 기준 첫 줄(양옆 어깨) · 둘째 줄(아래쪽, 조금 안쪽) — 4개짜리가 2개씩 겹치지 않게
+      st.boss.parts.forEach((p, i) => {
+        const row = i < 2 ? 0 : 1;
+        if (typeof boss.partDx === 'number') p.dx = Math.sign(p.dx) * (boss.partDx + (row ? 8 : 0));
+        if (typeof boss.partDy === 'number') p.dy = boss.partDy + (row ? 40 : 0);
+      });
+      // 새 보스 그림은 한 장으로 완결 — 예전 최종보스의 '심장 코어' 덧그림은 끔 (보스가 두 번 겹쳐 보이던 문제)
+      st.boss.core = undefined;
       if (boss.bullet) st.boss.bullet = boss.bullet;
       if (typeof boss.weakDy === 'number' && st.boss.weak) st.boss.weak = { ...st.boss.weak, dy: boss.weakDy };
     }
