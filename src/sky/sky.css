@@ -715,3 +715,30 @@ body.sky-hub-on .hub-back { display: none; }
 .cred-fin .cred-scroll { text-shadow: 0 2px 0 #000, 0 0 6px rgba(0, 0, 0, 0.8); }
 .cred-thanks { margin: 0; font-family: 'Gowun Batang', serif; font-weight: 700; font-size: 13px; line-height: 1.6; color: #fff1cc; text-align: center; }
 @keyframes cred-bg-in { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: scale(1); } }
+/* ───── 모바일 조작 v2: 근접·차지 버튼 없음 (끌어서 이동 · 자동 공격 · 길게 눌렀다 떼면 차지 · 근접 자동) ───── */
+.sky-ctrl { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+.sky-bomb { right: 8px; width: 74px; height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; background: #ff9ec0; box-shadow: inset 0 -5px 0 #d9407a; opacity: 0.92; }
+.sky-bomb .bomb-ic { font-size: 18px; line-height: 1; color: #7a1030; }
+.sky-bomb b { font-size: 12px; line-height: 1.1; }
+.sky-bomb .bomb-pips { display: flex; gap: 2px; height: 6px; margin-top: 2px; } .sky-bomb .bomb-pips i { width: 6px; height: 6px; background: #7a1030; border: 1px solid #fff4d6; }
+.sky-bomb small { position: absolute; top: -10px; right: -6px; padding: 0 4px; font-size: 11px; color: #fff4d6; background: #120a26; border: 2px solid #ff9ec0; }
+.sky-bomb.empty { filter: grayscale(0.9) brightness(0.7); }
+.sky-bomb.hint { animation: spready 0.4s steps(2) infinite; opacity: 1; }
+.sky-sp { left: 8px; right: auto; bottom: 0; width: 64px; height: 58px; }
+.sky-sp b { margin-top: 30px; }
+/* 세로 여유가 있는 화면(하단 바): 필살 · 안내 · 폭탄 */
+.sky-ctrl.in-bar { bottom: -60px; }
+.sky-ctrl.in-bar .sky-sp { left: 2%; right: auto; width: 27%; height: 54px; }
+.sky-ctrl.in-bar .sky-sp b { margin-top: 15px; }
+.sky-ctrl.in-bar .sky-bomb { right: 2%; width: 27%; height: 54px; flex-direction: row; gap: 6px; }
+.sky-ctrl.in-bar .sky-bomb .bomb-ic { font-size: 22px; } .sky-ctrl.in-bar .sky-bomb b { font-size: 15px; }
+.sky-ctrl.in-bar .sky-bomb .bomb-pips { flex-direction: column; height: auto; margin: 0; }
+.sky-ctrl-tip { position: absolute; left: 30%; right: 30%; bottom: 6px; margin: 0; text-align: center; font-size: 10px; line-height: 1.5; color: #cfc4ff; pointer-events: none; }
+.sky-ctrl-tip b { color: #ffe34a; }
+/* 첫 플레이 조작 안내: 전투를 막지 않는 한 줄 말풍선 */
+.ctrl-guide { position: absolute; left: 50%; top: 44%; transform: translateX(-50%); z-index: 7; display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none; width: 88%; }
+.ctrl-guide p { margin: 0; display: flex; align-items: center; gap: 8px; padding: 7px 12px; font-size: 13px; font-weight: 700; color: #fff4d6; background: rgba(18, 10, 46, 0.94); border: 3px solid #e8b53c; outline: 2px solid #120a26; text-align: left; text-shadow: 0 1px 0 #000; animation: guide-in 0.3s ease-out both; }
+.ctrl-guide p i { font-style: normal; font-size: 18px; color: #ffe34a; }
+.ctrl-guide span { display: flex; gap: 4px; } .ctrl-guide span b { width: 7px; height: 7px; background: #3a2a66; border: 1px solid #120a26; } .ctrl-guide span b.on { background: #ffe34a; }
+@keyframes guide-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.sky-opt > span { white-space: nowrap; flex: none; } .sky-opt { flex-wrap: wrap; } .sky-opt em { flex: 1 1 100%; }

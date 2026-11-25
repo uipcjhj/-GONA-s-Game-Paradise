@@ -45,6 +45,24 @@ function saveRecords(r: Records): void {
 }
 const DANGER = ['쌀알 병사 · 떡주먹 포 조심', '포자 소나기 · 가스 폭발 주의', '톱니 레이저 · 개틀링 탄막', '유도 촉수 · 물결 탄막', '방패 돌진 · 저격 비', '마왕의 봉인 · 십자 레이저 · 모든 것의 끝'];
 const FAM_KO: Record<FamilyId, string> = { mom: '엄마', dad: '아빠', imo: '이모', halmeoni: '할머니', halabeoji: '할아버지', samchon: '삼촌' };
+/** iPhone 홈 인디케이터 높이 (env(safe-area-inset-bottom) 을 실제 px 로) */
+function safeBottom(): number {
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;left:0;bottom:0;width:0;height:0;visibility:hidden;padding-bottom:env(safe-area-inset-bottom, 0px)';
+  document.body.appendChild(d);
+  const v = parseFloat(getComputedStyle(d).paddingBottom) || 0;
+  d.remove();
+  return v;
+}
+/** 첫 플레이 조작 안내 (아이콘 · 한 줄) */
+const GUIDE: [string, string][] = [
+  ['☝', '손가락으로 끌어서 움직여요'],
+  ['★', '공격은 자동으로 나가요!'],
+  ['◎', '길게 누른 채 움직이다 떼면 강력한 차지!'],
+  ['✊', '적에게 가까이 가면 근접 공격이 자동!'],
+  ['✹', '위험할 땐 오른쪽 아래 폭탄!'],
+];
+const GUIDE_KEY = `${NS}.ctrlguide`;
 /** 기념사진 속 패배한 보스의 한마디 */
 const BOSS_CRY = ['으앙… 내 떡이 다 풀어졌어…', '뿌우… 내 가스가 다 빠졌잖아…', '삐빅… 믹서 과열… 엉엉…', '말랑… 내 바다가 다시 흐른다니… 흑흑', '갑옷이… 말랑해졌어… 부끄러워…', '꽉… 꽉 막혀야 하는데… 뻥 뚫려 버렸다아…!'];
 /** 보스 격파 기념사진 (동료 × 난이도 × 보스 = 108장) · 작은 썸네일은 앨범 목록용 */
@@ -150,6 +168,21 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   const [albTab, setAlbTab] = useState<'hall' | 'photo' | 'badge' | 'mission' | 'ach'>('hall');
   const [albView, setAlbView] = useState<string | null>(null);
   const [albFam, setAlbFam] = useState<FamilyId>('mom');
+  /** 첫 플레이 조작 안내: 지금 보여 주는 줄 (-1 = 없음) */
+  const [guide, setGuide] = useState(-1);
+  const guideTimer = useRef(0);
+  const guideAfterPause = useRef(false);
+  const runGuide = useCallback((delay = 0) => {
+    window.clearInterval(guideTimer.current);
+    window.setTimeout(() => {
+      let i = 0;
+      setGuide(0);
+      guideTimer.current = window.setInterval(() => {
+        i++;
+        if (i >= GUIDE.length) { window.clearInterval(guideTimer.current); setGuide(-1); } else setGuide(i);
+      }, 1900);
+    }, delay);
+  }, []);
   const [prof, setProf] = useState(activeProfile);
   const [nickEdit, setNickEdit] = useState<'new' | 'rename' | null>(null);
   const [nickVal, setNickVal] = useState('');
@@ -234,7 +267,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
 
   // 캔버스 크기: 9:16 을 화면에 최대한 크게. 세로 여백이 충분하면 조작 버튼을 전투 화면 밖 하단 바로
   const CTRL = 66;
-  const [box, setBox] = useState({ w: 360, h: 640, bar: false });
+  const [box, setBox] = useState({ w: 360, h: 640, bar: false, sab: 0 });
   const [vp, setVp] = useState({ w: window.innerWidth, h: window.innerHeight });
   const [diag, setDiag] = useState(audioDiag);
   useEffect(() => {
@@ -242,9 +275,11 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
       setVp({ w: vw, h: vh });
-      const bar = vh - Math.min(vw, 540) * (16 / 9) >= CTRL;
-      const w = Math.floor(Math.min(vw, ((bar ? vh - CTRL : vh) * 9) / 16, 540));
-      setBox({ w, h: Math.floor((w * 16) / 9), bar });
+      // iPhone 홈 인디케이터(Safe Area) 만큼은 조작 바에서 비워 둠
+      const sab = safeBottom();
+      const bar = vh - sab - Math.min(vw, 540) * (16 / 9) >= CTRL;
+      const w = Math.floor(Math.min(vw, ((bar ? vh - CTRL - sab : vh) * 9) / 16, 540));
+      setBox({ w, h: Math.floor((w * 16) / 9), bar, sab });
     };
     on();
     window.addEventListener('resize', on);
@@ -346,6 +381,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
       hubJump.current = '';
       window.setTimeout(() => { eng.cheat('god'); eng.cheat('power'); eng.cheat(j); }, 900);
     }
+    eng.autoMelee = settings.autoMelee;
     if (location.search.includes('skytest')) (window as unknown as { __sky: SkyEngine }).__sky = eng;
     return () => {
       setTalk(null);
@@ -385,6 +421,13 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
         setPhase('play');
         setIntro(o.stage);
         window.setTimeout(() => setIntro(0), 3400);
+        // 처음 STAGE 1: 인트로 카드가 걷힌 뒤 조작 안내 다섯 줄 (약 9.5초 · 플레이를 막지 않음)
+        let seen = false;
+        try { seen = localStorage.getItem(GUIDE_KEY) === '1'; } catch { /* 무시 */ }
+        if ((o.stage === 1 && !seen && !location.search.includes('skytest')) || location.search.includes('guide')) {
+          try { localStorage.setItem(GUIDE_KEY, '1'); } catch { /* 무시 */ }
+          runGuide(3500);
+        }
         // 다음 스테이지 그림을 미리 받아 둠
         const nx = STAGES[o.stage];
         if (nx) void loadStageArt(nx.art);
@@ -501,6 +544,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     engine.current?.setPaused(p);
     setPaused(p);
     sfx(p ? 'menuMove' : 'menuOk');
+    if (!p && guideAfterPause.current) { guideAfterPause.current = false; runGuide(300); }
   };
   // 홈 화면·다른 앱으로 나갔다 오면 전투는 일시정지 상태로 (돌아온 순간 피격·끊김 없이 이어 하기)
   useEffect(() => {
@@ -1131,7 +1175,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   const ready = gauge >= 1;
   return (
     <div className="sky sky-play" ref={boxRef}>
-      <div className="sky-stage" style={{ width: box.w, height: box.h, marginBottom: box.bar ? CTRL : 0 }}>
+      <div className="sky-stage" style={{ width: box.w, height: box.h, marginBottom: box.bar ? CTRL + box.sab : 0 }}>
         <canvas ref={canvasRef} className="sky-canvas" style={{ width: box.w, height: box.h }} />
         {phase === 'play' && intro > 0 && (
           <div className="st-intro" key={intro}>
@@ -1159,17 +1203,6 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
             <div className={`sky-ctrl${box.bar ? ' in-bar' : ''}`}>
               <button
                 type="button"
-                className="sky-act sky-charge"
-                onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); engine.current?.holdCharge(true); }}
-                onPointerUp={() => engine.current?.holdCharge(false)}
-                onPointerCancel={() => engine.current?.holdCharge(false)}
-                onLostPointerCapture={() => engine.current?.holdCharge(false)}
-                onContextMenu={(e) => e.preventDefault()}
-              >
-                차지
-              </button>
-              <button
-                type="button"
                 className={`sky-act sky-sp${ready ? ' ready' : ''}`}
                 onPointerDown={() => engine.current?.useFamily()}
                 onContextMenu={(e) => e.preventDefault()}
@@ -1179,14 +1212,20 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
                 <span className="sp-fill" style={{ height: `${Math.round(gauge * 100)}%` }} />
                 <b>{ready ? '필살!' : `${Math.floor(gauge * 100)}%`}</b>
               </button>
-              <button type="button" className="sky-act sky-melee" onPointerDown={() => engine.current?.useMelee()} onContextMenu={(e) => e.preventDefault()} aria-label="근접 공격">
-                근접
-              </button>
-              <button type="button" className="sky-act sky-bomb" onPointerDown={() => engine.current?.useBomb()} onContextMenu={(e) => e.preventDefault()}>
-                폭탄<small>×{bombs}</small>
+              {box.bar && <p className="sky-ctrl-tip">끌어서 이동 · 공격 자동<br />길게 눌렀다 떼면 <b>차지</b></p>}
+              <button type="button" className={`sky-act sky-bomb${bombs <= 0 ? ' empty' : ''}${guide === 4 ? ' hint' : ''}`} onPointerDown={(e) => { e.stopPropagation(); engine.current?.useBomb(); }} onContextMenu={(e) => e.preventDefault()} aria-label={`폭탄 ${bombs}개 남음`}>
+                <span className="bomb-ic" aria-hidden>✹</span><b>폭탄</b>
+                <span className="bomb-pips" aria-hidden>{Array.from({ length: Math.max(bombs, 0) }, (_, i) => <i key={i} />)}</span>
+                <small>×{bombs}</small>
               </button>
             </div>
           </>
+        )}
+        {phase === 'play' && !talk && guide >= 0 && (
+          <div className="ctrl-guide" aria-live="polite">
+            <p key={guide}><i>{GUIDE[guide][0]}</i>{GUIDE[guide][1]}</p>
+            <span>{GUIDE.map((_, i) => <b key={i} className={i <= guide ? 'on' : ''} />)}</span>
+          </div>
         )}
         {paused && (
           <div className="sky-overlay">
@@ -1227,6 +1266,12 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
                   <em>이 브라우저는 진동 미지원 → 화면 흔들림 · 섬광 · 효과음으로 대신 알려 줘요</em>
                 )}
               </div>
+              <div className="sky-opt">
+                <span>근접 공격</span>
+                <button type="button" className={opts.autoMelee ? 'on' : ''} onClick={() => { setOpt({ autoMelee: !opts.autoMelee }); if (engine.current) engine.current.autoMelee = !opts.autoMelee; }}>{opts.autoMelee ? '자동' : '끔'}</button>
+                <em>적이 바로 앞에 오면 저절로 휘둘러요</em>
+              </div>
+              <button type="button" className="sky-btn" onClick={() => { guideAfterPause.current = true; togglePause(false); }}>조작 안내 다시 보기</button>
               <div className="sky-opt">
                 <span>성능 표시</span>
                 <button type="button" className={opts.perf ? 'on' : ''} onClick={() => setOpt({ perf: !opts.perf })}>{opts.perf ? '켜짐' : '꺼짐'}</button>

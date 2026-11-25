@@ -179,6 +179,10 @@ const MAX_HP = 5;
 const CHARGE_FULL: Record<FamilyId, number> = { mom: 1.0, dad: 0.8, imo: 1.0, halmeoni: 1.0, halabeoji: 0.8, samchon: 1.2 };
 /** 근접 공격: 돌진 시간 · 돌진 속도 · 가족별 피해 · 쿨다운(초). 붙어야 맞고, 맞는 동안 잠깐 무적 */
 const MELEE_T = 0.32;
+/** 터치 차지: 이만큼 누르고 있어야 충전 시작 (짧은 터치 · 잠깐 움직임은 차지가 아님) */
+const HOLD_START = 0.3;
+/** 손을 뗐을 때 차지 공격이 나가는 최소 충전량 (= 약 0.65초 이상 누름) */
+const HOLD_FIRE = 0.35;
 const MELEE_SPEED = 240;
 const MELEE: Record<FamilyId, { dmg: number; cd: number }> = {
   mom: { dmg: 3, cd: 2.2 }, dad: { dmg: 6, cd: 2.6 }, imo: { dmg: 3, cd: 1.8 }, halmeoni: { dmg: 3, cd: 2.8 }, halabeoji: { dmg: 5, cd: 3.0 }, samchon: { dmg: 4, cd: 2.6 },
@@ -282,6 +286,14 @@ export class SkyEngine {
   private volley = 0;
   private charge = 0;
   private charging = false;
+  /** 터치 차지: 손가락을 누르고 있는 시간 · MAX 알림 1회 · 근접 자동 발동 · 이번 근접이 돌진형인지 */
+  private holdT = 0;
+  private tcMax = false;
+  autoMelee = true;
+  private meleeLunge = true;
+  private meleeHitT = 0;
+  private nCharge = 0;
+  private nMelee = 0;
   private chargeSnd: AudioBufferSourceNode | null = null;
   private score = 0;
   private combo = 0;
@@ -438,6 +450,7 @@ export class SkyEngine {
     canvas.addEventListener('pointerdown', this.onDown);
     canvas.addEventListener('pointermove', this.onMove);
     canvas.addEventListener('pointerup', this.onUp);
+    canvas.addEventListener('pointercancel', this.onCancel);
     canvas.addEventListener('pointercancel', this.onUp);
     window.addEventListener('keydown', this.onKey);
     window.addEventListener('keyup', this.onKeyUp);
@@ -460,6 +473,7 @@ export class SkyEngine {
     this.canvas.removeEventListener('pointerdown', this.onDown);
     this.canvas.removeEventListener('pointermove', this.onMove);
     this.canvas.removeEventListener('pointerup', this.onUp);
+    this.canvas.removeEventListener('pointercancel', this.onCancel);
     this.canvas.removeEventListener('pointercancel', this.onUp);
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('keyup', this.onKeyUp);
@@ -487,6 +501,7 @@ export class SkyEngine {
     }
     this.talking = true;
     this.setCharging(false);
+    this.cancelHold();
     this.dragId = null;
     this.hasTarget = false;
     this.keys.clear();
@@ -520,6 +535,8 @@ export class SkyEngine {
     this.paused = p;
     if (!p) this.last = performance.now();
     this.setCharging(false);
+    this.cancelHold();
+    if (p) this.dragId = null;
     this.pushHud();
   }
   holdCharge(down: boolean): void {
@@ -555,16 +572,23 @@ export class SkyEngine {
     sfx('bomb');
     buzz([30, 40, 60]);
     this.setCharging(false);
+    this.cancelHold();
     this.pushHud();
   }
 
   /** 근접 공격: 앞으로 돌진해 붙은 적·탄을 친다 (사거리 짧음 · 쿨다운 · 돌진 중 짧은 무적) */
   useMelee(): void {
     if (this.paused || this.talking || this.over || this.sp || this.bombT > 0 || this.meleeCd > 0 || this.meleeT > 0) return;
+    this.startMelee(true);
+  }
+  /** 근접 시작 (lunge: 앞으로 돌진 · 자동 근접은 제자리에서 휘두름 → 보스 쪽으로 끌려가 맞지 않게) */
+  private startMelee(lunge: boolean): void {
+    this.meleeLunge = lunge;
+    this.nMelee++;
     this.meleeT = MELEE_T;
-    this.meleeCd = MELEE[this.fam].cd;
+    this.meleeCd = MELEE[this.fam].cd * (lunge ? 1 : 0.8);
     this.meleeSeen.clear();
-    this.inv = Math.max(this.inv, MELEE_T + 0.1);
+    this.inv = Math.max(this.inv, lunge ? MELEE_T + 0.1 : 0.22);
     this.setCharging(false);
     this.cKick = 1;
     this.shootAnimT = 0.3;
@@ -578,7 +602,7 @@ export class SkyEngine {
     if (this.meleeCd > 0) this.meleeCd -= dt;
     if (this.meleeT <= 0) return;
     this.meleeT -= dt;
-    this.py = clamp(this.py - MELEE_SPEED * dt, 40, H - 66);
+    if (this.meleeLunge) this.py = clamp(this.py - MELEE_SPEED * dt, 40, H - 66);
     const hx = this.px;
     const hy = this.py - 22;
     const dmg = MELEE[this.fam].dmg;
@@ -589,6 +613,18 @@ export class SkyEngine {
       this.meleeSeen.add(e.id);
       this.damage(e, dmg, 'melee', hx, hy);
       this.part(hx, hy, rand(-60, 60), rand(-80, -20), 0.3, '#fff8d0', 2, 0);
+      if (this.meleeSeen.size === 1) {
+        // 근접 명중: 묵직한 타격음 · 짧은 멈춤 · 섬광 고리 · 'SMASH!' (일반 탄과 확실히 다른 손맛)
+        sfx('bossHit', 0.9, 0.78);
+        sfx('enemyHit', 1, 0.7);
+        this.hitstop = Math.max(this.hitstop, 0.055);
+        this.kick(0.3, 0.06);
+        this.addFx('ring', (e.x + hx) / 2, (e.y + hy) / 2, 1.3, 0.24);
+        this.meleeHitT = 0.14;
+        this.floatText(e.x, e.y - e.hr - 4, 'SMASH!', '#9cf0ff');
+        for (let i = 0; i < 8; i++) this.part(e.x, e.y, rand(-120, 120), rand(-120, 40), 0.35, i % 2 ? '#bfe6ff' : '#ffffff', 2, 120);
+        buzz(18);
+      }
     }
     for (const q of this.eb) {
       if (q.alive && q.age >= 0 && Math.abs(q.x - hx) < 16 + q.r && Math.abs(q.y - hy) < 16 + q.r) { q.alive = false; this.starFrom(q.x, q.y); }
@@ -616,6 +652,7 @@ export class SkyEngine {
       stage: this.st.id, t: +this.t.toFixed(1), hp: this.hp, score: this.score, enemies: this.en.length, ebullets: this.eb.length, pbullets: this.pb.length, parts: this.parts.length, fx: this.fx.length + this.booms.length,
       boss: this.boss ? Math.round(this.boss.hp) : -1, bossMax: this.boss ? this.boss.max : 0, phase: this.bs?.phase ?? 0, mid: this.midboss ? Math.round(this.midboss.hp) : -1, block: this.block, step: this.stepIdx,
       power: this.power, over: this.over ? 1 : 0, won: this.overWon ? 1 : 0, px: Math.round(this.px), py: Math.round(this.py), anim: this.lastAnim, hits: this.hits, lasers: this.lasers.length,
+      hold: +this.holdT.toFixed(2), charge: +this.charge.toFixed(2), chargeShots: this.nCharge, melees: this.nMelee, meleeCd: +Math.max(0, this.meleeCd).toFixed(2), drag: this.dragId === null ? 0 : 1,
       talking: this.talking ? 1 : 0, vil: this.vil ? `${this.vil.kind}:${this.vil.mode}` : '',
       cause: JSON.stringify(this.hitLog), gauge: +this.gauge.toFixed(2), sp: this.sp ? this.sp.id : '', bombs: this.bombs, S: R, fps: this.perf.fps, ft: this.perf.ft, ftMax: this.perf.ftMax, upd: this.perf.upd, drw: this.perf.drw,
     };
@@ -688,6 +725,15 @@ export class SkyEngine {
   };
   private onUp = (e: PointerEvent): void => {
     if (e.pointerId === this.dragId) {
+      this.releaseHold();
+      this.dragId = null;
+      this.hasTarget = false;
+    }
+  };
+  /** 시스템이 터치를 뺏음(알림·제스처 등): 발사하지 않고 충전만 취소 */
+  private onCancel = (e: PointerEvent): void => {
+    if (e.pointerId === this.dragId) {
+      this.cancelHold();
       this.dragId = null;
       this.hasTarget = false;
     }
@@ -1196,6 +1242,57 @@ export class SkyEngine {
     const vy = (this.py - prevY) / Math.max(dt, 0.001);
     if (Math.abs(v) > 6 || Math.abs(vy) > 6) this.lastMoveT = this.t;
     if (this.charging) this.charge = Math.min(1.2, this.charge + dt);
+    this.updateHold(dt);
+    this.checkAutoMelee();
+  }
+  /** 터치 차지: 손가락을 누르고 있는 동안 (이동해도) 충전 · 일반 공격은 계속 나감 · 손을 떼면 발사 */
+  private updateHold(dt: number): void {
+    if (this.charging) return; // 키보드 차지 중
+    const can = this.dragId !== null && !this.paused && !this.talking && !this.over && !this.sp && this.bombT <= 0;
+    if (!can) {
+      if (this.dragId !== null && (this.sp || this.bombT > 0)) this.cancelHold();
+      return;
+    }
+    this.holdT += dt;
+    if (this.holdT <= HOLD_START) return;
+    this.charge = Math.min(1.2, this.charge + dt);
+    if (!this.tcMax && this.charge >= CHARGE_FULL[this.fam]) {
+      this.tcMax = true;
+      sfx('gaugeFull', 0.9);
+      this.addFx('ring', this.px, this.py - 6, 1.2, 0.3);
+      this.floatText(this.px, this.py - 34, 'MAX!', '#ff8ac8');
+      buzz(15);
+    }
+  }
+  private cancelHold(): void {
+    this.holdT = 0;
+    this.tcMax = false;
+    if (!this.charging) this.charge = 0;
+  }
+  /** 손을 뗐을 때: 충분히 충전됐으면 차지 공격 (짧은 터치 · 바로 뗀 손은 아무 일 없음) */
+  private releaseHold(): void {
+    const ok = this.holdT > HOLD_START && this.charge >= HOLD_FIRE && !this.charging && !this.paused && !this.talking && !this.over && !this.sp && this.bombT <= 0;
+    if (ok) this.releaseCharge();
+    this.cancelHold();
+  }
+  /** 근접 자동 발동: 적이 바로 앞(근접 판정 안)에 들어오면 제자리에서 휘두름 · 쿨다운 동안은 다시 안 나감 */
+  private checkAutoMelee(): void {
+    if (!this.autoMelee || this.meleeCd > 0 || this.meleeT > 0 || this.sp || this.bombT > 0 || this.talking || this.paused || this.over) return;
+    const hx = this.px;
+    const hy = this.py - 22;
+    for (const e of this.en) {
+      if (e.dead || e.y < 8) continue;
+      if (e.kind === 'boss') { const m = this.bsOf(e).mode; if (m === 'enter' || m === 'dying') continue; }
+      const reach = 12 + e.hr * 0.75; // 실제 타격 판정(16 + hr·0.8)보다 조금 좁게 → 발동하면 반드시 맞음
+      if (Math.abs(e.x - hx) <= reach && Math.abs(e.y - hy) <= reach) {
+        this.startMelee(false);
+        this.cKick = 1;
+        this.shootAnimT = 0.3;
+        this.addFx('ring', hx, hy, 0.8, 0.2);
+        sfx('shotHeavy', 0.8, 1.3);
+        return;
+      }
+    }
   }
 
   private updateWeapons(dt: number): void {
@@ -1229,6 +1326,7 @@ export class SkyEngine {
     const c = this.charge;
     this.charge = 0;
     if (c < 0.35 || this.over || this.paused) return;
+    this.nCharge++;
     const f = Math.min(1, c / CHARGE_FULL[this.fam]);
     const px = this.px;
     const py = this.py - 22;
@@ -2571,6 +2669,7 @@ export class SkyEngine {
     }
     compact(this.fx, (f) => f.age < f.dur);
     if (this.chargeFlash > 0) this.chargeFlash -= dt;
+    if (this.meleeHitT > 0) this.meleeHitT -= dt;
     for (const f of this.floats) {
       f.age += dt;
       f.y -= 22 * dt;
@@ -3823,6 +3922,37 @@ export class SkyEngine {
       g.fillRect(cx - 12, cy + 22, 25, 3);
       g.fillStyle = kk >= 1 ? '#ff6f9f' : this.charge >= 0.35 ? '#ffe34a' : '#fff';
       g.fillRect(cx - 11, cy + 23, Math.round(23 * kk), 1);
+    }
+    // 차지 에너지 링: 캐릭터 둘레에서 점점 커지고 · 테두리 게이지가 차오름 · MAX 면 분홍빛으로 맥동
+    const touchC = !this.charging && this.dragId !== null && this.holdT > HOLD_START && this.charge > 0;
+    if (this.charging || touchC) {
+      const full = CHARGE_FULL[this.fam];
+      const kk = Math.min(1, this.charge / full);
+      const max = kk >= 1;
+      const pul = max ? 0.5 + 0.5 * Math.sin(this.t * 18) : 0;
+      const rr = 11 + kk * 9 + pul * 2;
+      const cy0 = this.py - 6;
+      g.globalAlpha = 0.08 + kk * 0.1 + pul * 0.06;
+      g.fillStyle = max ? '#ff8ac8' : '#ffe470';
+      g.beginPath(); g.arc(this.px, cy0, rr, 0, TAU); g.fill();
+      g.globalAlpha = 0.55;
+      g.strokeStyle = '#2a1a3a';
+      g.lineWidth = 3;
+      g.beginPath(); g.arc(this.px, cy0, rr + 3, 0, TAU); g.stroke();
+      g.globalAlpha = 1;
+      g.strokeStyle = max ? (pul > 0.5 ? '#ffffff' : '#ff6fb0') : kk >= HOLD_FIRE / full ? '#ffe34a' : '#fff4d6';
+      g.lineWidth = 2;
+      g.beginPath(); g.arc(this.px, cy0, rr + 3, -Math.PI / 2, -Math.PI / 2 + TAU * kk); g.stroke();
+      if (Math.random() < 0.35) {
+        const a = rand(0, TAU);
+        this.part(this.px + Math.cos(a) * (rr + 10), cy0 + Math.sin(a) * (rr + 10), -Math.cos(a) * 70, -Math.sin(a) * 70, 0.2, max ? '#ffb0d8' : '#ffe470', 1, 0);
+      }
+    }
+    if (this.meleeHitT > 0) {
+      g.globalAlpha = this.meleeHitT / 0.14;
+      g.fillStyle = '#e8fbff';
+      g.beginPath(); g.arc(this.px, this.py - 24, 12 + (0.14 - this.meleeHitT) * 120, 0, TAU); g.fill();
+      g.globalAlpha = 1;
     }
     if (this.chargeFlash > 0) {
       const k = this.chargeFlash / 0.22;

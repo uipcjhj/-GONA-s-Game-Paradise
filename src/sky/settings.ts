@@ -12,6 +12,8 @@ export interface SkySettings {
   shake: number;
   vibrate: boolean;
   perf: boolean;
+  /** 근접 공격 자동 발동 (적이 근접 범위에 들어오면) */
+  autoMelee: boolean;
 }
 
 const KEY = `${NS}.settings`;
@@ -50,7 +52,7 @@ function iosTick(): void {
 }
 
 function read(): SkySettings {
-  const def: SkySettings = { shake: 1, vibrate: true, perf: /[?&]perf/.test(location.search) };
+  const def: SkySettings = { shake: 1, vibrate: true, perf: /[?&]perf/.test(location.search), autoMelee: true };
   try {
     const s = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<SkySettings>;
     return { ...def, ...s, perf: def.perf || !!s.perf };
