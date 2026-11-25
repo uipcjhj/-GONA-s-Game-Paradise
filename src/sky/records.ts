@@ -14,6 +14,9 @@ import type { Difficulty } from './stages';
 import type { FamilyId } from './engine';
 import { rankValue, type Rank } from './rank';
 
+/** 받침 있으면 '과', 없으면 '와' */
+export const josaWa = (w: string): string => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '과' : '와'; };
+
 export interface Entry {
   score: number;
   rank?: Rank;
@@ -200,7 +203,7 @@ export function achievements(): Achievement[] {
   const a = (id: string, name: string, desc: string, cur: number, max: number): Achievement => ({ id, name, desc, done: cur >= max, prog: [Math.min(cur, max), max] });
   return [
     a('first', '첫 번째 탈출', '어떤 동료와든 FINAL 클리어', n, 1),
-    ...FAM_ALL.map((f) => a(`fam-${f}`, `${FAM_KO2[f]}와 함께`, `${FAM_KO2[f]}와 FINAL 클리어`, has(f) ? 1 : 0, 1)),
+    ...FAM_ALL.map((f) => a(`fam-${f}`, `${FAM_KO2[f]}${josaWa(FAM_KO2[f])} 함께`, `${FAM_KO2[f]}${josaWa(FAM_KO2[f])} FINAL 클리어`, has(f) ? 1 : 0, 1)),
     a('easy', 'EASY 정복', 'EASY 로 FINAL 클리어', FAM_ALL.some((f) => has(f, 'easy')) ? 1 : 0, 1),
     a('normal', 'NORMAL 정복', 'NORMAL 로 FINAL 클리어', FAM_ALL.some((f) => has(f, 'normal')) ? 1 : 0, 1),
     a('hard', 'HARD 정복', 'HARD 로 FINAL 클리어', hardN > 0 ? 1 : 0, 1),

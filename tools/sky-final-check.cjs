@@ -8,7 +8,7 @@ const [url, out, fam = 'imo', diff = 'normal'] = process.argv.slice(2);
 (async () => {
   fs.mkdirSync(out, { recursive: true });
   const b = await chromium.launch();
-  const ctx = await b.newContext({ viewport: { width: 393, height: 636 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const ctx = await b.newContext({ viewport: { width: +(process.env.W||393), height: +(process.env.H||636) }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await ctx.addInitScript((f) => { localStorage.setItem('gona.skyadv.opened', '1'); localStorage.setItem('gona.skyadv.fam', f); }, fam);
   const p = await ctx.newPage();
   const errs = [];

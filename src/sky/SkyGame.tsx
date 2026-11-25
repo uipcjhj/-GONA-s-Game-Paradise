@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactElement } from 'rea
 import { loadAssets, loadStageArt, type Assets, type StageArt } from './assets';
 import { initAudio, preloadAudio, prepareBgm, playBgm, stopBgm, sfx, isMuted, setMuted, audioUnlocked, audioState, audioTap, audioDiag, unlockAudio, reviveAudio, testBeep, forceHtmlAudio } from './audio';
 import { SkyEngine, SPECIAL_NAME, WEAPON_NAME, type EndInfo, type FamilyId, type RunOpts } from './engine';
-import { submit, bestOf, topOf, stageBoard, runBoard, dailyBoard, dailyFor, dailyState, dailyTry, dailyHistory, today, recordClear, setFlags, clears, clearKey, achievements, markSeen, DIFF_ORDER, recordStage, stampBoard, missions, type Daily, type Submitted } from './records';
+import { josaWa, submit, bestOf, topOf, stageBoard, runBoard, dailyBoard, dailyFor, dailyState, dailyTry, dailyHistory, today, recordClear, setFlags, clears, clearKey, achievements, markSeen, DIFF_ORDER, recordStage, stampBoard, missions, type Daily, type Submitted } from './records';
 import { activeProfile, createProfile, renameProfile, profiles, switchProfile, profileKey, exportProfile, importProfile } from './profile';
 import { parTime } from './rank';
 import { STAGES, DIFF, type Difficulty } from './stages';
@@ -1176,7 +1176,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
             <img className="cer-fam" src={`${BASE}${packPath(`chars/${photo.fam}/illust.png`)}`} alt={FAM_KO[photo.fam]} />
             <img className="cer-gona" src={`${BASE}${packPath('opening2/gona-hero.png', 'chars/gona/illust.png')}`} alt="고나" />
             <p className="cer-title">{photo.diff === 'hard' ? 'LEGENDARY CLEAR!!' : photo.diff === 'normal' ? 'GREAT CLEAR!' : 'CLEAR!'}</p>
-            <p className="cer-line">{FAM_KO[photo.fam]}와 고나, {photo.diff.toUpperCase()} 정복!</p>
+            <p className="cer-line">{FAM_KO[photo.fam]}{josaWa(FAM_KO[photo.fam])} 고나, {photo.diff.toUpperCase()} 정복!</p>
             <p className="cer-snap">찰칵!</p>
             <i className="cer-flash" />
           </div>
