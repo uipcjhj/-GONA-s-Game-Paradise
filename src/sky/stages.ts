@@ -42,7 +42,7 @@ export const ART_NAMES: ArtName[] = ['bg-backdrop', 'island-castle', 'island-rui
 export type EnemyName = 'drone' | 'fighter' | 'wyvern' | 'orb' | 'gunship';
 export type Move = 'sine' | 'strafe' | 'swarm' | 'dive' | 'turret' | 'heavy' | 'hold' | 'zig' | 'loop' | 'snake'
   /** 화려한 편대 (2차 리마스터): 옆에서 훅 파고들었다 빠짐 · V자 진형 · 회전 진입 */
-  | 'swoop' | 'vee' | 'spiral' | 'dash';
+  | 'swoop' | 'vee' | 'spiral' | 'dash' | 'xcross' | 'circle';
 export type Fire = 'aim1' | 'aim3' | 'needle2' | 'fireball' | 'ring' | 'gun' | 'spread5' | 'snipe' | 'curtain' | 'spiralMini' | 'none';
 export interface EnemyDef { art: ArtName; hp: number; hr: number; score: number; fire: Fire; cd: [number, number] }
 export const ENEMIES: Record<EnemyName, EnemyDef> = {
@@ -479,11 +479,11 @@ export const STAGES: StageDef[] = [
 // 화려한 추가 편대: 스테이지가 뒤로 갈수록 더 많이 · 더 다양하게 (보스 직전엔 몰아치기)
 const FORM: [EnemyName, number, Move][][] = [
   [['drone', 5, 'vee'], ['fighter', 3, 'swoop']],
-  [['fighter', 4, 'swoop'], ['drone', 5, 'vee'], ['drone', 6, 'spiral']],
-  [['drone', 6, 'spiral'], ['fighter', 5, 'swoop'], ['fighter', 5, 'vee'], ['wyvern', 3, 'swoop']],
-  [['wyvern', 4, 'swoop'], ['fighter', 6, 'dash'], ['drone', 7, 'spiral'], ['fighter', 6, 'vee'], ['fighter', 5, 'swoop']],
-  [['fighter', 7, 'vee'], ['fighter', 7, 'dash'], ['wyvern', 5, 'swoop'], ['drone', 8, 'spiral'], ['fighter', 6, 'swoop'], ['wyvern', 5, 'vee']],
-  [['drone', 8, 'spiral'], ['fighter', 8, 'dash'], ['fighter', 7, 'swoop'], ['wyvern', 6, 'vee'], ['drone', 8, 'spiral'], ['fighter', 8, 'dash'], ['fighter', 7, 'swoop'], ['wyvern', 6, 'swoop']],
+  [['fighter', 4, 'swoop'], ['drone', 5, 'vee'], ['drone', 6, 'circle'], ['drone', 6, 'spiral']],
+  [['drone', 6, 'spiral'], ['fighter', 6, 'xcross'], ['fighter', 5, 'swoop'], ['fighter', 5, 'vee'], ['wyvern', 3, 'swoop']],
+  [['wyvern', 4, 'swoop'], ['drone', 7, 'circle'], ['fighter', 6, 'dash'], ['fighter', 6, 'xcross'], ['drone', 7, 'spiral'], ['fighter', 6, 'vee'], ['fighter', 5, 'swoop']],
+  [['fighter', 7, 'vee'], ['drone', 8, 'circle'], ['fighter', 8, 'xcross'], ['fighter', 7, 'dash'], ['wyvern', 5, 'swoop'], ['drone', 8, 'spiral'], ['fighter', 6, 'swoop'], ['wyvern', 5, 'vee']],
+  [['drone', 8, 'spiral'], ['fighter', 8, 'xcross'], ['drone', 8, 'circle'], ['fighter', 8, 'dash'], ['fighter', 7, 'swoop'], ['wyvern', 6, 'vee'], ['drone', 8, 'spiral'], ['fighter', 8, 'dash'], ['fighter', 7, 'swoop'], ['wyvern', 6, 'swoop']],
 ];
 function addFormations(stages: StageDef[]): void {
   for (const st of stages) {

@@ -332,6 +332,10 @@ export class SkyEngine {
   private partSmoke: number[][] = [];
   /** 이번 스테이지 보스 부위 파괴 수 · 전체 수 (랭크 평가) */
   partsBroken = 0;
+  /** 보스 분노 컷인 남은 시간 · 최종 형태 여부 · 격파 슬로모션 */
+  private rageT = 0;
+  private rageFinal = false;
+  private slowT = 0;
   /** 부서져 떨어지는 부위 조각 */
   private chunks: { cell: number; x: number; y: number; vx: number; vy: number; rot: number; vr: number; k: number; t: number }[] = [];
   private darkCache = new Map<CanvasImageSource, HTMLCanvasElement>();
@@ -955,6 +959,12 @@ export class SkyEngine {
     } else if (move === 'loop') {
       sx = dir > 0 ? -14 : W + 14;
       sy = 30 + (idx % 2) * 8;
+    } else if (move === 'xcross') {
+      sx = dir > 0 ? 6 + (idx % 3) * 8 : W - 6 - (idx % 3) * 8;
+      sy = -16 - idx * 10;
+    } else if (move === 'circle') {
+      sx = W / 2;
+      sy = -16;
     } else if (move === 'dash') {
       sx = dir > 0 ? -14 : W + 14;
       sy = y + (idx % 2) * 18;
@@ -988,6 +998,7 @@ export class SkyEngine {
         this.hitstop -= dt;
         this.shake = Math.max(0, this.shake - dt * 1.6);
       } else {
+        if (this.slowT > 0) { this.slowT -= dt; dt *= 0.35; }
         // 컷인 중 슬로모션
         if (this.sp && this.sp.t < this.sp.cut) {
           this.sp.t += dt;
@@ -1024,6 +1035,7 @@ export class SkyEngine {
   private update(dt: number): void {
     this.t += dt;
     if (this.lvUpT > 0) this.lvUpT -= dt;
+    if (this.rageT > 0) this.rageT -= dt;
     if (this.lvDownT > 0) this.lvDownT -= dt;
     this.updateProps(dt);
     this.shake = Math.max(0, this.shake - dt * 1.6);
@@ -1718,6 +1730,19 @@ export class SkyEngine {
         if (e.age < 2.8) e.y += (e.holdY - e.y) * Math.min(1, dt * 2.4);
         else { e.x += (e.x < W / 2 ? -1 : 1) * 95 * dt; e.y -= 18 * dt; }
         break;
+      case 'xcross':
+        // X자 교차: 위 양쪽 모서리에서 대각선으로 내려와 가운데에서 엇갈림
+        e.x += e.dir * 78 * dt;
+        e.y += 92 * dt;
+        break;
+      case 'circle': {
+        // 원형 진입: 가운데 위에서 큰 원을 그리며 한 바퀴 돌고 아래로 빠짐
+        const a = -Math.PI / 2 + e.age * 2.1 * e.dir + e.ph * 0.9;
+        const r = 58;
+        e.x = W / 2 + Math.cos(a) * r;
+        e.y = (e.age < 3 ? 110 : 110 + (e.age - 3) * 80) + Math.sin(a) * r * 0.75;
+        break;
+      }
       case 'dash':
         // 화면을 가로지르는 고속 돌진 (속도감) — 살짝 물결치며 옆으로 관통
         e.x += e.dir * 175 * dt;
@@ -1964,6 +1989,7 @@ export class SkyEngine {
       for (let i = 0; i < 6; i++) this.addBoom(e.x + rand(-30, 30), e.y + rand(-20, 30), 0.8, i * 0.08);
       this.debris(e.x, e.y, 18, ['#c02040', '#d8a040', '#5a5a66']);
       this.bossSay(phase === np ? `${def.name} 최종 형태!` : `장갑 파손! ${def.name} 분노`, '#ff7a8a');
+      if (!def.mid) { this.rageT = 1.6; this.rageFinal = phase === np; buzz([60, 40, 90], 0); }
       if (!def.mid) { this.talk(phase >= 3 ? 'bossP3' : 'bossP2'); b.sigDue = true; }
     }
     if (b.mode === 'enter') {
@@ -2653,6 +2679,14 @@ export class SkyEngine {
     } else if (src !== 'bomb') {
       if (e.kind === 'part' && (special)) dmg *= 0.6;
       if (e.kind === 'part') {
+        // 파손 임계치(체력 절반)를 넘는 순간: 금 가는 소리 · 파편 폭발 · CRACK!
+        if (e.hp > e.max * 0.5 && e.hp - dmg <= e.max * 0.5) {
+          sfx('armorBreak', 0.5, 1.5);
+          for (let i = 0; i < 10; i++) this.part(e.x, e.y, rand(-120, 120), rand(-130, 10), 0.45, i % 3 ? '#ffd890' : '#ffffff', 2, 260);
+          this.floatText(e.x, e.y - 14, 'CRACK!', '#ffe9a0');
+          this.kick(0.25, 0.04);
+          this.hitstop = Math.max(this.hitstop, 0.04);
+        }
         // 부위 피격: 살짝 밀려 들어가며 떨림 + 금속 파편 · 불티 (손맛)
         e.hitT = 0.13;
         for (let i = 0; i < (strong ? 4 : 2); i++) this.part(hx, hy, rand(-90, 90), rand(-110, -20), 0.32, i % 2 ? '#fff4c0' : '#ffb040', 2, 240);
@@ -2679,6 +2713,8 @@ export class SkyEngine {
         for (const l of this.lasers) l.alive = false;
         for (const p of this.en) if (p.kind === 'part' && p.parent === e) this.killPart(p, false);
         if (!b.def.mid) {
+          this.slowT = 1.1; // 격파 순간 슬로모션 → 연쇄 폭발
+          buzz([90, 50, 140, 50, 200], 0);
           sfx('bossBreak');
           stopBgm(1.0);
           this.flashWhite = 0.6;
@@ -3086,6 +3122,7 @@ export class SkyEngine {
 
     g.setTransform(R, 0, 0, R, 0, 0);
     this.drawWarning();
+    this.drawRage();
     this.drawCutin();
     this.drawHud();
     if (this.flashWhite > 0.02) {
@@ -3207,6 +3244,23 @@ export class SkyEngine {
     }
   }
 
+  /** 보스 분노: 붉은 테두리 맥동 + 사선 띠 'RAGE MODE' 컷인 (필살기 예고) */
+  private drawRage(): void {
+    if (this.rageT <= 0 || this.over) return;
+    const g = this.g;
+    const t = 1.6 - this.rageT;
+    const a = Math.min(1, this.rageT * 2) * (0.35 + 0.25 * Math.sin(this.t * 30));
+    g.globalAlpha = a; g.fillStyle = '#ff2040';
+    g.fillRect(0, 0, W, 5); g.fillRect(0, H - 5, W, 5); g.fillRect(0, 0, 5, H); g.fillRect(W - 5, 0, 5, H);
+    g.globalAlpha = 1;
+    if (t < 1.2) {
+      const x = t < 0.2 ? (1 - t / 0.2) * W : t > 1.0 ? -((t - 1.0) / 0.2) * W : 0;
+      g.fillStyle = 'rgba(20,4,10,0.85)'; g.fillRect(x, 150, W, 30);
+      g.fillStyle = '#ff2040'; g.fillRect(x, 150, W, 2); g.fillRect(x, 178, W, 2);
+      this.text(this.rageFinal ? 'FINAL FORM!' : 'RAGE MODE!', W / 2 + x, 154, '#ff6f8a', 'center', 16);
+    }
+  }
+
   private drawWarning(): void {
     if (this.over || this.block !== 'warning') return;
     const g = this.g;
@@ -3221,8 +3275,24 @@ export class SkyEngine {
       g.fillStyle = '#e02040';
       for (let x = -16 + ((this.t * 60) % 16); x < W; x += 16) { g.beginPath(); g.moveTo(x, y + 16); g.lineTo(x + 8, y); g.lineTo(x + 14, y); g.lineTo(x + 6, y + 16); g.fill(); }
     }
+    // 보스 실루엣이 붉은 하늘 뒤에서 천천히 다가옴 (등장 컷)
+    const bim = this.art[this.st.boss.art];
+    if (bim) {
+      const fw = bim.width / this.st.boss.frames;
+      const prog = clamp(1 - this.warnT / 3.6, 0, 1);
+      const sc = this.st.boss.k * (1.1 + prog * 0.5);
+      g.globalAlpha = 0.25 + prog * 0.35;
+      this.drawV2(this.darkOf(bim) as unknown as HTMLImageElement, W / 2, 118 - (1 - prog) * 20, false, 0, 0, fw, sc);
+      g.globalAlpha = 1;
+    }
     this.text('WARNING', W / 2, 150, k > 0.5 ? '#ff4060' : '#ffe0e8', 'center', 22);
-    this.text(`${this.st.boss.name} 접근 중`, W / 2, 176, '#ffe0e8', 'center', 11);
+    // 이름표: 금테 남색 명판이 옆에서 미끄러져 들어옴
+    const slide = clamp((3.6 - this.warnT) / 0.5, 0, 1);
+    const px = W / 2 - (1 - slide) * W;
+    g.fillStyle = '#120a2e'; g.fillRect(px - 76, 174, 152, 34);
+    g.fillStyle = '#e8b53c'; g.fillRect(px - 76, 174, 152, 2); g.fillRect(px - 76, 206, 152, 2);
+    this.text(this.st.boss.name, px, 178, '#ffe9a0', 'center', 13);
+    this.text(this.st.boss.intro.slice(0, 22), px, 194, '#cfc4ff', 'center', 8);
   }
 
   /** 필살기 컷인: 원화 띠가 오른쪽에서 들어와 멈췄다 왼쪽으로 빠짐 + 이름 */

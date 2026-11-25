@@ -120,3 +120,14 @@
 |---|---|---|---|
 | special.png | album/special.jpg | 기념사진 18장 완성 보상: 온 가족 특별 사진 | 3.5 |
 | master.png | ui/master.png | MASTER 배지 | 1.25 |
+
+---
+
+## 2026-11-25 (5차) · 최종 통합 리마스터
+잔액 48.75 → **42.75** · **사용 6** · GPT Image 2.6 (high · 2k)
+
+| 원본 (art-src/sky-poop/v8/) | 적용 | 용도 | 크레딧 |
+|---|---|---|---|
+| cer-easy.png | ui/cer-easy.jpg | 승리 세리머니 배경 EASY (파스텔 무지개 무대) | 2 |
+| cer-normal.png | ui/cer-normal.jpg | 승리 세리머니 배경 NORMAL (노을 하늘) | 2 |
+| cer-hard.png | ui/cer-hard.jpg | 승리 세리머니 배경 HARD (밤하늘 불꽃놀이·트로피) | 2 |

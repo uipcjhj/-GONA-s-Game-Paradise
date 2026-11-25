@@ -61,3 +61,27 @@ export function profileKey(base: string): string {
   if (!s.active || s.list[0]?.id === s.active) return base;
   return `${base}.${s.active}`;
 }
+
+// ───────── 기기 옮기기 (백업 코드) ─────────
+// 서버 없이 다른 기기·브라우저로 옮기는 방법: 지금 모험가의 기록 전체를 문자열(백업 코드)로 내보내고, 다른 기기에서 붙여 넣으면 새 모험가로 들어옴.
+// 나중에 서버 동기화를 붙일 때도 이 묶음(JSON)을 그대로 업로드 단위로 쓰면 됨.
+const DATA_KEYS = (): string[] => [`${NS}.rec2`, `${NS}.records`];
+export function exportProfile(): string {
+  const p = activeProfile();
+  const data: Record<string, string | null> = {};
+  for (const k of DATA_KEYS()) data[k] = localStorage.getItem(profileKey(k));
+  const json = JSON.stringify({ v: 1, game: 'gona-sky-adventure', nick: p?.nick ?? '모험가', at: new Date().toISOString().slice(0, 10), data });
+  return `GONA1:${btoa(unescape(encodeURIComponent(json)))}`;
+}
+export function importProfile(code: string): Profile | null {
+  try {
+    const raw = code.trim().replace(/^GONA1:/, '');
+    const o = JSON.parse(decodeURIComponent(escape(atob(raw)))) as { v: number; game: string; nick: string; data: Record<string, string | null> };
+    if (o.game !== 'gona-sky-adventure' || !o.data) return null;
+    const p = createProfile(o.nick);
+    for (const [k, v] of Object.entries(o.data)) if (v && DATA_KEYS().includes(k)) localStorage.setItem(profileKey(k), v);
+    return p;
+  } catch {
+    return null;
+  }
+}
