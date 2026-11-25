@@ -42,7 +42,7 @@ export const ART_NAMES: ArtName[] = ['bg-backdrop', 'island-castle', 'island-rui
 export type EnemyName = 'drone' | 'fighter' | 'wyvern' | 'orb' | 'gunship';
 export type Move = 'sine' | 'strafe' | 'swarm' | 'dive' | 'turret' | 'heavy' | 'hold' | 'zig' | 'loop' | 'snake'
   /** 화려한 편대 (2차 리마스터): 옆에서 훅 파고들었다 빠짐 · V자 진형 · 회전 진입 */
-  | 'swoop' | 'vee' | 'spiral';
+  | 'swoop' | 'vee' | 'spiral' | 'dash';
 export type Fire = 'aim1' | 'aim3' | 'needle2' | 'fireball' | 'ring' | 'gun' | 'spread5' | 'snipe' | 'curtain' | 'spiralMini' | 'none';
 export interface EnemyDef { art: ArtName; hp: number; hr: number; score: number; fire: Fire; cd: [number, number] }
 export const ENEMIES: Record<EnemyName, EnemyDef> = {
@@ -481,9 +481,9 @@ const FORM: [EnemyName, number, Move][][] = [
   [['drone', 5, 'vee'], ['fighter', 3, 'swoop']],
   [['fighter', 4, 'swoop'], ['drone', 5, 'vee'], ['drone', 6, 'spiral']],
   [['drone', 6, 'spiral'], ['fighter', 5, 'swoop'], ['fighter', 5, 'vee'], ['wyvern', 3, 'swoop']],
-  [['wyvern', 4, 'swoop'], ['drone', 7, 'spiral'], ['fighter', 6, 'vee'], ['fighter', 5, 'swoop']],
-  [['fighter', 7, 'vee'], ['wyvern', 5, 'swoop'], ['drone', 8, 'spiral'], ['fighter', 6, 'swoop'], ['wyvern', 5, 'vee']],
-  [['drone', 8, 'spiral'], ['fighter', 7, 'swoop'], ['wyvern', 6, 'vee'], ['drone', 8, 'spiral'], ['fighter', 7, 'swoop'], ['wyvern', 6, 'swoop']],
+  [['wyvern', 4, 'swoop'], ['fighter', 6, 'dash'], ['drone', 7, 'spiral'], ['fighter', 6, 'vee'], ['fighter', 5, 'swoop']],
+  [['fighter', 7, 'vee'], ['fighter', 7, 'dash'], ['wyvern', 5, 'swoop'], ['drone', 8, 'spiral'], ['fighter', 6, 'swoop'], ['wyvern', 5, 'vee']],
+  [['drone', 8, 'spiral'], ['fighter', 8, 'dash'], ['fighter', 7, 'swoop'], ['wyvern', 6, 'vee'], ['drone', 8, 'spiral'], ['fighter', 8, 'dash'], ['fighter', 7, 'swoop'], ['wyvern', 6, 'swoop']],
 ];
 function addFormations(stages: StageDef[]): void {
   for (const st of stages) {
@@ -496,7 +496,7 @@ function addFormations(stages: StageDef[]): void {
       const at = Math.round(((i + 1) * last) / (forms.length + 1.5));
       let k = at;
       while (k < last && !('wait' in sc[k])) k++;
-      sc.splice(k, 0, { wave: { e, n, move, extra: true, dir: i % 2 ? -1 : 1, x0: 22, x1: 158, y: 64, gap: move === 'vee' ? 0 : 0.22, drop: i === forms.length - 1 ? 'star' : undefined } });
+      sc.splice(k, 0, { wave: { e, n, move, extra: true, dir: i % 2 ? -1 : 1, x0: 22, x1: 158, y: move === 'dash' ? 118 : 64, gap: move === 'vee' ? 0 : 0.22, drop: i === forms.length - 1 ? 'star' : undefined } });
     });
     // 보스 직전 몰아치기 (STAGE 3~): 양쪽에서 동시에 휘어 들어옴
     const w = sc.findIndex((q) => 'warning' in q);

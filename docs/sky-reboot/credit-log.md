@@ -110,3 +110,13 @@
 | logo-ko.png | title/logo.png | 로고 v6: 영문 + 한글 명판 '고나의 스카이 어드벤처' | 2 |
 | eat-full · sleep-full | opening3/*.jpg | 오프닝: 이유식 먹는 고나 · 잠들며 꿈 먼지 | 7 |
 | wake.png | ending/wake.jpg | 엔딩: 아침에 눈 비비며 깨는 고나 | 3.5 |
+
+---
+
+## 2026-11-25 (4차) · 수집 보상 마무리
+잔액 53.5 → **48.75** · **사용 4.75** · GPT Image 2.6
+
+| 원본 (art-src/sky-poop/v7/) | 적용 | 용도 | 크레딧 |
+|---|---|---|---|
+| special.png | album/special.jpg | 기념사진 18장 완성 보상: 온 가족 특별 사진 | 3.5 |
+| master.png | ui/master.png | MASTER 배지 | 1.25 |

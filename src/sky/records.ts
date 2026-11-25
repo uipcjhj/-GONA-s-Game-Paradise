@@ -9,7 +9,7 @@
  *  최고 점수 · 최고 랭크 · 최단 클리어는 보드의 기록들에서 따로 계산 (bestOf)
  */
 import { NS } from './ns';
-import { profileKey } from './profile';
+import { profileKey, activeProfile } from './profile';
 import type { Difficulty } from './stages';
 import type { FamilyId } from './engine';
 import { rankValue, type Rank } from './rank';
@@ -23,13 +23,19 @@ export interface Entry {
   stage: number;
   /** 기록한 날 (YYYY-MM-DD) */
   at: string;
+  /** 기록한 모험가 닉네임 (서버 랭킹으로 옮길 때 그대로 사용) */
+  nick?: string;
 }
 interface Store {
   v: 2;
   boards: Record<string, Entry[]>;
   daily: Record<string, { cleared: boolean; tries: number }>;
   /** 수집: 동료 × 난이도 클리어(기념사진 · 배지) · 업적 깃발 · 처음 본 사진 */
-  col?: { clears: Record<string, { at: string; score: number; rank?: Rank }>; flags: Record<string, boolean>; seen: Record<string, boolean> };
+  col?: { clears: Record<string, { at: string; score: number; rank?: Rank }>; flags: Record<string, boolean>; seen: Record<string, boolean>;
+    /** 스테이지 클리어 최고 기록: `동료:난이도:스테이지` → 랭크 · 최소 피격 · 최소 폭탄 · 부위 전부 파괴 여부 */
+    stages?: Record<string, { rank?: Rank; hits: number; bombs: number; allParts: boolean }>;
+    /** 누적 횟수 (부위 전부 파괴한 보스 수 등) */
+    counts?: Record<string, number> };
 }
 const KEY = `${NS}.rec2`;
 const MAX = 10;
@@ -87,6 +93,7 @@ export interface Submitted { place: number; newScore: boolean; newRank: boolean;
 export function submit(board: string, e: Entry): Submitted {
   const st = backend.load();
   const before = bestOf(board);
+  if (!e.nick) e.nick = activeProfile()?.nick;
   const list = [...(st.boards[board] ?? [])];
   // 최고 랭크 · 최단 시간은 상위 10 밖으로 밀려도 잃지 않도록: 10 등 밖이면 그 값만 가진 기록과 바꿔 둠
   list.push(e);
@@ -206,5 +213,68 @@ export function achievements(): Achievement[] {
     a('parts', '부위 파괴왕', '보스 부위를 전부 부수고 격파', c.flags.allparts ? 1 : 0, 1),
     a('daily', '오늘의 영웅', '오늘의 도전 클리어', daily ? 1 : 0, 1),
     a('album', '추억 앨범 완성', '기념사진 18장 모두 모으기', n, 18),
+  ];
+}
+
+// ───────── 스테이지 기록 · 미션 ─────────
+export interface StageResult { fam: FamilyId; diff: Difficulty; stage: number; rank?: Rank; hits: number; bombs: number; allParts: boolean }
+export function recordStage(r: StageResult): void {
+  const st = backend.load();
+  const c = colOf(st);
+  const st2 = (c.stages ??= {});
+  const k = `${r.fam}:${r.diff}:${r.stage}`;
+  const p = st2[k];
+  st2[k] = {
+    rank: rankValue(r.rank) > rankValue(p?.rank) ? r.rank : p?.rank,
+    hits: Math.min(p?.hits ?? 99, r.hits), bombs: Math.min(p?.bombs ?? 99, r.bombs), allParts: !!p?.allParts || r.allParts,
+  };
+  const cn = (c.counts ??= {});
+  if (r.allParts) cn.allParts = (cn.allParts ?? 0) + 1;
+  cn.stageClears = (cn.stageClears ?? 0) + 1;
+  backend.save(st);
+}
+/** 스테이지 도장판: 난이도 × 스테이지 → 그 스테이지의 최고 랭크 (아무 동료나) */
+export function stampBoard(): Record<string, Rank | 'C0'> {
+  const out: Record<string, Rank | 'C0'> = {};
+  const sts = backend.load().col?.stages ?? {};
+  for (const [k, v] of Object.entries(sts)) {
+    const [, d, n] = k.split(':');
+    const key = `${d}:${n}`;
+    const cur = out[key];
+    const r = v.rank ?? 'C0';
+    if (!cur || (r !== 'C0' && rankValue(r) > rankValue(cur === 'C0' ? undefined : cur))) out[key] = r;
+  }
+  return out;
+}
+export interface Mission { id: string; group: '공용' | '동료' | '난이도'; name: string; desc: string; done: boolean; prog: [number, number]; stars: number }
+const RANK_GE = (r: Rank | undefined, min: Rank): boolean => rankValue(r) >= rankValue(min);
+export function missions(): Mission[] {
+  const st = backend.load();
+  const c = st.col ?? { clears: {}, flags: {}, seen: {} };
+  const sts = c.stages ?? {};
+  const cn = c.counts ?? {};
+  const all = Object.entries(sts).map(([k, v]) => { const [f, d, n] = k.split(':'); return { f: f as FamilyId, d: d as Difficulty, n: +n, ...v }; });
+  const any = (fn: (x: (typeof all)[number]) => boolean): boolean => all.some(fn);
+  const m = (id: string, group: Mission['group'], name: string, desc: string, cur: number, max: number, stars: number): Mission => ({ id, group, name, desc, done: cur >= max, prog: [Math.min(cur, max), max], stars });
+  const b = (x: boolean): number => (x ? 1 : 0);
+  return [
+    m('m-parts1', '공용', '부위 파괴 입문', '보스 부위를 전부 부수고 보스 격파', cn.allParts ?? 0, 1, 1),
+    m('m-parts6', '공용', '부위 파괴 장인', '부위 전부 파괴 보스 6번', cn.allParts ?? 0, 6, 3),
+    m('m-bomb', '공용', '절약 비행', '폭탄 1개 이하로 STAGE 3 이후 스테이지 클리어', b(any((x) => x.n >= 3 && x.bombs <= 1)), 1, 2),
+    m('m-hit', '공용', '아슬아슬 회피', '피격 2회 이하로 STAGE 5 클리어', b(any((x) => x.n === 5 && x.hits <= 2)), 1, 2),
+    m('m-rankA', '공용', 'A 랭크의 맛', '아무 스테이지 A 랭크 이상', b(any((x) => RANK_GE(x.rank, 'A'))), 1, 1),
+    m('m-finalA', '공용', '최종 결전의 달인', 'FINAL STAGE 를 A 랭크 이상으로', b(any((x) => x.n === 6 && RANK_GE(x.rank, 'A'))), 1, 3),
+    m('m-daily', '공용', '오늘의 영웅', '오늘의 도전 클리어', b(Object.values(st.daily).some((d) => d.cleared)), 1, 1),
+    m('m-daily3', '공용', '꾸준한 영웅', '오늘의 도전 3일 클리어', Object.values(st.daily).filter((d) => d.cleared).length, 3, 3),
+    m('m-mom2', '동료', '목욕물 폭포', '엄마와 STAGE 2 클리어', b(any((x) => x.f === 'mom' && x.n >= 2)), 1, 1),
+    m('m-dad3', '동료', '고압 소방대', '아빠와 노미스로 스테이지 클리어', b(any((x) => x.f === 'dad' && x.hits === 0)), 1, 2),
+    m('m-imo4', '동료', '프룬 요정의 별빛', '이모와 STAGE 4 를 B 랭크 이상', b(any((x) => x.f === 'imo' && x.n === 4 && RANK_GE(x.rank, 'B'))), 1, 2),
+    m('m-halm', '동료', '약손의 기적', '할머니와 폭탄 없이 스테이지 클리어', b(any((x) => x.f === 'halmeoni' && x.bombs === 0)), 1, 2),
+    m('m-hala3', '동료', '철벽 수호', '할아버지와 HARD STAGE 3 클리어', b(any((x) => x.f === 'halabeoji' && x.d === 'hard' && x.n >= 3)), 1, 3),
+    m('m-sam5', '동료', '유산균 대작전', '삼촌과 STAGE 5 의 보스 부위 전부 파괴', b(any((x) => x.f === 'samchon' && x.n === 5 && x.allParts)), 1, 2),
+    m('m-easy6', '난이도', 'EASY 완주', 'EASY 로 STAGE 1~6 모두 클리어', new Set(all.filter((x) => x.d === 'easy').map((x) => x.n)).size, 6, 2),
+    m('m-norm6', '난이도', 'NORMAL 완주', 'NORMAL 로 STAGE 1~6 모두 클리어', new Set(all.filter((x) => x.d === 'normal').map((x) => x.n)).size, 6, 3),
+    m('m-hard6', '난이도', 'HARD 완주', 'HARD 로 STAGE 1~6 모두 클리어', new Set(all.filter((x) => x.d === 'hard').map((x) => x.n)).size, 6, 5),
+    m('m-hardS', '난이도', '전설의 S', 'HARD 에서 S 랭크', b(any((x) => x.d === 'hard' && x.rank === 'S')), 1, 5),
   ];
 }

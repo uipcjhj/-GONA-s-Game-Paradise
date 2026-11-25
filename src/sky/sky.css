@@ -609,3 +609,30 @@ body.sky-hub-on .hub-back { display: none; }
 .alb-badge .bd-face { position: absolute; width: 33%; height: 33%; left: 33.5%; top: 21%; }
 .ttl2-sub span { white-space: nowrap; }
 .ttl2-logo p.ttl2-sub { margin-top: -0.4em; }
+
+/* 3차: 앨범 완성률 · 도장판 · 미션 · 폴라로이드 */
+.alb-rate { position: relative; width: min(94vw, 380px); height: 14px; background: #0c0820; border: 2px solid #3a2a66; }
+.alb-rate i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #e8b53c, #ffe9a0); }
+.alb-rate span { position: relative; display: block; text-align: center; font-size: 9px; line-height: 10px; color: #fff4d6; text-shadow: 0 1px 0 #000; }
+.alb-card.special { grid-column: span 3; display: grid; grid-template-columns: 30% 1fr; align-items: center; gap: 8px; background: linear-gradient(#ffe9a0, #e8b53c); padding: 4px; }
+.alb-card.special span { position: static; font-size: 12px; } .alb-card.special.locked { background: #261a5a; }
+.alb-stamps { display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; }
+.alb-master { display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: #1c1446; border: 2px solid #e8b53c; } .alb-master img { width: 52px; height: 52px; object-fit: contain; }
+.alb-master span { font-size: 11px; color: #ffe9a0; } .alb-master.locked { border-color: #3a2a66; } .alb-master.locked img { filter: grayscale(1) brightness(0.35); } .alb-master.locked span { color: #8a80c0; }
+.alb-sub { margin: 4px 0 0; font-size: 10px; color: #e8b53c; }
+.stamp-row { display: grid; grid-template-columns: 52px repeat(6, 1fr) 40px; gap: 3px; align-items: center; padding: 3px 4px; background: #1c1446; }
+.stamp-row > span { font-size: 10px; color: #cfc4ff; } .stamp-row.d-hard > span { color: #ffd84a; }
+.stamp-row i { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-style: normal; font-size: 10px; color: #4a3a86; border: 2px dashed #3a2a66; border-radius: 50%; }
+.stamp-row i.on { border: 2px solid #e8b53c; color: #ffe9a0; background: #2a1e5a; transform: rotate(-8deg); } .stamp-row i img { width: 120%; height: 120%; object-fit: contain; }
+.stamp-row b { position: relative; display: flex; justify-content: center; filter: grayscale(1) brightness(0.35); } .stamp-row b.on { filter: none; }
+.stamp-row b img { width: 34px; height: 34px; object-fit: contain; } .stamp-row b em { position: absolute; bottom: 0; font-style: normal; font-size: 8px; color: #fff; text-shadow: 0 1px 0 #000; }
+.mis-star { color: #ffd84a; font-size: 9px; }
+.polaroid { position: relative; width: min(84vw, 340px); padding: 8px 8px 10px; background: #fff8ea; border: 2px solid #120a26; box-shadow: 0 6px 0 rgba(0, 0, 0, 0.5); transform: rotate(-2deg); animation: res-pop 0.35s steps(4) both; display: flex; flex-direction: column; gap: 4px; }
+.polaroid.d-normal { background: #eef2ff; } .polaroid.d-hard, .polaroid.gold { background: linear-gradient(#fff4c8, #f0c860); }
+.polaroid img { width: 100%; display: block; border: 1px solid #c8b89a; }
+.polaroid q { font-family: 'Gowun Batang', serif; font-weight: 700; font-size: 13px; color: #3a1a08; text-align: center; quotes: none; }
+.polaroid small { font: 9px 'Galmuri11', monospace; color: #6a4a2a; text-align: center; }
+.polaroid .polaroid-stamp { position: absolute; right: -14px; bottom: 34px; width: 56px; border: none; transform: rotate(10deg); }
+.polaroid span.polaroid-stamp { position: absolute; right: -14px; bottom: 34px; width: 56px; transform: rotate(10deg); }
+.polaroid span.polaroid-stamp img { width: 100%; border: none; display: block; }
+.polaroid span.polaroid-stamp .ps-face { position: absolute; width: 33%; height: auto; left: 33.5%; top: 21%; border-radius: 50%; }

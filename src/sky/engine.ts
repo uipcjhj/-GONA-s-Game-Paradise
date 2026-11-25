@@ -955,6 +955,9 @@ export class SkyEngine {
     } else if (move === 'loop') {
       sx = dir > 0 ? -14 : W + 14;
       sy = 30 + (idx % 2) * 8;
+    } else if (move === 'dash') {
+      sx = dir > 0 ? -14 : W + 14;
+      sy = y + (idx % 2) * 18;
     } else if (move === 'swoop') {
       sx = dir > 0 ? -14 : W + 14;
       sy = 22 + (idx % 3) * 6;
@@ -1714,6 +1717,11 @@ export class SkyEngine {
         // V자 진형으로 내려와 잠깐 버티며 쏘고 → 바깥쪽으로 갈라져 퇴장
         if (e.age < 2.8) e.y += (e.holdY - e.y) * Math.min(1, dt * 2.4);
         else { e.x += (e.x < W / 2 ? -1 : 1) * 95 * dt; e.y -= 18 * dt; }
+        break;
+      case 'dash':
+        // 화면을 가로지르는 고속 돌진 (속도감) — 살짝 물결치며 옆으로 관통
+        e.x += e.dir * 175 * dt;
+        e.y = e.holdY + Math.sin(e.age * 5 + e.ph) * 10 + e.age * 14;
         break;
       case 'spiral': {
         // 회전하며 내려오는 소용돌이 편대
@@ -2621,6 +2629,7 @@ export class SkyEngine {
           if (Math.random() < 0.35) this.addFx('ring', hx, hy, 0.55, 0.2);
           for (let i = 0; i < 2; i++) this.part(hx, hy, rand(-70, 70), rand(-90, -10), 0.35, i ? '#ffb8d8' : '#ffffff', 2, 160);
           sfx('bossWeak');
+          if (strong) this.hitstop = Math.max(this.hitstop, 0.045); // 약점에 차지 · 강공격: 짧은 멈춤
         } else {
           this.addFx('metal', hx, hy, strong ? 1.7 : 1.25, 0.24);
           this.part(hx, hy, rand(-80, 80), rand(-100, -30), 0.3, '#ffc040', 1, 220);
@@ -2649,8 +2658,10 @@ export class SkyEngine {
         for (let i = 0; i < (strong ? 4 : 2); i++) this.part(hx, hy, rand(-90, 90), rand(-110, -20), 0.32, i % 2 ? '#fff4c0' : '#ffb040', 2, 240);
         if (e.parent && e.parent === this.boss) this.bossRecoil = Math.min(1.6, this.bossRecoil + 0.2);
       }
-      this.addFx(e.kind === 'part' ? 'metal' : 'spark', hx, hy, strong ? 1.4 : 0.8, 0.18);
-      sfx(e.kind === 'part' ? 'bossHit' : 'enemyHit', e.kind === 'part' ? 0.6 : 1);
+      this.addFx(e.kind === 'part' ? 'metal' : 'spark', hx, hy, strong ? 1.6 : e.kind === 'part' ? 1.1 : 0.8, 0.18);
+      // 소리 차등: 부위 = 높은 금속음 · 일반 적 = 기본
+      if (e.kind === 'part') sfx('bossHit', 0.75, rand(1.2, 1.35)); else sfx('enemyHit', 1);
+      if (strong) this.hitstop = Math.max(this.hitstop, e.kind === 'part' ? 0.05 : 0.03);
       if (strong) this.kick(0.2, 0.04);
     }
     e.hp -= dmg;
@@ -2747,7 +2758,9 @@ export class SkyEngine {
     }
     if (!reward) return;
     sfx('armorBreak');
-    this.kick(0.5, 0.06);
+    sfx('boomM', 0.8);
+    this.hitstop = Math.max(this.hitstop, 0.09); // 부위 파괴 순간: 확실한 히트스톱
+    this.kick(0.6, 0.07);
     this.score += p.score;
     this.partsBroken++;
     this.floatText(p.x, p.y - 8, `+${p.score}`, '#ffc040');
@@ -3457,8 +3470,11 @@ export class SkyEngine {
         const ht = e.hitT ?? 0;
         const px = e.x + (ht > 0 ? Math.sin(this.t * 90) * 1.2 : 0);
         const py = e.y - ht * 14;
-        this.g.globalAlpha = 0.4;
-        this.drawV2(this.darkOf(im) as unknown as HTMLImageElement, px + 1.5, py + 2.5, false, 0, e.pdef.cell * fw, fw, e.k);
+        // 본체와 같은 굵은 어두운 외곽선 + 붙은 자리 그림자 → '따로 얹은 그림'이 아니라 한 몸처럼
+        const dk = this.darkOf(im) as unknown as HTMLImageElement;
+        for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) this.drawV2(dk, px + ox, py + oy, false, 0, e.pdef.cell * fw, fw, e.k);
+        this.g.globalAlpha = 0.45;
+        this.drawV2(dk, px + 2, py + 3, false, 0, e.pdef.cell * fw, fw, e.k);
         this.g.globalAlpha = 1;
         this.drawV2(im, px, py, white || (e.hp < e.max * 0.25 && Math.floor(this.t * 8) % 2 === 0), 0, e.pdef.cell * fw, fw, e.k);
         const dmgK = clamp((1 - e.hp / e.max - 0.3) / 0.55, 0, 0.9);
