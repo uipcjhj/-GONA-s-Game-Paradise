@@ -5,7 +5,7 @@ import { SkyEngine, SPECIAL_NAME, type EndInfo, type FamilyId, type RunOpts } fr
 import { STAGES, DIFF, type Difficulty } from './stages';
 import { CHARACTERS } from './data/characters';
 import { settings, saveSettings, canVibrate, iosHaptic, buzz } from './settings';
-import { NS, BETA } from './ns';
+import { NS, BETA, PROD } from './ns';
 import { THEME, familyText } from './theme';
 import { packPath } from './artpack';
 import { talkLines, talkMode, type TalkKey } from './story';
@@ -20,7 +20,7 @@ const FAMILY: FamilyId[] = ['mom', 'dad', 'imo', 'halmeoni', 'halabeoji', 'samch
 const REC_KEY = `${NS}.records`;
 const DIFFS: Difficulty[] = ['easy', 'normal', 'hard'];
 // 테스트 메뉴(STAGE 1~6 선택 · 엔딩 보기): 주소에 ?dev / ?skytest, 또는 #dev (미리보기 링크는 #dev 만 전달됨)
-const DEV = /[?&](dev|skytest)/.test(location.search) || location.hash === '#dev';
+const DEV = !PROD && (/[?&](dev|skytest)/.test(location.search) || location.hash === '#dev');
 interface Rec { score: number; reach: number; clear: boolean }
 type Records = Record<Difficulty, Rec>;
 function loadRecords(): Records {
@@ -141,6 +141,13 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   }, []);
 
   useEffect(() => () => stopBgm(0.3), []);
+
+  // 응가판: 타이틀·선택·오프닝·엔딩(허브 테스트 중엔 항상)에서 세로 BETA 띠 숨김 — CSS :has 대신 body 클래스 (사파리 성능)
+  useEffect(() => {
+    const hide = (THEME.id as string) === 'poop' && (HUB || phase === 'title' || phase === 'select' || phase === 'opening' || phase === 'ending' || phase === 'hub');
+    document.body.classList.toggle('sky-nobeta', hide);
+  }, [phase]);
+  useEffect(() => () => document.body.classList.remove('sky-nobeta'), []);
 
   // 화면별 BGM (첫 터치 전에는 예약만 → 잠금이 풀리는 순간 재생)
   useEffect(() => {
@@ -381,6 +388,16 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     setPaused(p);
     sfx(p ? 'menuMove' : 'menuOk');
   };
+  // 홈 화면·다른 앱으로 나갔다 오면 전투는 일시정지 상태로 (돌아온 순간 피격·끊김 없이 이어 하기)
+  useEffect(() => {
+    if (phase !== 'play') return;
+    const onHide = (): void => {
+      if (document.visibilityState === 'hidden' && engine.current && !paused) { engine.current.setPaused(true); setPaused(true); }
+    };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', onHide);
+    return () => { document.removeEventListener('visibilitychange', onHide); window.removeEventListener('pagehide', onHide); };
+  }, [phase, paused]);
   const setOpt = (p: Partial<typeof settings>) => {
     saveSettings(p);
     setOpts({ ...settings });

@@ -15,7 +15,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { hasPack, loadArtPack, packPath } from './artpack';
-import { playBgm, prepareBgm, stopBgm, unlockAudio } from './audio';
+import { playBgm, prepareBgm, releaseBgm, stopBgm, unlockAudio } from './audio';
 import type { FamilyId } from './engine';
 
 const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
@@ -176,6 +176,15 @@ class Painter {
   W = 360;
   H = 640;
   private sil = new Map<string, HTMLCanvasElement>();
+  /** 끝날 때 만든 사본 캔버스를 바로 0 크기로 — iOS 사파리는 캔버스 메모리를 늦게 돌려줘서 다음 화면이 끊기거나 멈춤 */
+  dispose(): void {
+    for (const m of [this.sil, this.glowCache, this.vigCache, this.rayCache, this.tintCache]) {
+      for (const c of m.values()) { c.width = 0; c.height = 0; }
+      m.clear();
+    }
+    this.c.width = 0;
+    this.c.height = 0;
+  }
   constructor(private c: HTMLCanvasElement, private a: Art) {
     this.g = c.getContext('2d', { alpha: false })!;
     // 큰 배경을 한 번씩 작게 그려 GPU 에 올려 둠 (장면 전환 첫 프레임 끊김 방지)
@@ -1667,11 +1676,16 @@ export function OpeningCinematic({ onDone, startAt = 0 }: { onDone: () => void; 
     let painter: Painter | null = null;
     let t0 = 0;
     const drawMs: number[] = [];
+    // 자동 화질: 실제 기기에서 1초 평균 프레임이 45fps 아래면 해상도 배율을 한 단계씩 (1.5 → 1.25 → 1)
+    let dprCap = 1.5;
+    let gapSum = 0;
+    let gapN = 0;
+    let lastMs = 0;
     const fit = () => {
       const box = boxRef.current;
       const c = ref.current;
       if (!box || !c || !painter) return;
-      const dpr = Math.min(1.5, window.devicePixelRatio || 1); // 컷신은 1.5배까지 (모바일 부하 절감)
+      const dpr = Math.min(dprCap, window.devicePixelRatio || 1); // 컷신은 1.5배까지 · 프레임이 밀리면 자동으로 낮춤
       painter.resize(box.clientWidth, box.clientHeight, dpr);
     };
     // 그림 + 음악 + 자막 글꼴 준비 (늦거나 실패해도 4초 뒤엔 시작 · 글꼴이 없으면 시스템 명조)
@@ -1695,6 +1709,16 @@ export function OpeningCinematic({ onDone, startAt = 0 }: { onDone: () => void; 
         painter.frame(Math.min(t, OPENING_END + 4));
         drawMs.push(performance.now() - f0);
         if (drawMs.length > 240) drawMs.shift();
+        if (lastMs && t > 0.6) {
+          const gap = Math.min(100, ms - lastMs);
+          gapSum += gap;
+          if (++gapN >= 45) {
+            if (gapSum / gapN > 22 && dprCap > 1 && !document.hidden) { dprCap = Math.max(1, dprCap - 0.25); fit(); }
+            gapSum = 0;
+            gapN = 0;
+          }
+        }
+        lastMs = ms;
         const ui = Math.floor(t * 10);
         if (ui !== lastUi) { lastUi = ui; setNow(t); }
         if (t > OPENING_END + 1.4) { finish(); return; }
@@ -1711,6 +1735,7 @@ export function OpeningCinematic({ onDone, startAt = 0 }: { onDone: () => void; 
           scene: () => sceneAt(tRef.current),
           art: () => (artRef.current ? SLOTS.map((n) => `${n}:${artRef.current!.op[n] ? '새 그림' : `임시(${FALLBACK[n] ?? '-'})`}`) : []),
           font: () => (document.fonts ? document.fonts.check('16px "Gowun Batang"', '고나') : false),
+          dpr: () => dprCap,
           /** 검수용: 컷신 시각을 바로 옮김 (음악은 그대로) */
           seek: (s: number) => { t0 = performance.now() - s * 1000; },
           /** 검수용: 최근 그리기 시간(ms) 평균·최대 */
@@ -1721,6 +1746,10 @@ export function OpeningCinematic({ onDone, startAt = 0 }: { onDone: () => void; 
     return () => {
       alive = false;
       cancelAnimationFrame(raf);
+      painter?.dispose();
+      window.setTimeout(() => releaseBgm('opening'), 1500); // 페이드아웃이 끝난 뒤 오프닝 곡 메모리 반납
+      painter = null;
+      artRef.current = null;
       window.removeEventListener('resize', fit);
       window.removeEventListener('orientationchange', fit);
       delete (window as unknown as { __skyOpening?: unknown }).__skyOpening;

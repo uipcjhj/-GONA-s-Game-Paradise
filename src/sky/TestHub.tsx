@@ -3,13 +3,14 @@
  *  타이틀 · 오프닝 장면별 · 캐릭터 선택 · STAGE 1~6 (시작/중간보스/보스 바로) · 엔딩 장면별 · 크레딧 · 새 그림 갤러리
  *  어느 화면에서든 왼쪽 위 '◀ 테스트 목록' 으로 돌아옴 (SkyGame 이 sky-hub 이벤트를 받음)
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { packPath } from './artpack';
 import { SCENES } from './OpeningCinematic';
 import { STAGES } from './stages';
 import { THEME } from './theme';
+import { PROD } from './ns';
 
-export const HUB = location.hash === '#hub' || /[?&]hub\b/.test(location.search);
+export const HUB = !PROD && (location.hash === '#hub' || /[?&]hub\b/.test(location.search));
 const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
 
 export type HubGo =
@@ -36,6 +37,11 @@ const GALLERY: [string, string[]][] = [
 export function TestHub({ go }: { go: (g: HubGo) => void }) {
   const [view, setView] = useState<string | null>(null);
   const [tab, setTab] = useState<'play' | 'art'>('play');
+  // 허브 화면에서는 '◀ 테스트 목록' 버튼을 숨김 (CSS :has 대신 body 클래스 — 사파리 성능)
+  useEffect(() => {
+    document.body.classList.add('sky-hub-on');
+    return () => document.body.classList.remove('sky-hub-on');
+  }, []);
   return (
     <div className="sky hub">
       <header className="hub-head">

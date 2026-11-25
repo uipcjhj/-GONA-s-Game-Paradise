@@ -181,8 +181,13 @@ const textCache = new Map<string, HTMLCanvasElement>();
 function textImg(s: string, col: string, size: number): HTMLCanvasElement {
   const key = `${size}|${col}|${s}`;
   let c = textCache.get(key);
-  if (c) return c;
-  if (textCache.size > 360) textCache.clear();
+  if (c) {
+    // 최근에 쓴 글자를 뒤로 (오래 안 쓴 것부터 지움 — 예전엔 360장마다 통째로 비워 한꺼번에 다시 만들며 끊김)
+    textCache.delete(key);
+    textCache.set(key, c);
+    return c;
+  }
+  if (textCache.size > 200) textCache.delete(textCache.keys().next().value as string);
   c = document.createElement('canvas');
   const g = c.getContext('2d')!;
   const font = `700 ${size * R}px Galmuri11, monospace`;
@@ -362,6 +367,7 @@ export class SkyEngine {
     this.score = opts.score;
     this.resize();
     this.bgBaked = this.bakeBackdrop();
+    this.prewarm();
     this.cCd = this.fam === 'halmeoni' ? 5 : this.fam === 'halabeoji' ? 1 : 1.2;
     canvas.addEventListener('pointerdown', this.onDown);
     canvas.addEventListener('pointermove', this.onMove);
@@ -392,6 +398,14 @@ export class SkyEngine {
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('keyup', this.onKeyUp);
     stopSfx(this.chargeSnd);
+    // 이 판에서 만든 캔버스를 바로 0 크기로 (iOS 사파리 캔버스 메모리 한도 · 늦은 회수로 인한 끊김 방지)
+    for (const m of [this.propBaked, this.ebImg, this.pbImg]) { for (const c of m.values()) { c.width = 0; c.height = 0; } m.clear(); }
+    this.bgBaked.width = 0;
+    this.bgBaked.height = 0;
+    for (const im of Object.values(this.art)) {
+      const c = im && this.a.flash.get(im);
+      if (c) { c.width = 0; c.height = 0; this.a.flash.delete(im); }
+    }
   }
   /** 스토리 대화 시작 (대사가 없으면 아무것도 안 함 → 케이크 테마·대사 없는 순간은 그대로 진행) */
   private talk(key: TalkKey): boolean {
@@ -438,6 +452,7 @@ export class SkyEngine {
   }
   setPaused(p: boolean): void {
     this.paused = p;
+    if (!p) this.last = performance.now();
     this.setCharging(false);
     this.pushHud();
   }
@@ -592,12 +607,14 @@ export class SkyEngine {
     this.dragY = e.clientY;
     this.dragPx = this.px;
     this.dragPy = this.py;
+    // 화면 크기는 누를 때 한 번만 잼 (움직일 때마다 재면 DOM 이 바뀐 프레임마다 강제 레이아웃 → iPhone 끊김)
+    this.dragK = (W / Math.max(1, this.canvas.getBoundingClientRect().width)) * 1.45;
     e.preventDefault();
   };
+  private dragK = 1.45;
   private onMove = (e: PointerEvent): void => {
     if (e.pointerId !== this.dragId) return;
-    const rect = this.canvas.getBoundingClientRect();
-    const k = (W / rect.width) * 1.45; // 손가락보다 살짝 더 멀리 움직이는 감도
+    const k = this.dragK; // 손가락보다 살짝 더 멀리 움직이는 감도
     this.targetX = this.dragPx + (e.clientX - this.dragX) * k;
     this.targetY = this.dragPy + (e.clientY - this.dragY) * k;
     this.hasTarget = true;
@@ -1420,7 +1437,7 @@ export class SkyEngine {
     }
     const bs: BossState = {
       def, mode: 'enter', atk: '', at: 0, rest: 1, last: '', phase: 1, n: 0, tx: W / 2, sub: 0, minion: 8, dyingT: 0, teleT: 0, cycle: 0,
-      mask: this.buildMask(def.art, def.frames, def.k), life: 0,
+      mask: this.maskOf(def), life: 0,
     };
     (e as Enemy & { bs: BossState }).bs = bs;
     if (!def.mid) {
@@ -1437,6 +1454,25 @@ export class SkyEngine {
     return (e as Enemy & { bs: BossState }).bs;
   }
 
+  /** 보스 마스크는 스테이지 시작 때 미리 만들어 둠 (보스 등장 순간 getImageData 로 끊기지 않게) */
+  private masks = new Map<string, { w: number; h: number; m: Uint8Array }[]>();
+  private maskOf(def: BossDef): { w: number; h: number; m: Uint8Array }[] {
+    const key = `${def.art}|${def.frames}|${def.k}`;
+    let m = this.masks.get(key);
+    if (!m) { m = this.buildMask(def.art, def.frames, def.k); this.masks.set(key, m); }
+    return m;
+  }
+  /** 첫 피격·첫 등장 때 만들던 사본(흰 번쩍임 · 마스크)을 시작 전에 미리 → 전투 중 큰 캔버스 생성 없음 */
+  private prewarm(): void {
+    try {
+      for (const def of [this.st.boss, this.st.midboss]) if (def) { this.maskOf(def); whiteOf(this.a, this.art[def.art]); for (const pd of def.parts) whiteOf(this.a, this.art[pd.art]); }
+      for (const n of ['enemy-drone', 'enemy-fighter', 'enemy-orb', 'enemy-wyvern', 'enemy-gunship'] as ArtName[]) if (this.art[n]) whiteOf(this.a, this.art[n]);
+      for (const n of ['icon-heart', 'icon-bomb'] as const) if (this.a.img[n]) whiteOf(this.a, this.a.img[n]);
+      for (let d = 0; d <= 9; d++) textImg(String(d), '#ffe9a8', 11);
+    } catch {
+      /* 미리 만들기 실패는 무시 (그때그때 만듦) */
+    }
+  }
   /** 실루엣 마스크 (논리 해상도) — 총알이 실제 그림에 닿은 지점에서 맞도록 */
   private buildMask(art: ArtName, frames: number, k: number): { w: number; h: number; m: Uint8Array }[] {
     const im = this.art[art];
@@ -3431,6 +3467,18 @@ export class SkyEngine {
   }
 
   private text(s: string, x: number, y: number, col = '#fff7dc', align: 'left' | 'center' | 'right' = 'left', size = 11): void {
+    if (s.length >= 4 && /^\d+$/.test(s)) {
+      // 점수처럼 자주 바뀌는 숫자: 숫자 한 글자씩 캐시된 그림을 이어 그림 (바뀔 때마다 새 캔버스를 만들지 않음)
+      const adv = (textImg('0', col, size).width - 4 * R) / R;
+      const w0 = s.length * adv + 4;
+      let x0 = align === 'left' ? x - 2 : align === 'center' ? x - w0 / 2 : x - w0 + 2;
+      for (const ch of s) {
+        const im = textImg(ch, col, size);
+        this.g.drawImage(im, Math.round(x0 * R) / R, Math.round((y - 1) * R) / R, im.width / R, im.height / R);
+        x0 += adv;
+      }
+      return;
+    }
     const im = textImg(s, col, size);
     const w = im.width / R;
     const x0 = align === 'left' ? x - 2 : align === 'center' ? x - w / 2 : x - w + 2;

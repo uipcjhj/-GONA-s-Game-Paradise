@@ -75,31 +75,46 @@ export type SfxName = keyof typeof SFX;
 export const SFX_NAMES = Object.keys(SFX) as SfxName[];
 export const BGM_NAMES = Object.keys(BGM) as BgmName[];
 
-// ───────── 음원 데이터 (JS 청크에 data: URL 로 포함 · 필요할 때 불러옴) ─────────
-const SOURCES = import.meta.glob('./sound/*.{mp3,wav}', { query: '?inline', import: 'default' }) as Record<string, () => Promise<string>>;
+// ───────── 음원 데이터: 따로 된 파일(브라우저 캐시)로 필요할 때만 받음 ─────────
+// (예전엔 JS 청크 안의 base64 문자열 → 한 번 불러온 곡은 문자열·바이트가 끝까지 메모리에 남아 iPhone 메모리 압박)
+const SOURCES = import.meta.glob('./sound/*.{mp3,wav}', { query: '?url', import: 'default', eager: true }) as Record<string, string>;
 const srcKey = (file: string): string | undefined => Object.keys(SOURCES).find((k) => k.endsWith(`/${file}.mp3`) || k.endsWith(`/${file}.wav`));
+const MIME = (url: string): string => (/\.wav(\?|$)|audio\/wav/.test(url) ? 'audio/wav' : 'audio/mpeg');
+const FETCH_RETRY = [500, 1500, 3000];
 
 const bytesCache = new Map<string, Promise<{ bytes: Uint8Array; mime: string } | null>>();
+async function fetchBytes(url: string): Promise<Uint8Array> {
+  let err: unknown = null;
+  for (let i = 0; i <= FETCH_RETRY.length; i++) {
+    try {
+      // GitHub Pages 가 가끔 잠깐 503 → 주소를 살짝 바꿔 다시
+      const r = await fetch(i === 0 || url.startsWith('data:') ? url : `${url}${url.includes('?') ? '&' : '?'}retry=${i}`);
+      if (r.ok) return new Uint8Array(await r.arrayBuffer());
+      err = `HTTP ${r.status}`;
+    } catch (e) {
+      err = e;
+    }
+    if (i < FETCH_RETRY.length) await new Promise((res) => setTimeout(res, FETCH_RETRY[i]));
+  }
+  throw new Error(String(err));
+}
 function getBytes(file: string): Promise<{ bytes: Uint8Array; mime: string } | null> {
   let p = bytesCache.get(file);
   if (!p) {
     const k = srcKey(file);
-    p = !k
+    const url = k ? SOURCES[k] : '';
+    p = !url
       ? Promise.resolve(null)
-      : SOURCES[k]()
-          .then((url) => {
-            const comma = url.indexOf(',');
-            const mime = url.slice(5, url.indexOf(';'));
-            const bin = atob(url.slice(comma + 1));
-            const bytes = new Uint8Array(bin.length);
-            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-            return { bytes, mime };
-          })
+      : fetchBytes(url)
+          .then((bytes) => ({ bytes, mime: MIME(url) }))
           .catch((e: unknown) => {
             note(`음원 로드 실패 ${file}: ${String(e)}`);
+            bytesCache.delete(file);
             return null;
           });
     bytesCache.set(file, p);
+    // 배경음은 디코딩·재생 준비가 끝나면 원본 바이트를 놓아 줌 (다시 필요하면 브라우저 캐시에서 다시 받음)
+    if (file.startsWith('bgm-')) void p.then(() => window.setTimeout(() => bytesCache.delete(file), 0));
   }
   return p;
 }
@@ -319,6 +334,14 @@ export function preloadAudio(which: 'menu' | 'game'): Promise<void> {
 }
 
 /** 이번 화면에 필요한 BGM 만 디코딩해 두고, 나머지 BGM 버퍼는 메모리에서 해제 (iPhone 메모리 보호) */
+/** 다 쓴 배경음의 디코딩 사본을 놓아 줌 (오프닝 곡 ≈18MB 등 · 지금 재생 중이면 그대로) */
+export function releaseBgm(name: BgmName): void {
+  if (curName === name) return;
+  buffers.delete(`bgm-${name}`);
+  decoding.delete(`bgm-${name}`);
+  const u = blobUrls.get(`bgm-${name}`);
+  if (u) { URL.revokeObjectURL(u); blobUrls.delete(`bgm-${name}`); }
+}
 export function prepareBgm(names: BgmName[]): Promise<void> {
   const keep = new Set<string>([...names, 'clear', 'over'].map((n) => `bgm-${n}`));
   if (curName) keep.add(`bgm-${curName}`);

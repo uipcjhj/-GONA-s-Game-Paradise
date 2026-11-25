@@ -133,6 +133,8 @@ export function loadStageArt(key: StageDef['art']): Promise<StageArt> {
     });
     stageCache.set(key, p);
     p.catch(() => stageCache.delete(key));
+    // 지난 스테이지 그림은 놓아 줌 (지금 · 바로 앞 스테이지만 기억 → 후반 스테이지에서 메모리가 계속 쌓이지 않게)
+    while (stageCache.size > 2) stageCache.delete(stageCache.keys().next().value as string);
   }
   return p;
 }

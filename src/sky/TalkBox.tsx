@@ -173,7 +173,7 @@ export function BarkBox({ line, onNext, st, art }: { line: TalkLine; onNext: () 
   useEffect(() => { recordSeen('bark', line); }, [line]);
   useEffect(() => {
     if (shown >= full) return;
-    const id = window.setTimeout(() => setShown((n) => n + 1), 22);
+    const id = window.setTimeout(() => setShown((n) => n + 2), 44); // 전투 중 무전창: 2글자씩 (React 갱신 절반 · 속도는 같음)
     return () => window.clearTimeout(id);
   }, [shown, full]);
   useEffect(() => {

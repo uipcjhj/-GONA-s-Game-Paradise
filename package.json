@@ -10,7 +10,8 @@
     "preview": "vite preview --host",
     "typecheck": "tsc --noEmit",
     "shots": "node tools/mobile-shots.cjs",
-    "build:poop": "VITE_SKY_THEME=poop VITE_SKY_PREVIEW=1 VITE_SKY_BETA=1 VITE_SKY_NS=gona.skypoop vite build --outDir dist-poop"
+    "build:poop": "VITE_SKY_THEME=poop VITE_SKY_PREVIEW=1 VITE_SKY_BETA=1 VITE_SKY_NS=gona.skypoop vite build --outDir dist-poop",
+    "build:adventure": "VITE_SKY_THEME=poop VITE_SKY_PREVIEW=1 VITE_SKY_PROD=1 VITE_SKY_NS=gona.skyadv vite build --outDir dist-adventure"
   },
   "dependencies": {
     "galmuri": "^2.40.3",
