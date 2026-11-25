@@ -9,6 +9,7 @@
  *  최고 점수 · 최고 랭크 · 최단 클리어는 보드의 기록들에서 따로 계산 (bestOf)
  */
 import { NS } from './ns';
+import { profileKey } from './profile';
 import type { Difficulty } from './stages';
 import type { FamilyId } from './engine';
 import { rankValue, type Rank } from './rank';
@@ -27,6 +28,8 @@ interface Store {
   v: 2;
   boards: Record<string, Entry[]>;
   daily: Record<string, { cleared: boolean; tries: number }>;
+  /** 수집: 동료 × 난이도 클리어(기념사진 · 배지) · 업적 깃발 · 처음 본 사진 */
+  col?: { clears: Record<string, { at: string; score: number; rank?: Rank }>; flags: Record<string, boolean>; seen: Record<string, boolean> };
 }
 const KEY = `${NS}.rec2`;
 const MAX = 10;
@@ -39,8 +42,8 @@ export interface ScoreBackend {
 const local: ScoreBackend = {
   load() {
     try {
-      const s = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Store | null;
-      if (s && s.v === 2 && s.boards) return { v: 2, boards: s.boards, daily: s.daily ?? {} };
+      const s = JSON.parse(localStorage.getItem(profileKey(KEY)) ?? 'null') as Store | null;
+      if (s && s.v === 2 && s.boards) return { v: 2, boards: s.boards, daily: s.daily ?? {}, col: s.col };
     } catch {
       /* 깨진 기록은 무시하고 새로 */
     }
@@ -48,7 +51,7 @@ const local: ScoreBackend = {
   },
   save(s) {
     try {
-      localStorage.setItem(KEY, JSON.stringify(s));
+      localStorage.setItem(profileKey(KEY), JSON.stringify(s));
     } catch {
       /* 저장 공간 부족 등 → 이번 기록만 저장 안 됨 */
     }
@@ -143,4 +146,65 @@ export function dailyTry(date: string, cleared: boolean): void {
 export function dailyHistory(n = 7): { date: string; d: Daily; cleared: boolean; best: number }[] {
   const st = backend.load();
   return Object.keys(st.daily).sort().reverse().slice(0, n).map((date) => ({ date, d: dailyFor(date), cleared: st.daily[date].cleared, best: bestOf(dailyBoard(date)).score }));
+}
+
+// ───────── 수집: 기념사진 · 클리어 배지 · 업적 ─────────
+export const DIFF_ORDER: Difficulty[] = ['easy', 'normal', 'hard'];
+const colOf = (st: Store): NonNullable<Store['col']> => (st.col ??= { clears: {}, flags: {}, seen: {} });
+export const clearKey = (fam: FamilyId, diff: Difficulty): string => `${fam}:${diff}`;
+export function clears(): Record<string, { at: string; score: number; rank?: Rank }> {
+  return backend.load().col?.clears ?? {};
+}
+/** FINAL 클리어 기록 → 새로 얻은 기념사진(= 배지)인지 */
+export function recordClear(fam: FamilyId, diff: Difficulty, score: number, rank?: Rank): { isNew: boolean } {
+  const st = backend.load();
+  const c = colOf(st);
+  const k = clearKey(fam, diff);
+  const isNew = !c.clears[k];
+  const prev = c.clears[k];
+  c.clears[k] = { at: prev?.at ?? today(), score: Math.max(prev?.score ?? 0, score), rank: rankValue(rank) > rankValue(prev?.rank) ? rank : prev?.rank };
+  backend.save(st);
+  return { isNew };
+}
+export function setFlags(f: Record<string, boolean>): void {
+  const st = backend.load();
+  const c = colOf(st);
+  let ch = false;
+  for (const [k, v] of Object.entries(f)) if (v && !c.flags[k]) { c.flags[k] = true; ch = true; }
+  if (ch) backend.save(st);
+}
+export function markSeen(k: string): void {
+  const st = backend.load();
+  const c = colOf(st);
+  if (!c.seen[k]) { c.seen[k] = true; backend.save(st); }
+}
+export interface Achievement { id: string; name: string; desc: string; done: boolean; prog: [number, number] }
+const FAM_ALL: FamilyId[] = ['mom', 'dad', 'imo', 'halmeoni', 'halabeoji', 'samchon'];
+const FAM_KO2: Record<FamilyId, string> = { mom: '엄마', dad: '아빠', imo: '이모', halmeoni: '할머니', halabeoji: '할아버지', samchon: '삼촌' };
+export function achievements(): Achievement[] {
+  const st = backend.load();
+  const c = st.col ?? { clears: {}, flags: {}, seen: {} };
+  const has = (f: FamilyId, d?: Difficulty): boolean => (d ? !!c.clears[clearKey(f, d)] : DIFF_ORDER.some((x) => !!c.clears[clearKey(f, x)]));
+  const n = Object.keys(c.clears).length;
+  const famN = FAM_ALL.filter((f) => has(f)).length;
+  const diffN = DIFF_ORDER.filter((d) => FAM_ALL.some((f) => has(f, d))).length;
+  const hardN = FAM_ALL.filter((f) => has(f, 'hard')).length;
+  const daily = Object.values(st.daily).some((d) => d.cleared);
+  const a = (id: string, name: string, desc: string, cur: number, max: number): Achievement => ({ id, name, desc, done: cur >= max, prog: [Math.min(cur, max), max] });
+  return [
+    a('first', '첫 번째 탈출', '어떤 동료와든 FINAL 클리어', n, 1),
+    ...FAM_ALL.map((f) => a(`fam-${f}`, `${FAM_KO2[f]}와 함께`, `${FAM_KO2[f]}와 FINAL 클리어`, has(f) ? 1 : 0, 1)),
+    a('easy', 'EASY 정복', 'EASY 로 FINAL 클리어', FAM_ALL.some((f) => has(f, 'easy')) ? 1 : 0, 1),
+    a('normal', 'NORMAL 정복', 'NORMAL 로 FINAL 클리어', FAM_ALL.some((f) => has(f, 'normal')) ? 1 : 0, 1),
+    a('hard', 'HARD 정복', 'HARD 로 FINAL 클리어', hardN > 0 ? 1 : 0, 1),
+    a('allfam', '온 가족 출동', '동료 6명 모두로 클리어', famN, 6),
+    a('alldiff', '난이도 마스터', 'EASY · NORMAL · HARD 모두 클리어', diffN, 3),
+    a('hardall', '전설의 가족', '동료 6명 모두 HARD 클리어', hardN, 6),
+    a('nobomb1', '맨손의 용기', '폭탄 없이 STAGE 1 클리어', c.flags['nobomb-s1'] ? 1 : 0, 1),
+    a('nomiss', '노미스 비행', '한 번도 안 맞고 스테이지 클리어', c.flags.nomiss ? 1 : 0, 1),
+    a('rankS', 'S 랭크', '스테이지 랭크 S 획득', c.flags.rankS ? 1 : 0, 1),
+    a('parts', '부위 파괴왕', '보스 부위를 전부 부수고 격파', c.flags.allparts ? 1 : 0, 1),
+    a('daily', '오늘의 영웅', '오늘의 도전 클리어', daily ? 1 : 0, 1),
+    a('album', '추억 앨범 완성', '기념사진 18장 모두 모으기', n, 18),
+  ];
 }

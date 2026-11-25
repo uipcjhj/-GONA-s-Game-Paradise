@@ -125,6 +125,8 @@ interface Enemy {
   parent?: Enemy; dx?: number; dy?: number; partFire?: 'aim' | 'ring' | 'needle' | 'homing' | 'none'; partCd?: number;
   /** 응가 팩 보스 부위 (parts.png 칸 · 이름 · 파괴 효과) */
   pdef?: PartDef;
+  /** 부위 피격 반응 (밀림 · 떨림) 남은 시간 */
+  hitT?: number;
 }
 /** 레이저: 경고선(warn) → 발사(life) */
 interface Laser { x: number; y: number; ang: number; len: number; w: number; warn: number; life: number; t: number; rot: number; owner: Enemy | null; alive: boolean }
@@ -146,6 +148,8 @@ interface BossState {
   sigDue?: boolean;
   /** 부위 파괴 결과: 쓰지 않게 된 공격 · 새로 열린 공격 · 약점 배율 · 쉬는 시간 배율 · 남은 잔해 */
   cut: Attack[]; rage: Attack[]; weakMul: number; restMul: number;
+  /** 약점 노출 표시 남은 시간 (부위가 깨진 직전) · 노출 여부 */
+  exposedT?: number;
   wrecks: { dx: number; dy: number; cell: number; k: number }[];
 }
 
@@ -328,6 +332,23 @@ export class SkyEngine {
   private partSmoke: number[][] = [];
   /** 이번 스테이지 보스 부위 파괴 수 · 전체 수 (랭크 평가) */
   partsBroken = 0;
+  /** 부서져 떨어지는 부위 조각 */
+  private chunks: { cell: number; x: number; y: number; vx: number; vy: number; rot: number; vr: number; k: number; t: number }[] = [];
+  private darkCache = new Map<CanvasImageSource, HTMLCanvasElement>();
+  /** 그림자용 어두운 실루엣 (한 번만 만듦) */
+  private darkOf(src: HTMLImageElement): HTMLCanvasElement {
+    let c = this.darkCache.get(src);
+    if (!c) {
+      const [cc, g] = this.mkCanvas(src.width, src.height);
+      g.drawImage(src, 0, 0);
+      g.globalCompositeOperation = 'source-in';
+      g.fillStyle = '#1a0a20';
+      g.fillRect(0, 0, cc.width, cc.height);
+      c = cc;
+      this.darkCache.set(src, c);
+    }
+    return c;
+  }
   private startScore = 0;
   private diffId: Difficulty = 'normal';
   private bombsUsed = 0;
@@ -913,7 +934,9 @@ export class SkyEngine {
   }
 
   private spawnWave(w: Wave): void {
-    const n = w.n;
+    // 추가 편대는 난이도별로 수가 다름 (EASY 는 크게 줄이고, 1기 이하면 생략)
+    const n = w.extra ? Math.round(w.n * ({ easy: 0.55, normal: 1, hard: 1.35 } as const)[this.diffId]) : w.n;
+    if (n < 2 && w.extra) return;
     const gap = w.gap ?? 0.35;
     for (let i = 0; i < n; i++) {
       const x = n === 1 ? (w.x0 ?? 90) : (w.x0 ?? 30) + (((w.x1 ?? 150) - (w.x0 ?? 30)) * i) / (n - 1);
@@ -932,11 +955,18 @@ export class SkyEngine {
     } else if (move === 'loop') {
       sx = dir > 0 ? -14 : W + 14;
       sy = 30 + (idx % 2) * 8;
+    } else if (move === 'swoop') {
+      sx = dir > 0 ? -14 : W + 14;
+      sy = 22 + (idx % 3) * 6;
+    } else if (move === 'vee') {
+      const off = Math.abs(idx - 2) * 13;
+      sy = -16 - off;
+      y -= off;
     }
     const hp = this.ehp(d.hp);
     this.en.push({
       id: this.nextId++, kind: 'small', type, art: d.art, k: 0.5, pat: move, fireKind: fire ?? d.fire,
-      x: sx, y: sy, x0: x, vx: 0, vy: 0, hp, max: hp, age: 0, flash: 0, fire: rand(d.cd[0], d.cd[1]) * 0.6 * this.dif.cd, dir, hr: d.hr, score: d.score,
+      x: sx, y: sy, x0: move === 'spiral' ? W / 2 + dir * 24 : x, vx: 0, vy: 0, hp, max: hp, age: 0, flash: 0, fire: rand(d.cd[0], d.cd[1]) * 0.6 * this.dif.cd, dir, hr: d.hr, score: d.score,
       dead: false, ph: idx * 0.7, burst: 0, holdY: y, drop,
     });
   }
@@ -1674,6 +1704,24 @@ export class SkyEngine {
         e.y += e.vy * dt;
         break;
       }
+      case 'swoop': {
+        // 옆에서 들어와 고나 쪽으로 깊게 휘어 내려왔다가 반대편 위로 빠져나감
+        e.x += e.dir * 96 * dt;
+        e.y = 22 + Math.sin(Math.min(Math.PI, e.age * 1.25)) * (165 + (e.ph % 3) * 8) - Math.max(0, e.age - 2.5) * 60;
+        break;
+      }
+      case 'vee':
+        // V자 진형으로 내려와 잠깐 버티며 쏘고 → 바깥쪽으로 갈라져 퇴장
+        if (e.age < 2.8) e.y += (e.holdY - e.y) * Math.min(1, dt * 2.4);
+        else { e.x += (e.x < W / 2 ? -1 : 1) * 95 * dt; e.y -= 18 * dt; }
+        break;
+      case 'spiral': {
+        // 회전하며 내려오는 소용돌이 편대
+        const a = e.age * 2.6 + e.ph * 1.8;
+        e.x = e.x0 + Math.cos(a) * 34;
+        e.y = -20 + e.age * 40 + Math.sin(a) * 22;
+        break;
+      }
       case 'snake':
         e.vx = e.dir * 62;
         e.vy = Math.cos(e.age * 3 + e.ph) * 32;
@@ -1780,6 +1828,7 @@ export class SkyEngine {
   }
 
   private updatePart(e: Enemy, dt: number): void {
+    if (e.hitT) e.hitT = Math.max(0, e.hitT - dt);
     const p = e.parent!;
     if (p.dead) { e.dead = true; return; }
     e.x = p.x + (e.dx ?? 0);
@@ -2471,6 +2520,8 @@ export class SkyEngine {
   }
 
   private updateFx(dt: number): void {
+    for (const c of this.chunks) { c.t += dt; c.x += c.vx * dt; c.vy += 320 * dt; c.y += c.vy * dt; c.rot += c.vr * dt; }
+    if (this.chunks.length) compact(this.chunks, (c) => c.t < 1.4 && c.y < H + 40);
     for (const p of this.parts) {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
@@ -2592,6 +2643,12 @@ export class SkyEngine {
       }
     } else if (src !== 'bomb') {
       if (e.kind === 'part' && (special)) dmg *= 0.6;
+      if (e.kind === 'part') {
+        // 부위 피격: 살짝 밀려 들어가며 떨림 + 금속 파편 · 불티 (손맛)
+        e.hitT = 0.13;
+        for (let i = 0; i < (strong ? 4 : 2); i++) this.part(hx, hy, rand(-90, 90), rand(-110, -20), 0.32, i % 2 ? '#fff4c0' : '#ffb040', 2, 240);
+        if (e.parent && e.parent === this.boss) this.bossRecoil = Math.min(1.6, this.bossRecoil + 0.2);
+      }
       this.addFx(e.kind === 'part' ? 'metal' : 'spark', hx, hy, strong ? 1.4 : 0.8, 0.18);
       sfx(e.kind === 'part' ? 'bossHit' : 'enemyHit', e.kind === 'part' ? 0.6 : 1);
       if (strong) this.kick(0.2, 0.04);
@@ -2679,7 +2736,15 @@ export class SkyEngine {
     const pd = p.pdef;
     const b = p.parent ? this.bsOf(p.parent) : null;
     // 부서진 자리에 파손 그림이 그대로 남음 (응가 팩 부위)
-    if (pd && b && pd.cell != null) b.wrecks.push({ dx: p.dx ?? 0, dy: p.dy ?? 0, cell: pd.cell + 1, k: pd.k });
+    if (pd && b && pd.cell != null) {
+      b.wrecks.push({ dx: p.dx ?? 0, dy: p.dy ?? 0, cell: pd.cell + 1, k: pd.k });
+      // 떨어져 나가는 조각: 부서지기 전 모습이 회전하며 튕겨 떨어짐 (본체엔 파손 그림이 남음)
+      if (this.chunks.length < 6) this.chunks.push({ cell: pd.cell, x: p.x, y: p.y, vx: Math.sign(p.dx ?? 1) * rand(40, 80), vy: rand(-140, -90), rot: 0, vr: rand(-6, 6), k: pd.k * 0.8, t: 0 });
+      if (p.parent) { p.parent.flash = 0.09; if (p.parent === this.boss) this.bossRecoil = 1.6; }
+      this.addFx('ring', p.x, p.y, 1.6, 0.4);
+      for (let i = 0; i < 10; i++) this.addFx('smoke', p.x + rand(-10, 10), p.y + rand(-8, 8), rand(0.6, 1.1), rand(0.6, 1.1), -rand(10, 30));
+      if (pd.fx?.cover || pd.fx?.weak) b.exposedT = 3;
+    }
     if (!reward) return;
     sfx('armorBreak');
     this.kick(0.5, 0.06);
@@ -2960,6 +3025,12 @@ export class SkyEngine {
     for (const it of this.items) this.drawItem(it.kind, it.x, it.y + Math.round(Math.sin(it.age * 6)), it.age);
     for (const e of this.en) if (e.kind !== 'part') this.drawEnemy(e);
     for (const e of this.en) if (e.kind === 'part') this.drawEnemy(e);
+    if (this.chunks.length && this.art.parts) {
+      const pim = this.art.parts;
+      const fw = pim.width / 4;
+      for (const c of this.chunks) { this.g.globalAlpha = clamp(1.4 - c.t, 0, 1); this.drawV2(pim, c.x, c.y, c.t < 0.08, c.rot, c.cell * fw, fw, c.k); }
+      this.g.globalAlpha = 1;
+    }
     this.drawBeams();
     this.drawSpecialUnder();
 
@@ -3381,9 +3452,19 @@ export class SkyEngine {
     }
     if (e.kind === 'part') {
       if (e.pdef?.cell != null) {
-        // 보스 고유 부위 (A · B): 맞을수록 붉게 깜빡 → 거의 부서지면 계속 깜빡
+        // 보스 고유 부위 (A · B): 본체에 붙은 그림자 · 맞으면 안쪽으로 밀리며 떨림 · 체력이 줄수록 파손 그림이 서서히 드러남
         const fw = im.width / 4;
-        this.drawV2(im, e.x, e.y, white || (e.hp < e.max * 0.3 && Math.floor(this.t * 8) % 2 === 0), 0, e.pdef.cell * fw, fw, e.k);
+        const ht = e.hitT ?? 0;
+        const px = e.x + (ht > 0 ? Math.sin(this.t * 90) * 1.2 : 0);
+        const py = e.y - ht * 14;
+        this.g.globalAlpha = 0.4;
+        this.drawV2(this.darkOf(im) as unknown as HTMLImageElement, px + 1.5, py + 2.5, false, 0, e.pdef.cell * fw, fw, e.k);
+        this.g.globalAlpha = 1;
+        this.drawV2(im, px, py, white || (e.hp < e.max * 0.25 && Math.floor(this.t * 8) % 2 === 0), 0, e.pdef.cell * fw, fw, e.k);
+        const dmgK = clamp((1 - e.hp / e.max - 0.3) / 0.55, 0, 0.9);
+        if (dmgK > 0) { this.g.globalAlpha = dmgK; this.drawV2(im, px, py, false, 0, (e.pdef.cell + 1) * fw, fw, e.k); this.g.globalAlpha = 1; }
+        // 금이 많이 갔으면 작은 불꽃 · 연기
+        if (dmgK > 0.4 && Math.random() < 0.12) this.part(px + rand(-6, 6), py + rand(-6, 6), rand(-10, 10), rand(-40, -15), 0.5, '#ff8a30', 2, -30);
         if (e.hp < e.max) this.hpBar(e.x - 9, e.y + e.hr, 18, e.hp / e.max);
         return;
       }
@@ -3403,6 +3484,18 @@ export class SkyEngine {
       const pim = this.art.parts;
       const pfw = pim.width / 4;
       for (const w of b.wrecks) this.drawV2(pim, e.x + shakeX + w.dx, e.y - recoil + w.dy, white, 0, w.cell * pfw, pfw, w.k);
+    }
+    // 약점 노출: 깨진 자리 너머 약점에 붉은 조준 고리가 맥동 (어디를 쏴야 하는지 한눈에)
+    if (e === this.boss && b.weakMul > 1.5 && def.weak && b.mode !== 'dying') {
+      const g = this.g;
+      const pul = 0.5 + 0.5 * Math.sin(this.t * 7);
+      if (b.exposedT && b.exposedT > 0) b.exposedT -= 1 / 60;
+      g.strokeStyle = (b.exposedT ?? 0) > 0 ? '#ffffff' : '#ff4060';
+      g.globalAlpha = 0.5 + 0.4 * pul;
+      g.lineWidth = 1.5;
+      g.beginPath(); g.arc(e.x + def.weak.dx + shakeX, e.y + def.weak.dy - recoil, def.weak.r + 2 + pul * 3, 0, TAU); g.stroke();
+      g.globalAlpha = 1;
+      if ((b.exposedT ?? 0) > 1.5) this.text('WEAK!', e.x + def.weak.dx, e.y + def.weak.dy - def.weak.r - 14, '#ff6f8a', 'center', 9);
     }
     if (def.core) {
       // 최종 보스: 성채 위의 심장 코어 (부품이 남아 있으면 어둡게 봉인)

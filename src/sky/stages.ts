@@ -40,7 +40,9 @@ export type ArtName =
 export const ART_NAMES: ArtName[] = ['bg-backdrop', 'island-castle', 'island-ruins', 'island-small', 'island-tower', 'clocktower', 'airship', 'cloud-big', 'cloud-small', 'enemy-drone', 'enemy-fighter', 'enemy-orb', 'enemy-wyvern', 'enemy-gunship', 'boss'];
 
 export type EnemyName = 'drone' | 'fighter' | 'wyvern' | 'orb' | 'gunship';
-export type Move = 'sine' | 'strafe' | 'swarm' | 'dive' | 'turret' | 'heavy' | 'hold' | 'zig' | 'loop' | 'snake';
+export type Move = 'sine' | 'strafe' | 'swarm' | 'dive' | 'turret' | 'heavy' | 'hold' | 'zig' | 'loop' | 'snake'
+  /** 화려한 편대 (2차 리마스터): 옆에서 훅 파고들었다 빠짐 · V자 진형 · 회전 진입 */
+  | 'swoop' | 'vee' | 'spiral';
 export type Fire = 'aim1' | 'aim3' | 'needle2' | 'fireball' | 'ring' | 'gun' | 'spread5' | 'snipe' | 'curtain' | 'spiralMini' | 'none';
 export interface EnemyDef { art: ArtName; hp: number; hr: number; score: number; fire: Fire; cd: [number, number] }
 export const ENEMIES: Record<EnemyName, EnemyDef> = {
@@ -63,6 +65,8 @@ export interface Wave {
   fire?: Fire;
   /** 이 편대의 마지막 기체가 떨어뜨릴 아이템 */
   drop?: 'star' | 'banana' | 'strawberry' | 'cookie';
+  /** 추가 편대: 난이도에 따라 수가 달라지고 EASY 에서는 줄어듦 */
+  extra?: boolean;
 }
 export type Step =
   | { wait: number }
@@ -471,6 +475,40 @@ export const STAGES: StageDef[] = [
     },
   },
 ];
+
+// 화려한 추가 편대: 스테이지가 뒤로 갈수록 더 많이 · 더 다양하게 (보스 직전엔 몰아치기)
+const FORM: [EnemyName, number, Move][][] = [
+  [['drone', 5, 'vee'], ['fighter', 3, 'swoop']],
+  [['fighter', 4, 'swoop'], ['drone', 5, 'vee'], ['drone', 6, 'spiral']],
+  [['drone', 6, 'spiral'], ['fighter', 5, 'swoop'], ['fighter', 5, 'vee'], ['wyvern', 3, 'swoop']],
+  [['wyvern', 4, 'swoop'], ['drone', 7, 'spiral'], ['fighter', 6, 'vee'], ['fighter', 5, 'swoop']],
+  [['fighter', 7, 'vee'], ['wyvern', 5, 'swoop'], ['drone', 8, 'spiral'], ['fighter', 6, 'swoop'], ['wyvern', 5, 'vee']],
+  [['drone', 8, 'spiral'], ['fighter', 7, 'swoop'], ['wyvern', 6, 'vee'], ['drone', 8, 'spiral'], ['fighter', 7, 'swoop'], ['wyvern', 6, 'swoop']],
+];
+function addFormations(stages: StageDef[]): void {
+  for (const st of stages) {
+    const forms = FORM[st.id - 1] ?? [];
+    const sc = st.script;
+    const end = sc.findIndex((q) => 'warning' in q);
+    const last = end > 0 ? end : sc.length;
+    // 대본 중간중간 (대기 사이) 고르게 끼워 넣음 · 방향은 번갈아
+    forms.forEach(([e, n, move], i) => {
+      const at = Math.round(((i + 1) * last) / (forms.length + 1.5));
+      let k = at;
+      while (k < last && !('wait' in sc[k])) k++;
+      sc.splice(k, 0, { wave: { e, n, move, extra: true, dir: i % 2 ? -1 : 1, x0: 22, x1: 158, y: 64, gap: move === 'vee' ? 0 : 0.22, drop: i === forms.length - 1 ? 'star' : undefined } });
+    });
+    // 보스 직전 몰아치기 (STAGE 3~): 양쪽에서 동시에 휘어 들어옴
+    const w = sc.findIndex((q) => 'warning' in q);
+    if (st.id >= 3 && w > 0) {
+      sc.splice(w, 0,
+        { wave: { e: 'fighter', n: 3 + st.id, move: 'swoop', dir: 1, extra: true, gap: 0.2 } },
+        { wave: { e: 'fighter', n: 3 + st.id, move: 'swoop', dir: -1, extra: true, gap: 0.2 } },
+        { wait: 4 });
+    }
+  }
+}
+addFormations(STAGES);
 
 // 테마 팩(케이크 기본 / 응가 대탈출)에 맞춰 이름·대사 교체 — 기본 팩은 아무것도 바꾸지 않음
 applyTheme(STAGES);

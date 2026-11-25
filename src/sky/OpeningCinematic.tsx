@@ -119,7 +119,7 @@ interface Art {
   r3: Record<string, Img>;
 }
 /** 리마스터 그림 목록: 아기방(저녁·흐림·밤) · 꿈 터널 · 마왕성 · 고나 연속동작 프레임 · 세로 키아트 */
-const R3 = ['opening3/strain-full.jpg', 'opening3/cry-full.jpg', 'opening3/sortie.jpg', 'opening3/room-eve.jpg', 'opening3/room-eve-blur.jpg', 'opening3/room-night.jpg', 'opening3/dream.jpg', 'opening3/castle.jpg', 'title/keyart-tall.jpg',
+const R3 = ['opening3/eat-full.jpg', 'opening3/sleep-full.jpg', 'opening3/strain-full.jpg', 'opening3/cry-full.jpg', 'opening3/sortie.jpg', 'opening3/room-eve.jpg', 'opening3/room-eve-blur.jpg', 'opening3/room-night.jpg', 'opening3/dream.jpg', 'opening3/castle.jpg', 'title/keyart-tall.jpg',
   ...['bite', 'chew', 'full', 'pat', 'clutch', 'drowsy'].map((n) => `opening3/a-${n}.png`),
   ...['strain0', 'sleep', 'wake', 'fly', 'rub', 'giggle'].map((n) => `opening3/b-${n}.png`),
   ...['eat2', 'startle', 'strain', 'strain2', 'cry'].map((n) => `opening3/n-${n}.png`)];
@@ -648,7 +648,9 @@ class Painter {
     const r = this.a.r3;
     const st = r['strain-full'];
     const cr = r['cry-full'];
-    if (!st && !cr) return;
+    const ea = r['eat-full'];
+    const sl = r['sleep-full'];
+    if (!st && !cr && !ea && !sl) return;
     const { W, H } = this;
     const g = this.g;
     const show = (im: Img, a: number, z: number, oy: number, shake: number): void => {
@@ -662,6 +664,19 @@ class Painter {
       g.drawImage(im, (W - w) / 2 + Math.sin(t * 73) * shake, (H - h) / 2 + oy + Math.cos(t * 61) * shake * 0.5, w, h);
       g.restore();
     };
+    if (ea && t < T.s3 + 0.6) {
+      // 오프닝 첫 장면: 저녁 햇살 속 이유식 · 떡뻥 먹는 고나 (천천히 다가가는 카메라 · 오물오물)
+      const a = eIO(lin(t, 0.2, 1.2)) * (1 - eIO(lin(t, T.s3 - 0.2, T.s3 + 0.6)));
+      const chew = t > 4 && t < 6.9 ? Math.max(0, Math.sin(t * 15)) * 0.006 : 0;
+      show(ea, a, 1.12 - 0.08 * lin(t, 0, T.s3) + chew, 10 - 16 * lin(t, 0, T.s3), 0);
+      if (t > 6.9 && t < 9.4) this.ptext('냠냠!', W / 2 + 70, H * 0.36, 9, '#fff2c8', 0.9 * a * lin(t, 6.9, 7.2));
+    }
+    if (sl && t >= T.s5 - 0.3) {
+      // 울먹이다 잠듦 → 금빛 꿈 먼지가 달빛 창으로 (꿈 세계로 넘어가기 직전)
+      const a = eIO(lin(t, T.s5 - 0.3, T.s5 + 0.5)) * (1 - eIO(lin(t, T.kingdom - 0.5, T.kingdom)));
+      show(sl, a, 1.03 + 0.12 * eIn(lin(t, T.s5, T.kingdom)), -16 * lin(t, T.s5, T.kingdom), 0);
+      this.dust(t, 30, '#ffe7a8', 0.7 * a, 18);
+    }
     if (st && t >= T.s4 && t < T.cry + 0.5) {
       // 끄응! — 밀어 넣을 때마다 카메라가 살짝 다가가고 화면이 부들부들
       const a = eIO(lin(t, T.s4, T.s4 + 0.6)) * (1 - eIO(lin(t, T.cry - 0.2, T.cry + 0.4)));

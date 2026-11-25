@@ -95,7 +95,8 @@ export function PoopEnding({ onDone, startScene = 0 }: { onDone: () => void; sta
   // 아케이드 업그레이드 일러스트 (있으면 우선): 힘주기 클로즈업 · 뿡! 성공의 순간
   const strainArt = P('ending/strain.jpg');
   const reliefArt = P('ending/relief.jpg');
-  const ill = scene.id === 'strain' && !wake && strainArt ? strainArt : scene.id === 'fart' && reliefArt ? reliefArt : null;
+  const wakeArt = P('ending/wake.jpg');
+  const ill = scene.id === 'strain' && wake && wakeArt ? wakeArt : scene.id === 'strain' && !wake && strainArt ? strainArt : scene.id === 'fart' && reliefArt ? reliefArt : null;
   return (
     <div className={`sky end pe pes-${scene.id}`}>
       <div className="pe-stage" key={scene.id}>

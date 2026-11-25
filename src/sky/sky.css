@@ -550,3 +550,62 @@ body.sky-hub-on .hub-back { display: none; }
 @media (max-height: 680px) { .ttl2-logo img { width: min(76vw, 340px); } }
 .pe-epi .pe-bg { object-position: 80% 45%; animation: pe-epi 12s ease-out both; }
 @keyframes pe-epi { from { transform: scale(1.14); filter: brightness(1.25); } to { transform: scale(1.02); filter: none; } }
+
+/* ═══ 2차 리마스터: 닉네임 · 앨범(기념사진) · 배지 · 업적 · 결과 화면 기념사진 ═══ */
+.ttl2-row .ttl2-btn { font-size: clamp(10px, 3.1vw, 13px); }
+.ttl2-btn.ttl2-album { border-color: #ff9ec0; color: #ffe0ec; }
+.ttl2-foot .ttl2-nick { color: #9cd8ff; }
+.nick-modal { position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; background: rgba(8, 4, 20, 0.72); }
+.nick-box { width: min(86vw, 320px); padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 8px; text-align: center; background: linear-gradient(#1c1446, #120a2e); border: 3px solid #e8b53c; outline: 2px solid #120a26; box-shadow: 0 0 0 5px #3a2a66; font-family: 'Galmuri11', monospace; color: #fff4d6; }
+.nick-box h2 { margin: 0; font-size: 17px; color: #ffd84a; } .nick-box p { margin: 0; font-size: 11px; color: #cfc4ff; }
+.nick-box input { font: 700 16px 'Galmuri11', monospace; padding: 8px; text-align: center; color: #2a1206; background: #fff4d6; border: 2px solid #120a26; outline: none; }
+.sky.album { justify-content: flex-start; padding-top: calc(env(safe-area-inset-top) + 10px); gap: 6px; font-family: 'Galmuri11', monospace; }
+.alb-who { margin: 0; font-size: 11px; color: #cfc4ff; text-align: center; width: min(94vw, 380px); } .alb-who b { color: #9cd8ff; }
+.alb-mini { margin-left: 6px; padding: 1px 6px; font: 10px 'Galmuri11', monospace; color: #ffe9a0; background: #261a5a; border: 1px solid #6a5ab8; cursor: pointer; }
+.alb-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.alb-card { position: relative; padding: 3px 3px 16px; background: #fff4d6; border: 2px solid #120a26; cursor: pointer; }
+.alb-card.d-normal { background: #dfe8ff; } .alb-card.d-hard { background: linear-gradient(#ffe9a0, #e8b53c); }
+.alb-card img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block; }
+.alb-card.locked { background: #261a5a; } .alb-card.locked img { filter: grayscale(1) brightness(0.3) contrast(1.4) blur(2.5px); }
+.alb-card span { position: absolute; left: 4px; bottom: 2px; font-size: 10px; color: #2a1206; } .alb-card.locked span { color: #8a80c0; }
+.alb-card em { position: absolute; right: 4px; bottom: 2px; font-style: normal; font-size: 9px; color: #7a3a0a; } .alb-card.locked em { color: #6a5ab8; }
+.alb-badges { display: flex; flex-direction: column; gap: 6px; }
+.alb-brow { display: grid; grid-template-columns: 64px repeat(3, 1fr); align-items: center; gap: 6px; padding: 4px; background: #1c1446; border-left: 3px solid #6a5ab8; }
+.alb-bname { font-size: 12px; color: #fff4d6; }
+.alb-badge { position: relative; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
+.alb-badge .bd-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.alb-badge .bd-face { position: relative; width: 46%; height: 46%; object-fit: cover; border-radius: 50%; }
+.alb-badge em { position: absolute; bottom: -2px; font-style: normal; font-size: 8px; color: #fff4d6; text-shadow: 0 1px 0 #000; }
+.alb-badge.locked { filter: grayscale(1) brightness(0.35); }
+.alb-ach { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.alb-ach li { display: grid; grid-template-columns: 20px 1fr auto; grid-template-rows: auto auto auto; gap: 0 6px; padding: 4px 6px; background: #1c1446; border-left: 3px solid #3a2a66; color: #8a80c0; font-size: 12px; }
+.alb-ach li b { grid-row: 1 / span 3; align-self: center; color: #6a5ab8; } .alb-ach li em { grid-column: 2 / span 2; font-style: normal; font-size: 10px; }
+.alb-ach li small { grid-row: 1; grid-column: 3; font-size: 10px; } .alb-ach li.done { border-left-color: #ffd84a; color: #fff4d6; } .alb-ach li.done b { color: #ffd84a; }
+.alb-prog { grid-column: 2 / span 2; height: 4px; background: #0c0820; display: block; } .alb-prog i { display: block; height: 100%; background: #ffd84a; }
+.alb-view { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: rgba(6, 2, 14, 0.94); padding: 14px; }
+.alb-view img { max-width: 100%; max-height: 80vh; border: 6px solid #fff4d6; outline: 2px solid #120a26; animation: res-pop 0.35s steps(4) both; }
+.alb-view p { margin: 0; font-size: 11px; color: #cfc4ff; text-align: center; }
+.res-photo { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.res-photo p { margin: 0; font-size: 12px; color: #ffd84a; animation: ttlblink 0.8s steps(2) infinite; } .res-photo span { font-size: 11px; color: #cfc4ff; }
+.res-photo-card { position: relative; width: 46%; padding: 4px 4px 10px; background: #fff4d6; border: 2px solid #120a26; transform: rotate(-3deg); animation: res-photo-in 0.8s steps(6) 1.2s both; }
+.res-photo.d-hard .res-photo-card { background: linear-gradient(#ffe9a0, #e8b53c); } .res-photo.d-normal .res-photo-card { background: #dfe8ff; }
+.res-photo-card img { width: 100%; display: block; }
+.res-photo-card .res-badge { position: absolute; right: -16px; bottom: -14px; width: 52px; height: auto; transform: rotate(8deg); animation: res-stamp 0.5s steps(5) 2s both; }
+@keyframes res-photo-in { from { transform: translateY(40px) rotate(12deg) scale(0.4); opacity: 0; } to { transform: rotate(-3deg); opacity: 1; } }
+
+/* 첫 실행 관문 v2: 오프닝 첫 장면(저녁 아기방)이 흐릿하게 깔리고 금빛 먼지 — 오프닝의 일부처럼 */
+.sky.gate { background: #0c0618; }
+.gate-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.38) saturate(0.85); animation: gate-breathe 7s ease-in-out infinite alternate; }
+@keyframes gate-breathe { from { transform: scale(1.04); } to { transform: scale(1.1); } }
+.gate-dust { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.gate-dust i { position: absolute; bottom: -6px; width: 3px; height: 3px; background: #ffe7a8; box-shadow: 0 0 6px #ffcf70; opacity: 0; animation: gate-dust 5s linear infinite; }
+@keyframes gate-dust { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 0.9; } 100% { transform: translateY(-70vh); opacity: 0; } }
+.gate-chron, .gate-line, .gate-tap, .gate-note { position: relative; margin: 0; text-align: center; }
+.gate-chron { font-family: 'Gowun Batang', serif; font-size: 14px; color: #e8c477; letter-spacing: 0.12em; animation: oc-in 1.4s ease-out both; }
+.gate-line { font-family: 'Gowun Batang', serif; font-weight: 700; font-size: clamp(19px, 6vw, 24px); color: #fff1d0; text-shadow: 0 2px 6px #000; letter-spacing: 0.08em; animation: oc-in 1.4s ease-out 0.6s both; }
+.gate-tap { margin-top: 26px; font-family: 'Gowun Batang', serif; font-weight: 700; font-size: 15px; color: #ffe9a0; letter-spacing: 0.3em; text-shadow: 0 0 8px rgba(255, 190, 80, 0.6); animation: oc-in 1s ease-out 1.4s both, gate-pulse 2.2s ease-in-out 2.4s infinite; }
+@keyframes gate-pulse { 50% { opacity: 0.45; } }
+.gate-note { font-size: 11px; color: #a89ad8; animation: oc-in 1s ease-out 1.8s both; }
+.alb-badge .bd-face { position: absolute; width: 33%; height: 33%; left: 33.5%; top: 21%; }
+.ttl2-sub span { white-space: nowrap; }
+.ttl2-logo p.ttl2-sub { margin-top: -0.4em; }

@@ -97,3 +97,16 @@
 | sortie.png | opening3/sortie.jpg | 오프닝 출격 클라이맥스: 고나 + 가족 편대 | 3.5 |
 | relief.png | ending/relief.jpg | 엔딩: 해냈다! 아침 햇살 만세 (변기 없는 우회 구도) | 3.5 |
 | epilogue.png | ending/epilogue.jpg | 엔딩 에필로그: 노을 · 편히 잠든 고나 | 3.5 |
+
+---
+
+## 2026-11-25 (3차) · 정식판 2차 리마스터 (기념사진 아카이브 · 로고 · 오프닝/엔딩 장면)
+잔액 89.75 → **53.5** · **사용 36.25** (거래 내역 기준 · 실패/차단 0) · GPT Image 2.6
+
+| 원본 (art-src/sky-poop/v6/) | 적용 | 용도 | 크레딧 |
+|---|---|---|---|
+| album/<동료>-<easy·normal·hard>.png ×18 | album/*.jpg (540×720) | 동료 6 × 난이도 3 클리어 기념사진 | 22.5 |
+| badges.png | ui/badge-easy·normal·hard.png | 클리어 배지 테두리 (동·은·금) | 1.25 |
+| logo-ko.png | title/logo.png | 로고 v6: 영문 + 한글 명판 '고나의 스카이 어드벤처' | 2 |
+| eat-full · sleep-full | opening3/*.jpg | 오프닝: 이유식 먹는 고나 · 잠들며 꿈 먼지 | 7 |
+| wake.png | ending/wake.jpg | 엔딩: 아침에 눈 비비며 깨는 고나 | 3.5 |

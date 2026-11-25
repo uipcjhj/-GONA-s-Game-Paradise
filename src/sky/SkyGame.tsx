@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState, type ReactElement } from 'rea
 import { loadAssets, loadStageArt, type Assets, type StageArt } from './assets';
 import { initAudio, preloadAudio, prepareBgm, playBgm, stopBgm, sfx, isMuted, setMuted, audioUnlocked, audioState, audioTap, audioDiag, unlockAudio, reviveAudio, testBeep, forceHtmlAudio } from './audio';
 import { SkyEngine, SPECIAL_NAME, WEAPON_NAME, type EndInfo, type FamilyId, type RunOpts } from './engine';
-import { submit, bestOf, topOf, stageBoard, runBoard, dailyBoard, dailyFor, dailyState, dailyTry, dailyHistory, today, type Daily, type Submitted } from './records';
+import { submit, bestOf, topOf, stageBoard, runBoard, dailyBoard, dailyFor, dailyState, dailyTry, dailyHistory, today, recordClear, setFlags, clears, clearKey, achievements, markSeen, DIFF_ORDER, type Daily, type Submitted } from './records';
+import { activeProfile, createProfile, renameProfile, profiles, switchProfile } from './profile';
 import { parTime } from './rank';
 import { STAGES, DIFF, type Difficulty } from './stages';
 import { CHARACTERS } from './data/characters';
@@ -56,7 +57,7 @@ const SP_DESC: Record<FamilyId, string> = {
   samchon: '거대 발명 메카의 미사일 연사 + 드릴 돌진',
 };
 
-type Phase = 'loading' | 'gate' | 'hub' | 'title' | 'opening' | 'select' | 'prep' | 'play' | 'tally' | 'continue' | 'gameover' | 'ending' | 'credits' | 'records' | 'daily';
+type Phase = 'loading' | 'album' | 'gate' | 'hub' | 'title' | 'opening' | 'select' | 'prep' | 'play' | 'tally' | 'continue' | 'gameover' | 'ending' | 'credits' | 'records' | 'daily';
 
 /** GONA's Sky Adventure 화면 전체 (타이틀 → 동료 선택 → 플레이 → 결과). 월드맵과는 onExit 한 줄로만 연결됨 */
 /** 테스트 허브(#hub)일 때만 어느 화면에서든 '◀ 테스트 목록' 버튼을 띄움 */
@@ -106,6 +107,13 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   /** 방금 올린 기록 결과 (결과 화면의 NEW RECORD 표시) */
   const [subm, setSubm] = useState<Submitted | null>(null);
   const dailyRef = useRef<Daily | null>(null);
+  /** 이번 클리어로 얻은 기념사진 (결과 화면 획득 연출) */
+  const [photo, setPhoto] = useState<{ fam: FamilyId; diff: Difficulty; isNew: boolean } | null>(null);
+  const [albTab, setAlbTab] = useState<'photo' | 'badge' | 'ach'>('photo');
+  const [albView, setAlbView] = useState<string | null>(null);
+  const [prof, setProf] = useState(activeProfile);
+  const [nickEdit, setNickEdit] = useState<'new' | 'rename' | null>(null);
+  const [nickVal, setNickVal] = useState('');
   const [recTab, setRecTab] = useState<'stage' | 'run' | 'daily'>('stage');
   const [runOpts, setRunOpts] = useState<RunOpts | null>(null);
   const [stageArt, setStageArt] = useState<StageArt | null>(null);
@@ -216,6 +224,10 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
           const sc = r.stageScore + r.bonus.total;
           const e = { score: sc, rank: r.rank, time: Math.round(r.time), fam: opts.fam, stage: r.stage, at: today() };
           const sb = submit(stageBoard(r.stage, opts.diff), e);
+          // 업적 깃발 · FINAL 클리어면 기념사진(동료 × 난이도) 획득
+          setFlags({ 'nobomb-s1': r.stage === 1 && r.bombsUsed === 0, nomiss: r.hits === 0, rankS: r.rank === 'S', allparts: r.partsTotal > 0 && r.partsBroken === r.partsTotal });
+          if (r.final && !dl) setPhoto({ fam: opts.fam, diff: opts.diff, ...recordClear(opts.fam, opts.diff, r.score, r.rank) });
+          else setPhoto(null);
           if (dl) {
             const time = dl.rule === 'speed' && r.time > parTime(dl.stage) ? undefined : e.time;
             const ok = dl.rule !== 'speed' || time != null;
@@ -479,9 +491,12 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     const go = (): void => { unlockAudio(); setSoundOn(true); openingFrom.current = 'first'; setSlide(0); setPhase('opening'); };
     return (
       <div className="sky gate" onPointerDown={go} role="button" tabIndex={0} aria-label="터치하여 오프닝 시작">
-        <img className="gate-logo" src={`${BASE}${packPath('title/logo.png')}`} alt="GONA's SKY ADVENTURE" />
-        <p className="gate-tap">TOUCH TO START</p>
-        <p className="gate-note">♪ 소리를 켜고 오프닝부터 감상하세요</p>
+        <img className="gate-bg" src={`${BASE}${packPath('opening3/room-eve-blur.jpg', '')}`} alt="" />
+        <div className="gate-dust" aria-hidden>{Array.from({ length: 14 }, (_, i) => <i key={i} style={{ left: `${(i * 41) % 100}%`, animationDelay: `${(i * 0.53) % 4}s`, animationDuration: `${4 + (i % 5)}s` }} />)}</div>
+        <p className="gate-chron">서기 2026년 11월, 어느 저녁…</p>
+        <p className="gate-line">고나의 모험이 시작됩니다</p>
+        <p className="gate-tap">— TOUCH TO BEGIN —</p>
+        <p className="gate-note">♪ 소리를 켜고 감상하세요</p>
       </div>
     );
   }
@@ -583,11 +598,27 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
             </div>
             <div className="ttl2-row">
               <button type="button" className="ttl2-btn ttl2-daily" onClick={sub(() => setPhase('daily'))}>★ 오늘의 도전{dailyState().cleared ? ' ✓' : ''}</button>
-              <button type="button" className="ttl2-btn" onClick={sub(() => { setRecTab('stage'); setPhase('records'); })}>랭킹 · 기록</button>
+              <button type="button" className="ttl2-btn" onClick={sub(() => { setRecTab('stage'); setPhase('records'); })}>랭킹</button>
+              <button type="button" className="ttl2-btn ttl2-album" onClick={sub(() => { setAlbTab('photo'); setPhase('album'); })}>앨범 · 업적</button>
             </div>
-            <p className="ttl2-foot">{!soundOn ? '♪ 화면을 터치하면 음악이 켜져요' : <>{best > 0 && <b>HI-SCORE {String(best).padStart(8, '0')}</b>} 6 STAGES · {BETA ? '공개 테스트판' : PROD ? 'VER 1.1' : '개발판'}</>}</p>
+            <p className="ttl2-foot">{!soundOn ? '♪ 화면을 터치하면 음악이 켜져요' : <>{prof && <b className="ttl2-nick">{prof.nick}</b>}{best > 0 && <b>HI-SCORE {String(best).padStart(8, '0')}</b>} 6 STAGES · {BETA ? '공개 테스트판' : PROD ? 'VER 1.1' : '개발판'}</>}</p>
           </div>
           <div className="ttl-wipe" aria-hidden />
+          {((!prof && (!location.search.includes('skytest') || location.search.includes('firstrun'))) || nickEdit) && (
+            <div className="nick-modal" onPointerDown={(e) => e.stopPropagation()}>
+              <div className="nick-box">
+                <h2>{nickEdit === 'rename' ? '이름 바꾸기' : '모험가의 이름은?'}</h2>
+                <p>기록 · 기념사진 · 배지가 이 이름으로 모여요</p>
+                <input value={nickVal} maxLength={10} placeholder="예: 고나아빠" onChange={(e) => setNickVal(e.target.value)} autoFocus />
+                <button type="button" className="sky-btn sky-btn-go" onClick={() => {
+                  sfx('menuOk');
+                  if (nickEdit === 'rename' && prof) renameProfile(nickVal); else createProfile(nickVal);
+                  setProf(activeProfile()); setRecords(loadRecords()); setNickEdit(null); setNickVal('');
+                }}>{nickEdit === 'rename' ? '바꾸기' : '시작하기'}</button>
+                {nickEdit && prof && <button type="button" className="sky-btn" onClick={() => { setNickEdit(null); setNickVal(''); }}>취소</button>}
+              </div>
+            </div>
+          )}
         </div>
       );
     }
@@ -732,6 +763,81 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
         <div className="sel-btns cred-btns">
           <button type="button" className="sky-btn sky-btn-go" onClick={() => { unlockAudio(); sfx('menuOk'); start(d.fam, d.diff, d.stage, d); }}>도전 시작!</button>
           <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setRecTab('daily'); setPhase('records'); }}>기록</button>
+          <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setPhase('title'); }}>타이틀</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === 'album') {
+    const cl = clears();
+    const FAM_NAME = (f: FamilyId): string => (f === 'samchon' ? '삼촌' : CHARACTERS[f].name);
+    const got = Object.keys(cl).length;
+    const ach = achievements();
+    const photoSrc = (f: FamilyId, d: Difficulty): string => `${BASE}${packPath(`album/${f}-${d}.jpg`, '')}`;
+    return (
+      <div className="sky end cred album">
+        <h2 className="recs-h">ALBUM · 추억 앨범</h2>
+        <p className="alb-who">{prof ? <><b>{prof.nick}</b> 님의 앨범</> : '모험가'} · 기념사진 {got}/18 · 업적 {ach.filter((a) => a.done).length}/{ach.length}
+          <button type="button" className="alb-mini" onClick={() => { setNickVal(prof?.nick ?? ''); setNickEdit('rename'); setPhase('title'); }}>이름 바꾸기</button>
+          {profiles().length > 1 && <button type="button" className="alb-mini" onClick={() => { const ps = profiles(); const i = ps.findIndex((p) => p.id === prof?.id); switchProfile(ps[(i + 1) % ps.length].id); setProf(activeProfile()); setRecords(loadRecords()); }}>다른 모험가</button>}
+          <button type="button" className="alb-mini" onClick={() => { setNickVal(''); setNickEdit('new'); setPhase('title'); }}>새 모험가</button>
+        </p>
+        <nav className="recs-tabs">
+          {(['photo', 'badge', 'ach'] as const).map((t) => <button key={t} type="button" className={albTab === t ? 'on' : ''} onClick={() => { sfx('menuMove'); setAlbTab(t); }}>{t === 'photo' ? '기념사진' : t === 'badge' ? '클리어 배지' : '업적'}</button>)}
+        </nav>
+        <div className="recs-body">
+          {albTab === 'photo' && (
+            <div className="alb-grid">
+              {FAMILY.map((f) => DIFF_ORDER.map((d) => {
+                const k = clearKey(f, d);
+                const on = !!cl[k];
+                return (
+                  <button key={k} type="button" className={`alb-card d-${d}${on ? '' : ' locked'}`} onClick={() => { if (on) { sfx('menuOk'); markSeen(k); setAlbView(k); } else sfx('menuMove'); }}>
+                    <img src={photoSrc(f, d)} alt={on ? `${FAM_NAME(f)} ${d} 기념사진` : '잠긴 기념사진'} loading="lazy" decoding="async" />
+                    <span>{on ? FAM_NAME(f) : '???'}</span><em>{d.toUpperCase()}</em>
+                  </button>
+                );
+              }))}
+            </div>
+          )}
+          {albTab === 'badge' && (
+            <div className="alb-badges">
+              {FAMILY.map((f) => (
+                <div key={f} className="alb-brow">
+                  <span className="alb-bname">{FAM_NAME(f)}</span>
+                  {DIFF_ORDER.map((d) => {
+                    const on = !!cl[clearKey(f, d)];
+                    return (
+                      <div key={d} className={`alb-badge d-${d}${on ? '' : ' locked'}`} title={`${FAM_NAME(f)} ${d.toUpperCase()} 클리어`}>
+                        <img className="bd-frame" src={`${BASE}${packPath(`ui/badge-${d}.png`, '')}`} alt="" />
+                        <img className="bd-face" src={`${BASE}${packPath(`chars/${f}/face.png`)}`} alt={FAM_NAME(f)} />
+                        <em>{d.toUpperCase()}</em>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          )}
+          {albTab === 'ach' && (
+            <ul className="alb-ach">
+              {ach.map((a) => (
+                <li key={a.id} className={a.done ? 'done' : ''}>
+                  <b>{a.done ? '★' : '☆'}</b><span>{a.name}</span><em>{a.desc}</em>
+                  <i className="alb-prog"><i style={{ width: `${(a.prog[0] / a.prog[1]) * 100}%` }} /></i><small>{a.prog[0]}/{a.prog[1]}</small>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        {albView && (() => { const [f, d] = albView.split(':') as [FamilyId, Difficulty]; return (
+          <div className="alb-view" onClick={() => setAlbView(null)}>
+            <img src={photoSrc(f, d)} alt="기념사진" />
+            <p>{FAM_NAME(f)} · {d.toUpperCase()} 클리어 기념 · {cl[albView]?.at} · {cl[albView]?.score?.toLocaleString()}점 · 터치하면 닫기</p>
+          </div>
+        ); })()}
+        <div className="sel-btns cred-btns">
           <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setPhase('title'); }}>타이틀</button>
         </div>
       </div>
@@ -890,10 +996,11 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
                 {canVibrate ? (
                   <>
                     <button type="button" className={opts.vibrate ? 'on' : ''} onClick={() => { setOpt({ vibrate: !opts.vibrate }); if (!opts.vibrate) window.setTimeout(() => buzz([60, 80, 60], 0), 30); }}>{opts.vibrate ? '켜짐' : '꺼짐'}</button>
-                    {iosHaptic && <em>iPhone: 짧은 ‘톡’만 가능</em>}
+                    <button type="button" onClick={() => buzz([80, 60, 80, 60, 120], 0)}>테스트</button>
+                    <em>{iosHaptic ? 'iPhone(iOS 18+): 짧은 ‘톡’ 방식 · 설정 › 사운드 및 햅틱 › 시스템 햅틱이 켜져 있어야 함' : 'Android 등: 표준 진동 (패턴 지원)'}</em>
                   </>
                 ) : (
-                  <em>이 브라우저 미지원</em>
+                  <em>이 브라우저는 진동 미지원 → 화면 흔들림 · 섬광 · 효과음으로 대신 알려 줘요</em>
                 )}
               </div>
               <div className="sky-opt">
@@ -939,6 +1046,16 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
                 <p className="res-new">NEW RECORD! {[subm.newScore && '최고 점수', subm.newRank && '최고 랭크', subm.newTime && '최단 클리어'].filter(Boolean).join(' · ')}{subm.place > 0 && ` · ${subm.place}위`}</p>
               )}
               {daily && !subm && <p className="res-new miss">기준 시간 초과 — 도전 실패! 다시 노려 보세요</p>}
+              {result.final && photo && (
+                <div className={`res-photo d-${photo.diff}`}>
+                  <p>{photo.isNew ? '★ NEW! 기념사진 · 배지 획득 ★' : '기념사진 (이미 획득)'}</p>
+                  <div className="res-photo-card">
+                    <img src={`${BASE}${packPath(`album/${photo.fam}-${photo.diff}.jpg`, '')}`} alt="클리어 기념사진" />
+                    <img className="res-badge" src={`${BASE}${packPath(`ui/badge-${photo.diff}.png`, '')}`} alt="" />
+                  </div>
+                  <span>{photo.fam === 'samchon' ? '삼촌' : CHARACTERS[photo.fam].name} · {photo.diff.toUpperCase()} CLEAR</span>
+                </div>
+              )}
               {THEME.id === 'poop' && !daily && (
                 <div className="tally-train" aria-label={`응가 열차 ${result.stage}/${STAGES.length}`}>
                   {STAGES.map((_, i) => <i key={i} className={i < result.stage ? 'on' : ''} />)}
