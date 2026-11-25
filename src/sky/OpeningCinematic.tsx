@@ -119,7 +119,7 @@ interface Art {
   r3: Record<string, Img>;
 }
 /** 리마스터 그림 목록: 아기방(저녁·흐림·밤) · 꿈 터널 · 마왕성 · 고나 연속동작 프레임 · 세로 키아트 */
-const R3 = ['opening3/room-eve.jpg', 'opening3/room-eve-blur.jpg', 'opening3/room-night.jpg', 'opening3/dream.jpg', 'opening3/castle.jpg', 'title/keyart-tall.jpg',
+const R3 = ['opening3/strain-full.jpg', 'opening3/cry-full.jpg', 'opening3/sortie.jpg', 'opening3/room-eve.jpg', 'opening3/room-eve-blur.jpg', 'opening3/room-night.jpg', 'opening3/dream.jpg', 'opening3/castle.jpg', 'title/keyart-tall.jpg',
   ...['bite', 'chew', 'full', 'pat', 'clutch', 'drowsy'].map((n) => `opening3/a-${n}.png`),
   ...['strain0', 'sleep', 'wake', 'fly', 'rub', 'giggle'].map((n) => `opening3/b-${n}.png`),
   ...['eat2', 'startle', 'strain', 'strain2', 'cry'].map((n) => `opening3/n-${n}.png`)];
@@ -610,7 +610,7 @@ class Painter {
     g.fillStyle = '#000';
     g.fillRect(-40, -40, W + 80, this.H + 80);
     const sc = sceneAt(t);
-    if (t < T.kingdom && this.a.r3['room-eve']) this.real(t);
+    if (t < T.kingdom && this.a.r3['room-eve']) { this.real(t); this.fullIll(t); }
     else if (sc === 1) this.s1(t);
     else if (sc === 2) this.s2(t);
     else if (sc === 3) this.s3(t);
@@ -618,8 +618,71 @@ class Painter {
     else if (sc === 5) this.s5(t);
     else if (sc === 6) this.s6(t);
     else if (sc === 7) this.s7(t);
-    else if (t < TITLE_AT) { if (this.a.r3['b-fly']) this.s8r(t); else this.s8(t); }
+    else if (t < TITLE_AT) { if (this.a.r3['b-fly']) this.s8r(t); else this.s8(t); this.sortie(t); }
     else this.title(t);
+  }
+
+  /** 출격 클라이맥스 일러스트: 노을 하늘로 솟구치는 고나 + 뒤따르는 가족 — 카메라가 다가가다 금빛으로 번지며 타이틀 */
+  private sortie(t: number): void {
+    const im = this.a.r3.sortie;
+    if (!im || t < T.rise - 0.4) return;
+    const { W, H } = this;
+    const g = this.g;
+    const a = eIO(lin(t, T.rise - 0.4, T.rise + 0.4));
+    const z = 1.04 + 0.32 * eIn(lin(t, T.rise, TITLE_AT));
+    const k = Math.max(W / im.width, H / im.height) * z;
+    const w = im.width * k;
+    const h = im.height * k;
+    g.save();
+    g.globalAlpha = a;
+    g.imageSmoothingEnabled = true;
+    g.drawImage(im, (W - w) / 2, (H - h) * 0.42 + Math.sin(t * 5) * 2, w, h);
+    g.restore();
+    this.speed(t, 2, 0.25 + 0.4 * lin(t, T.toward, TITLE_AT), '255,240,200', 40, 1.4);
+    this.vignette(0.45);
+    this.fill('#fff2d8', eIn(lin(t, TITLE_AT - 0.5, TITLE_AT)) * 0.85);
+  }
+
+  /** 장면 일러스트 (배경과 고나가 한 장으로 그려진 컷): 힘주기 · 달밤의 울먹임 — 있으면 방 위에 덮어 크로스페이드 */
+  private fullIll(t: number): void {
+    const r = this.a.r3;
+    const st = r['strain-full'];
+    const cr = r['cry-full'];
+    if (!st && !cr) return;
+    const { W, H } = this;
+    const g = this.g;
+    const show = (im: Img, a: number, z: number, oy: number, shake: number): void => {
+      if (!im || a <= 0.001) return;
+      const k = Math.max(W / im.width, H / im.height) * z;
+      const w = im.width * k;
+      const h = im.height * k;
+      g.save();
+      g.globalAlpha = a;
+      g.imageSmoothingEnabled = true;
+      g.drawImage(im, (W - w) / 2 + Math.sin(t * 73) * shake, (H - h) / 2 + oy + Math.cos(t * 61) * shake * 0.5, w, h);
+      g.restore();
+    };
+    if (st && t >= T.s4 && t < T.cry + 0.5) {
+      // 끄응! — 밀어 넣을 때마다 카메라가 살짝 다가가고 화면이 부들부들
+      const a = eIO(lin(t, T.s4, T.s4 + 0.6)) * (1 - eIO(lin(t, T.cry - 0.2, T.cry + 0.4)));
+      let push = 0;
+      for (const p of PUSHES) { const d = t - p; if (d >= 0 && d < 0.6) push = Math.max(push, Math.exp(-d * 5)); }
+      const heat = lin(t, T.s4, T.peak);
+      show(st, a, 1.04 + 0.09 * lin(t, T.s4, T.cry) + 0.035 * push, 8 - 14 * lin(t, T.s4, T.cry), (0.3 + 1.3 * heat) * (t < T.puff ? 1 : 0.15));
+      if (heat > 0) this.glow(W / 2, H * 0.45, 140 + 40 * push, 'rgba(255,80,40,0.45)', (0.1 + 0.3 * heat) * a);
+      PUSHES.forEach((p, i) => {
+        const d = t - p;
+        if (d < 0 || d > 0.9) return;
+        this.ptext('끄응!', W / 2 + (i % 2 ? 76 : -76), H * 0.3 - d * 8, 11, '#ffb08a', (1 - d / 0.9) * 1.3 * a, i % 2 ? 0.18 : -0.18);
+      });
+      if (t >= T.puff) { const d = t - T.puff; this.ptext('…뿌웅?', W / 2 + 60, H * 0.6, 9, '#f2e6c8', clamp(d * 8) * clamp(1 - (d - 0.2) / 0.15) * a); }
+    }
+    if (cr && t >= T.cry - 0.2 && t < T.kingdom) {
+      // 달밤의 울먹임 → 잠드는 장면(아기방 밤)으로 천천히 돌아감
+      const a = eIO(lin(t, T.cry - 0.2, T.cry + 0.5)) * (1 - eIO(lin(t, T.s5 - 0.1, T.s5 + 0.8)));
+      show(cr, a, 1.03 + 0.07 * lin(t, T.cry, T.s5 + 0.8), -6 * lin(t, T.cry, T.s5), 0);
+      if (t < 20.2) this.ptext('훌쩍…', W / 2 + ((Math.floor((t - T.cry) / 0.8) % 2) ? 64 : -64), H * 0.3, 9, '#bcd2ff', 0.85 * a * lin(t, T.cry + 0.5, T.cry + 0.8));
+    }
   }
 
   // ═════════ 리마스터: 현실 세계 (0 ~ 23.2초) — 아기방 안의 고나, 하나로 이어진 카메라 ═════════

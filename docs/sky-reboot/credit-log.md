@@ -83,3 +83,17 @@
 | gona-hero.png | opening2/gona-hero.png | 오프닝 각성(출격) 컷 — 임시였던 칸 | 1.25 |
 | (차단) 엔딩 힘주기 · 뿡! 성공 일러스트 2장 | 미적용 | 안전 필터가 '아기 + 유아 변기' 구도를 차단 → 재시도하지 않음 | 0 |
 | **합계** | 9장 적용 | | **11.25** |
+
+---
+
+## 2026-11-25 (2차) · 오프닝 · 타이틀 · 엔딩 완성도 업 (사용자 승인: 오늘 사용 허용)
+잔액 115.25 → **92.5** · **사용 22.75** · 모델 GPT Image 2.6 (로고 high 2k · 장면 xhigh 2k 9:16) · 참고: 아기방 아침 · 고나 힘주기 원화 · 출격 고나 · 키아트
+
+| 원본 (art-src/sky-poop/v5/) | 적용 | 용도 | 크레딧 |
+|---|---|---|---|
+| logo1~4.png | logo1 → title/logo.png (나머지 3장 미적용 시안) | 타이틀 로고 시안 4종 → 1번(금빛 날개 · 크림 왕관 문장) 선택 | 8 |
+| strain-full.png | opening3/strain-full.jpg | 오프닝: 저녁 아기방에서 힘주는 고나 (배경 일체형) | 3.5 |
+| cry-full.png | opening3/cry-full.jpg | 오프닝: 달밤 아기방에서 울먹이는 고나 | 3.5 |
+| sortie.png | opening3/sortie.jpg | 오프닝 출격 클라이맥스: 고나 + 가족 편대 | 3.5 |
+| relief.png | ending/relief.jpg | 엔딩: 해냈다! 아침 햇살 만세 (변기 없는 우회 구도) | 3.5 |
+| epilogue.png | ending/epilogue.jpg | 엔딩 에필로그: 노을 · 편히 잠든 고나 | 3.5 |

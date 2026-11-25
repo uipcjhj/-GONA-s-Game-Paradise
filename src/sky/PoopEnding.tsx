@@ -17,7 +17,7 @@ const nm = (f: FamilyId | 'gona') => (f === 'samchon' ? '삼촌' : CHARACTERS[f]
 const L = (who: FamilyId | 'gona' | 'narr' | 'train', text: string): TalkLine =>
   who === 'narr' ? { who: 'narr', name: '', text } : who === 'train' ? { who: 'train', name: '응가 열차', text } : { who, name: nm(who), text, fam: who };
 
-type SceneId = 'train' | 'white' | 'strain' | 'fart' | 'success' | 'hug';
+type SceneId = 'train' | 'white' | 'strain' | 'fart' | 'success' | 'hug' | 'epi';
 const SCENES: { id: SceneId; lines: TalkLine[] }[] = [
   { id: 'train', lines: [
     L('narr', '변비마왕 꽉막혀가 쓰러지자, 마지막 성문이 활짝 열렸다!'),
@@ -45,6 +45,11 @@ const SCENES: { id: SceneId; lines: TalkLine[] }[] = [
     L('narr', '온 가족이 고나를 꼭 안아 주었다.'),
     L('narr', '세상에서 가장 작은 영웅의, 가장 위대한 탈출.'),
   ] },
+  // 에필로그 (그림이 있을 때만): 노을 지는 아기방 · 편히 잠든 고나 → 크레딧
+  { id: 'epi', lines: [
+    L('narr', '그날 밤, 고나는 세상에서 가장 편안한 잠에 들었다.'),
+    L('narr', '배 속 소화왕국에도 다시 평화가 찾아왔다. …다음 이유식이 오기 전까지는.'),
+  ] },
 ];
 
 if (location.search.includes('skytest')) Object.assign(window, { __skyEndingExpected: SCENES.flatMap((s) => s.lines.map((l) => l.text)) });
@@ -62,6 +67,7 @@ export function PoopEnding({ onDone, startScene = 0 }: { onDone: () => void; sta
       if (n === 'fart') { sfx('boomS', 0.9); sfx('shotHeavy', 0.6); }
       if (n === 'success') sfx('gaugeFull', 0.9);
       if (n === 'hug') sfx('heal', 0.8);
+      if (n === 'epi' && !hasPack('ending/epilogue.jpg')) { onDone(); return; }
       setSc(sc + 1);
       setWho('');
     }
@@ -140,6 +146,9 @@ export function PoopEnding({ onDone, startScene = 0 }: { onDone: () => void; sta
         )}
         {scene.id === 'success' && family && (
           <div className="pe-full pe-pan-x"><img className="pe-bg" src={family} alt="가족 여섯 명이 고나의 성공에 저마다 환호하는 그림" /></div>
+        )}
+        {scene.id === 'epi' && P('ending/epilogue.jpg') && (
+          <div className="pe-full pe-epi"><img className="pe-bg" src={P('ending/epilogue.jpg')!} alt="노을 지는 아기방에서 편히 잠든 고나" /><i className="pe-sparkle" /></div>
         )}
         {scene.id === 'hug' && hug2 && (
           <div className={`pe-full pe-hug2${lastLine ? ' framed' : ''}`}>

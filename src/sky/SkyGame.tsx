@@ -56,7 +56,7 @@ const SP_DESC: Record<FamilyId, string> = {
   samchon: '거대 발명 메카의 미사일 연사 + 드릴 돌진',
 };
 
-type Phase = 'loading' | 'hub' | 'title' | 'opening' | 'select' | 'prep' | 'play' | 'tally' | 'continue' | 'gameover' | 'ending' | 'credits' | 'records' | 'daily';
+type Phase = 'loading' | 'gate' | 'hub' | 'title' | 'opening' | 'select' | 'prep' | 'play' | 'tally' | 'continue' | 'gameover' | 'ending' | 'credits' | 'records' | 'daily';
 
 /** GONA's Sky Adventure 화면 전체 (타이틀 → 동료 선택 → 플레이 → 결과). 월드맵과는 onExit 한 줄로만 연결됨 */
 /** 테스트 허브(#hub)일 때만 어느 화면에서든 '◀ 테스트 목록' 버튼을 띄움 */
@@ -115,11 +115,13 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   const [slide, setSlide] = useState(0);
   /** 오프닝 종료: 다음부터는 자동 재생하지 않음 (타이틀의 '오프닝'으로 다시 볼 수 있음) */
   /** 오프닝을 어디서 열었는지: 첫 시작(→ 선택 화면) · 타이틀의 '오프닝 다시보기'(→ 타이틀) */
-  const openingFrom = useRef<'start' | 'title'>('start');
+  const openingFrom = useRef<'start' | 'title' | 'first'>('start');
   const finishOpening = (): void => {
     try { localStorage.setItem(OPENED_KEY, '1'); } catch { /* 무시 */ }
     setSlide(0);
-    setPhase(openingFrom.current === 'title' ? 'title' : 'select');
+    // 첫 실행(관문 → 오프닝) · 타이틀의 '오프닝 다시보기' → 끝나면 타이틀 / (예전 흐름) START 뒤 첫 오프닝 → 선택
+    setPhase(openingFrom.current === 'start' ? 'select' : 'title');
+    if (openingFrom.current !== 'start') playBgm('title', 0.6);
   };
   const best = Math.max(records.easy.score, records.normal.score, records.hard.score);
   const [mute, setMute] = useState(isMuted);
@@ -142,7 +144,10 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     Promise.all([loadAssets(), fonts])
       .then(([a]) => {
         setAssets(a);
-        setPhase(HUB && THEME.id === 'poop' ? 'hub' : 'title');
+        // 응가판 첫 실행: 오프닝부터 (소리를 켜려면 터치가 한 번 필요 → '터치하여 시작' 관문) · 재방문은 타이틀
+        let seen = true;
+        try { seen = localStorage.getItem(OPENED_KEY) === '1'; } catch { /* 무시 */ }
+        setPhase(HUB && THEME.id === 'poop' ? 'hub' : THEME.id === 'poop' && HAS_OPENING && !seen && (!location.search.includes('skytest') || location.search.includes('firstrun')) ? 'gate' : 'title');
         void preloadAudio('game');
       })
       .catch((e: unknown) => setErr(String(e)));
@@ -469,6 +474,17 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   }
 
   if (phase === 'hub') return <TestHub go={hubGo} />;
+  if (phase === 'gate') {
+    // 첫 실행 관문: 검은 화면 + 문장 하나 → 터치하면 소리와 함께 오프닝 (브라우저는 터치 전 소리를 막음)
+    const go = (): void => { unlockAudio(); setSoundOn(true); openingFrom.current = 'first'; setSlide(0); setPhase('opening'); };
+    return (
+      <div className="sky gate" onPointerDown={go} role="button" tabIndex={0} aria-label="터치하여 오프닝 시작">
+        <img className="gate-logo" src={`${BASE}${packPath('title/logo.png')}`} alt="GONA's SKY ADVENTURE" />
+        <p className="gate-tap">TOUCH TO START</p>
+        <p className="gate-note">♪ 소리를 켜고 오프닝부터 감상하세요</p>
+      </div>
+    );
+  }
   if (phase === 'opening' && THEME.id === 'poop') return <OpeningCinematic key={hubOpen} startAt={hubOpen} onDone={() => { setHubOpen(0); if (HUB) { stopBgm(0.4); setPhase('hub'); } else finishOpening(); }} />;
   if (phase === 'opening') {
     const sl = THEME.opening[Math.min(slide, THEME.opening.length - 1)];
@@ -541,7 +557,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
         // 응가 대탈출 팩은 첫 플레이 때 오프닝을 자동으로 보여 줌 (스킵 가능 · 타이틀의 '오프닝'으로 다시 보기)
         let seen = true;
         try { seen = localStorage.getItem(OPENED_KEY) === '1'; } catch { /* 무시 */ }
-        if (HAS_OPENING && !seen) { openingFrom.current = 'start'; setSlide(0); setPhase('opening'); } else setPhase('select');
+        if (HAS_OPENING && !seen && THEME.id !== 'poop') { openingFrom.current = 'start'; setSlide(0); setPhase('opening'); } else setPhase('select');
       }, 520);
     };
     // 응가 대탈출: 세로 키아트를 화면 전체에 깔고 로고(위) · 버튼 HUD(아래, 그라데이션으로 이어짐)
@@ -556,8 +572,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
           </div>
           <header className="ttl2-logo">
             <img src={`${BASE}${packPath('title/logo.png')}`} alt="GONA's SKY ADVENTURE" />
-            <h1 className="ttl2-ko">고나의 스카이 어드벤처</h1>
-            <p>~ 응가 대탈출 대작전 ~</p>
+            <p className="ttl2-sub"><span>응가 대탈출 대작전</span></p>
           </header>
           <div className="ttl2-menu">
             <button type="button" className="ttl2-start ttl-start" onClick={go}>PRESS START</button>
@@ -570,7 +585,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
               <button type="button" className="ttl2-btn ttl2-daily" onClick={sub(() => setPhase('daily'))}>★ 오늘의 도전{dailyState().cleared ? ' ✓' : ''}</button>
               <button type="button" className="ttl2-btn" onClick={sub(() => { setRecTab('stage'); setPhase('records'); })}>랭킹 · 기록</button>
             </div>
-            <p className="ttl2-foot">{!soundOn ? '♪ 화면을 터치하면 음악이 켜져요' : <>{best > 0 && <b>HI-SCORE {String(best).padStart(8, '0')}</b>} 6 STAGES · {BETA ? '공개 테스트판' : '개발판'}</>}</p>
+            <p className="ttl2-foot">{!soundOn ? '♪ 화면을 터치하면 음악이 켜져요' : <>{best > 0 && <b>HI-SCORE {String(best).padStart(8, '0')}</b>} 6 STAGES · {BETA ? '공개 테스트판' : PROD ? 'VER 1.1' : '개발판'}</>}</p>
           </div>
           <div className="ttl-wipe" aria-hidden />
         </div>
