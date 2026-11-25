@@ -15,6 +15,7 @@
  */
 import { THEME_ID } from './theme';
 import type { StageDef } from './stages';
+import { poopParts } from './bossparts';
 
 export interface PackMeta {
   /** 가로로 이어 붙인 프레임 수 (보스 페이즈 · 중간보스 상태) */
@@ -106,6 +107,9 @@ export function applyPackToStages(stages: StageDef[]): void {
       });
       // 새 보스 그림은 한 장으로 완결 — 예전 최종보스의 '심장 코어' 덧그림은 끔 (보스가 두 번 겹쳐 보이던 문제)
       st.boss.core = undefined;
+      // 부위 파괴 그림이 있으면 기존 포탑 대신 보스 고유 부위 (A 2개 + B 1개)
+      const pp = packMeta(`${dir}/parts.png`) ? poopParts(st.id) : null;
+      if (pp) { st.boss.parts = pp; st.boss.shielded = undefined; }
       if (boss.bullet) st.boss.bullet = boss.bullet;
       if (typeof boss.weakDy === 'number' && st.boss.weak) st.boss.weak = { ...st.boss.weak, dy: boss.weakDy };
     }

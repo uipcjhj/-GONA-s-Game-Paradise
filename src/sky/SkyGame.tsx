@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { loadAssets, loadStageArt, type Assets, type StageArt } from './assets';
 import { initAudio, preloadAudio, prepareBgm, playBgm, stopBgm, sfx, isMuted, setMuted, audioUnlocked, audioState, audioTap, audioDiag, unlockAudio, reviveAudio, testBeep, forceHtmlAudio } from './audio';
-import { SkyEngine, SPECIAL_NAME, type EndInfo, type FamilyId, type RunOpts } from './engine';
+import { SkyEngine, SPECIAL_NAME, WEAPON_NAME, type EndInfo, type FamilyId, type RunOpts } from './engine';
+import { submit, bestOf, topOf, stageBoard, runBoard, dailyBoard, dailyFor, dailyState, dailyTry, dailyHistory, today, type Daily, type Submitted } from './records';
+import { parTime } from './rank';
 import { STAGES, DIFF, type Difficulty } from './stages';
 import { CHARACTERS } from './data/characters';
 import { settings, saveSettings, canVibrate, iosHaptic, buzz } from './settings';
@@ -54,7 +56,7 @@ const SP_DESC: Record<FamilyId, string> = {
   samchon: '거대 발명 메카의 미사일 연사 + 드릴 돌진',
 };
 
-type Phase = 'loading' | 'hub' | 'title' | 'opening' | 'select' | 'prep' | 'play' | 'tally' | 'continue' | 'gameover' | 'ending' | 'credits';
+type Phase = 'loading' | 'hub' | 'title' | 'opening' | 'select' | 'prep' | 'play' | 'tally' | 'continue' | 'gameover' | 'ending' | 'credits' | 'records' | 'daily';
 
 /** GONA's Sky Adventure 화면 전체 (타이틀 → 동료 선택 → 플레이 → 결과). 월드맵과는 onExit 한 줄로만 연결됨 */
 /** 테스트 허브(#hub)일 때만 어느 화면에서든 '◀ 테스트 목록' 버튼을 띄움 */
@@ -99,6 +101,12 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     }
   });
   const [startStage, setStartStage] = useState(1);
+  /** 일일 도전 중이면 그 도전 (아니면 null = 아케이드) */
+  const [daily, setDaily] = useState<Daily | null>(null);
+  /** 방금 올린 기록 결과 (결과 화면의 NEW RECORD 표시) */
+  const [subm, setSubm] = useState<Submitted | null>(null);
+  const dailyRef = useRef<Daily | null>(null);
+  const [recTab, setRecTab] = useState<'stage' | 'run' | 'daily'>('stage');
   const [runOpts, setRunOpts] = useState<RunOpts | null>(null);
   const [stageArt, setStageArt] = useState<StageArt | null>(null);
   const [continues, setContinues] = useState(0);
@@ -196,11 +204,29 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
       runOpts,
       (r) => {
         setResult(r);
+        const dl = dailyRef.current;
         if (r.won) {
           sfx('menuOk');
-          setPhase(r.final ? 'ending' : 'tally');
-          if (r.final) { setSlide(0); playBgm('ending', 1.2); recordRun(r, true); }
-          else recordReach(r.stage + 1);
+          // 기록: 스테이지 보드 (이번 스테이지 점수 + 보너스 · 랭크 · 시간) · 일일 도전 보드
+          const sc = r.stageScore + r.bonus.total;
+          const e = { score: sc, rank: r.rank, time: Math.round(r.time), fam: opts.fam, stage: r.stage, at: today() };
+          const sb = submit(stageBoard(r.stage, opts.diff), e);
+          if (dl) {
+            const time = dl.rule === 'speed' && r.time > parTime(dl.stage) ? undefined : e.time;
+            const ok = dl.rule !== 'speed' || time != null;
+            dailyTry(dl.date, ok);
+            setSubm(ok ? submit(dailyBoard(dl.date), { ...e, time }) : null);
+            setPhase('tally');
+            return;
+          }
+          setSubm(sb);
+          // FINAL 도 결과(랭크)를 먼저 보여 주고 → '엔딩으로'
+          setPhase('tally');
+          if (!r.final) recordReach(r.stage + 1);
+        } else if (dl) {
+          dailyTry(dl.date, false);
+          setCount(9);
+          setPhase('continue');
         } else {
           setCount(9);
           setPhase('continue');
@@ -264,7 +290,8 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     });
   };
   const recordRun = (r: EndInfo, clear: boolean) => {
-    if (practice) return;
+    if (practice || daily) return;
+    submit(runBoard(diff), { score: r.score, fam, stage: r.stage, at: today(), time: clear ? Math.round(r.time) : undefined });
     setRecords((rec) => {
       const cur = rec[diff];
       const n = { ...rec, [diff]: { score: Math.max(cur.score, r.score), reach: Math.max(cur.reach, r.stage), clear: cur.clear || clear } };
@@ -329,7 +356,19 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     };
   }, [phase]);
 
-  const start = useCallback((f: FamilyId, d: Difficulty, stage: number) => {
+  const start = useCallback((f: FamilyId, d: Difficulty, stage: number, dl: Daily | null = null) => {
+    setDaily(dl);
+    dailyRef.current = dl;
+    setSubm(null);
+    if (dl) {
+      setFam(f);
+      setResult(null);
+      setContinues(0);
+      setPractice(true);
+      const rules = { noBomb: dl.rule === 'nobomb', oneLife: dl.rule === 'onelife' };
+      beginStage({ stage, diff: d, fam: f, hp: 5, bombs: DIFF[d].bombs, power: dl.rule === 'lv1' ? 1 : stage > 1 ? 3 : 1, score: 0, rules });
+      return;
+    }
     setFam(f);
     try {
       localStorage.setItem(`${NS}.fam`, f);
@@ -517,7 +556,8 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
           </div>
           <header className="ttl2-logo">
             <img src={`${BASE}${packPath('title/logo.png')}`} alt="GONA's SKY ADVENTURE" />
-            <p>응가 대탈출 대작전</p>
+            <h1 className="ttl2-ko">고나의 스카이 어드벤처</h1>
+            <p>~ 응가 대탈출 대작전 ~</p>
           </header>
           <div className="ttl2-menu">
             <button type="button" className="ttl2-start ttl-start" onClick={go}>PRESS START</button>
@@ -525,6 +565,10 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
               {HAS_OPENING && <button type="button" className="ttl2-btn" onClick={sub(() => { openingFrom.current = 'title'; setSlide(0); setPhase('opening'); })}>오프닝 다시보기</button>}
               {DEV && <button type="button" className="ttl2-btn ttl-test" onClick={sub(() => { setSlide(0); playBgm('ending', 1.2); setPhase('ending'); })}>엔딩</button>}
               <button type="button" className="ttl2-btn" onClick={sub(() => onExit())}>월드맵</button>
+            </div>
+            <div className="ttl2-row">
+              <button type="button" className="ttl2-btn ttl2-daily" onClick={sub(() => setPhase('daily'))}>★ 오늘의 도전{dailyState().cleared ? ' ✓' : ''}</button>
+              <button type="button" className="ttl2-btn" onClick={sub(() => { setRecTab('stage'); setPhase('records'); })}>랭킹 · 기록</button>
             </div>
             <p className="ttl2-foot">{!soundOn ? '♪ 화면을 터치하면 음악이 켜져요' : <>{best > 0 && <b>HI-SCORE {String(best).padStart(8, '0')}</b>} 6 STAGES · {BETA ? '공개 테스트판' : '개발판'}</>}</p>
           </div>
@@ -610,6 +654,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
           <dl>
             <dt className="sel-name">{c.name}</dt><dd className="sel-job">{familyText(fam)?.job ?? c.job}</dd>
             <dt>일반</dt><dd>{familyText(fam)?.attack ?? c.attack}</dd>
+            <dt>진화</dt><dd className="sel-evo">{WEAPON_NAME[fam].map((n, i) => <span key={n}><i>Lv{i + 1}</i>{n}</span>)}</dd>
             <dt>필살기</dt><dd><b>{familyText(fam)?.special ?? SPECIAL_NAME[fam]}</b> — {familyText(fam)?.specialDesc || SP_DESC[fam]}</dd>
           </dl>
         </div>
@@ -639,6 +684,86 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
         )}
         <div className="sel-btns">
           <button type="button" className="sky-btn sky-btn-go" onClick={() => { unlockAudio(); sfx('menuOk'); start(fam, diff, startStage); }}>출격!</button>
+          <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setPhase('title'); }}>타이틀</button>
+        </div>
+      </div>
+    );
+  }
+
+  const fmtT = (t: number | null | undefined): string => (t == null ? '—' : `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`);
+  const medal = (r: string | undefined, cls = ''): ReactElement | null => (r ? <img className={`rk-medal ${cls}`} src={`${BASE}${packPath(`ui/rank-${r}.png`, '')}`} alt={`${r} 랭크`} /> : null);
+
+  if (phase === 'daily') {
+    const d = dailyFor();
+    const st = dailyState(d.date);
+    const best = bestOf(dailyBoard(d.date));
+    return (
+      <div className="sky end cred daily">
+        <div className="cred-scroll still">
+          <img className="daily-badge" src={`${BASE}${packPath('ui/daily.png', '')}`} alt="오늘의 도전" />
+          <h2>오늘의 도전</h2>
+          <p className="daily-date">{d.date}</p>
+          <div className="daily-card">
+            <b>{d.title}</b>
+            <p>{d.desc}</p>
+            {d.rule === 'speed' && <p>기준 시간 {fmtT(parTime(d.stage))}</p>}
+            <p className="daily-fam">출격 동료: {CHARACTERS[d.fam].name} · {WEAPON_NAME[d.fam][0]}</p>
+          </div>
+          <dl className="cred-score">
+            <dt>오늘 상태</dt><dd>{st.cleared ? '★ 클리어!' : `도전 ${st.tries}회`}</dd>
+            <dt>오늘 최고</dt><dd>{best.score ? <>{medal(best.rank, 'sm')} {String(best.score).padStart(8, '0')}</> : '—'}</dd>
+          </dl>
+        </div>
+        <div className="sel-btns cred-btns">
+          <button type="button" className="sky-btn sky-btn-go" onClick={() => { unlockAudio(); sfx('menuOk'); start(d.fam, d.diff, d.stage, d); }}>도전 시작!</button>
+          <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setRecTab('daily'); setPhase('records'); }}>기록</button>
+          <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setPhase('title'); }}>타이틀</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === 'records') {
+    return (
+      <div className="sky end cred recs">
+        <h2 className="recs-h">RANKING · 기록</h2>
+        <nav className="recs-tabs">
+          {(['stage', 'run', 'daily'] as const).map((t) => (
+            <button key={t} type="button" className={recTab === t ? 'on' : ''} onClick={() => { sfx('menuMove'); setRecTab(t); }}>{t === 'stage' ? '스테이지' : t === 'run' ? '전체 런' : '오늘의 도전'}</button>
+          ))}
+        </nav>
+        {recTab !== 'daily' && (
+          <div className="recs-diff">
+            {DIFFS.map((d) => <button key={d} type="button" className={diff === d ? 'on' : ''} onClick={() => { sfx('menuMove'); setDiff(d); }}>{DIFF[d].name}</button>)}
+          </div>
+        )}
+        <div className="recs-body">
+          {recTab === 'stage' && (
+            <table className="recs-table">
+              <thead><tr><th>STAGE</th><th>랭크</th><th>최고 점수</th><th>최단</th></tr></thead>
+              <tbody>
+                {STAGES.map((st) => {
+                  const b = bestOf(stageBoard(st.id, diff));
+                  return <tr key={st.id}><td>{st.id === 6 ? 'FINAL' : st.id}<small>{THEME.stages[st.id - 1]?.name ?? st.name}</small></td><td>{medal(b.rank, 'sm') ?? '—'}</td><td>{b.score ? String(b.score).padStart(7, '0') : '—'}</td><td>{fmtT(b.time)}</td></tr>;
+                })}
+              </tbody>
+            </table>
+          )}
+          {recTab === 'run' && (
+            <ol className="recs-list">
+              {topOf(runBoard(diff)).length === 0 && <li className="empty">아직 기록이 없어요 · STAGE 1 부터 한 판 끝까지!</li>}
+              {topOf(runBoard(diff)).map((e, i) => <li key={i}><b>{i + 1}</b><span>{String(e.score).padStart(8, '0')}</span><em>{e.time != null ? 'ALL CLEAR' : `STAGE ${e.stage}`} · {CHARACTERS[e.fam].name}</em><small>{e.at.slice(5)}</small></li>)}
+            </ol>
+          )}
+          {recTab === 'daily' && (
+            <ol className="recs-list">
+              {(() => { const d = dailyFor(); const b = bestOf(dailyBoard(d.date)); return <li className="today"><b>오늘</b><span>{b.score ? String(b.score).padStart(8, '0') : '—'}</span><em>{d.title}</em><small>{dailyState(d.date).cleared ? '★ 클리어' : '미완료'}</small></li>; })()}
+              {dailyHistory(7).filter((h) => h.date !== today()).map((h) => <li key={h.date}><b>{h.date.slice(5)}</b><span>{h.best ? String(h.best).padStart(8, '0') : '—'}</span><em>{h.d.title}</em><small>{h.cleared ? '★ 클리어' : '실패'}</small></li>)}
+            </ol>
+          )}
+        </div>
+        <div className="sel-btns cred-btns">
+          <button type="button" className="sky-btn sky-btn-go" onClick={() => { sfx('menuMove'); setPhase('daily'); }}>오늘의 도전</button>
           <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setPhase('title'); }}>타이틀</button>
         </div>
       </div>
@@ -768,26 +893,61 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
         )}
         {phase === 'tally' && result && (
           <div className="sky-overlay">
-            <div className="sky-panel tally">
-              <h2>STAGE {result.stage} CLEAR!</h2>
-              <dl>
-                <dt>클리어 보너스</dt><dd>{result.bonus.clear}</dd>
-                <dt>체력 보너스</dt><dd>{result.bonus.hp}</dd>
-                <dt>폭탄 보너스</dt><dd>{result.bonus.bomb}</dd>
-                <dt>노미스 보너스</dt><dd>{result.noMiss ? result.bonus.noMiss : '—'}</dd>
-                <dt>합계</dt><dd><b>{result.bonus.total}</b></dd>
-                <dt>SCORE</dt><dd>{String(result.score).padStart(8, '0')}</dd>
-                <dt>최대 콤보</dt><dd>{result.maxCombo}</dd>
+            <div className="sky-panel tally res">
+              <div className="res-crest">
+                <img src={`${BASE}${packPath('ui/crest.png', '')}`} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                <h2>{daily ? 'DAILY CLEAR!' : `STAGE ${result.stage} CLEAR!`}</h2>
+              </div>
+              <div className="res-main">
+                <div className={`res-rank r-${result.rank ?? 'D'}`}>
+                  {medal(result.rank, 'big')}
+                  <span>{result.rankPts ?? 0} / 100</span>
+                </div>
+                <ul className="res-items">
+                  {(result.rankItems ?? []).map((it, i) => (
+                    <li key={it.key} style={{ animationDelay: `${0.15 + i * 0.12}s` }} className={it.pts >= it.max ? 'full' : it.pts === 0 ? 'zero' : ''}>
+                      <span>{it.label}</span><em>{it.detail}</em><b>{it.pts}<small>/{it.max}</small></b>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <dl className="res-bonus">
+                <dt>클리어</dt><dd>{result.bonus.clear}</dd>
+                <dt>체력</dt><dd>{result.bonus.hp}</dd>
+                <dt>폭탄</dt><dd>{result.bonus.bomb}</dd>
+                <dt>노미스</dt><dd>{result.noMiss ? result.bonus.noMiss : '—'}</dd>
+                <dt>랭크 {result.rank}</dt><dd>{result.bonus.rank}</dd>
+                <dt className="sum">보너스 합계</dt><dd className="sum">{result.bonus.total}</dd>
+                <dt className="sum">SCORE</dt><dd className="sum">{String(result.score).padStart(8, '0')}</dd>
               </dl>
-              {THEME.id === 'poop' && (
+              {subm && (subm.newScore || subm.newRank || subm.newTime) && (
+                <p className="res-new">NEW RECORD! {[subm.newScore && '최고 점수', subm.newRank && '최고 랭크', subm.newTime && '최단 클리어'].filter(Boolean).join(' · ')}{subm.place > 0 && ` · ${subm.place}위`}</p>
+              )}
+              {daily && !subm && <p className="res-new miss">기준 시간 초과 — 도전 실패! 다시 노려 보세요</p>}
+              {THEME.id === 'poop' && !daily && (
                 <div className="tally-train" aria-label={`응가 열차 ${result.stage}/${STAGES.length}`}>
                   {STAGES.map((_, i) => <i key={i} className={i < result.stage ? 'on' : ''} />)}
                   <img src={`${BASE}${packPath('ending/train.png', 'v2/fx/missile.png')}`} alt="응가 열차" style={{ left: `${((result.stage - 0.5) / STAGES.length) * 100}%` }} />
                 </div>
               )}
-              <p className="tally-next">NEXT ▶ STAGE {result.stage + 1} · {STAGES[result.stage]?.name}{THEME.id === 'poop' && STAGES[result.stage]?.temp ? ' (임시 그래픽)' : ''}</p>
-              <button type="button" className="sky-btn sky-btn-go" onClick={nextStage}>다음 스테이지</button>
-              <button type="button" className="sky-btn" onClick={() => { recordRun(result, false); setPhase('title'); }}>타이틀로</button>
+              {daily ? (
+                <>
+                  <button type="button" className="sky-btn sky-btn-go" onClick={() => { sfx('menuOk'); start(daily.fam, daily.diff, daily.stage, daily); }}>한 번 더 도전</button>
+                  <button type="button" className="sky-btn" onClick={() => { setRecTab('daily'); setPhase('records'); }}>기록 보기</button>
+                </>
+              ) : (
+                <>
+                  {result.final ? (
+                    <button type="button" className="sky-btn sky-btn-go" onClick={() => { sfx('menuOk'); recordRun(result, true); setSlide(0); playBgm('ending', 1.2); setPhase('ending'); }}>엔딩으로 ▶</button>
+                  ) : (
+                    <>
+                      <p className="tally-next">NEXT ▶ STAGE {result.stage + 1} · {THEME.stages[result.stage]?.name ?? STAGES[result.stage]?.name}</p>
+                      <button type="button" className="sky-btn sky-btn-go" onClick={nextStage}>다음 스테이지</button>
+                      <button type="button" className="sky-btn" onClick={() => { recordRun(result, false); setPhase('title'); }}>타이틀로</button>
+                    </>
+                  )}
+                </>
+              )}
             </div>
           </div>
         )}
@@ -797,7 +957,9 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
               <h2>CONTINUE?</h2>
               <b className="cont-count">{Math.max(0, count)}</b>
               <p>STAGE {result.stage} · {STAGES[result.stage - 1].name}<br />이어하면 점수는 0 부터 다시 시작해요</p>
-              <button type="button" className="sky-btn sky-btn-go" onClick={doContinue}>이어하기</button>
+              {daily ? (
+                <button type="button" className="sky-btn sky-btn-go" onClick={() => { sfx('menuOk'); start(daily.fam, daily.diff, daily.stage, daily); }}>처음부터 다시 도전</button>
+              ) : <button type="button" className="sky-btn sky-btn-go" onClick={doContinue}>이어하기</button>}
               <button type="button" className="sky-btn" onClick={() => { recordRun(result, false); setPhase('gameover'); }}>그만하기</button>
             </div>
           </div>

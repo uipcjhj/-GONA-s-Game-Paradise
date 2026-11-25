@@ -34,7 +34,9 @@ export type ArtName =
   | 'bg-backdrop' | 'island-castle' | 'island-ruins' | 'island-small' | 'island-tower' | 'clocktower' | 'airship' | 'cloud-big' | 'cloud-small'
   | 'enemy-drone' | 'enemy-fighter' | 'enemy-orb' | 'enemy-wyvern' | 'enemy-gunship' | 'boss'
   /** 중간보스 전용 그림 (응가 팩에 있을 때만 · 없으면 기존처럼 다른 적 그림을 씀) */
-  | 'midboss';
+  | 'midboss'
+  /** 보스 부위 파괴 그림 (응가 팩 · A · A파손 · B · B파손) */
+  | 'parts';
 export const ART_NAMES: ArtName[] = ['bg-backdrop', 'island-castle', 'island-ruins', 'island-small', 'island-tower', 'clocktower', 'airship', 'cloud-big', 'cloud-small', 'enemy-drone', 'enemy-fighter', 'enemy-orb', 'enemy-wyvern', 'enemy-gunship', 'boss'];
 
 export type EnemyName = 'drone' | 'fighter' | 'wyvern' | 'orb' | 'gunship';
@@ -80,7 +82,30 @@ export type Attack =
   | 'wallGap' | 'laserAim' | 'laserSweep' | 'laserCross' | 'homing' | 'curtain' | 'snipeRain' | 'gatling' | 'bubbleRings' | 'waveCurtain' | 'sporeRain'
   /** 보스 필살기 (스테이지마다 다른 시그니처 패턴 · 긴 예고 후 발동) */
   | 'sig';
-export interface PartDef { art: ArtName; dx: number; dy: number; hp: number; hr: number; k: number; fire: 'aim' | 'ring' | 'needle' | 'homing'; cd: number }
+/** 부위 파괴 효과 (응가 팩 보스 부위) */
+export interface PartFx {
+  /** 이 부위가 부서지면 보스가 더는 쓰지 않는 공격 */
+  cut?: Attack[];
+  /** 부서지면 새로 쓰기 시작하는 위험한 공격 (최종 발악 · 봉인 해제 등) */
+  rage?: Attack[];
+  /** 살아 있는 동안 본체가 받는 피해 배율 (방패·봉인) */
+  armor?: number;
+  /** 살아 있는 동안 약점을 가림 → 부서지면 약점 노출 */
+  cover?: boolean;
+  /** 부서진 뒤 약점 피해 배율 (기본 1.5) */
+  weak?: number;
+  /** 부서진 뒤 공격 사이 쉬는 시간 배율 (느려짐) */
+  slow?: number;
+}
+export interface PartDef {
+  art: ArtName; dx: number; dy: number; hp: number; hr: number; k: number; fire: 'aim' | 'ring' | 'needle' | 'homing' | 'none'; cd: number;
+  /** 부위 그림 시트(parts.png) 칸: 0 = 양옆 부위 A · 2 = 가운데 부위 B (파손 그림은 +1) */
+  cell?: number;
+  name?: string;
+  fx?: PartFx;
+  /** 파괴 보너스 점수 */
+  bonus?: number;
+}
 export interface BossDef {
   name: string;
   art: ArtName;

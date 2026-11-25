@@ -465,3 +465,72 @@ body.sky-hub-on .hub-back { display: none; }
 .sel.poop .sel-arrow { align-self: center; }
 .sel.poop .sel-art { height: auto; min-height: 140px; max-height: 470px; }
 .sel.poop > * { flex-shrink: 0; } .sel.poop > .sel-main { flex-shrink: 1; }
+
+/* ═══ 결과 화면 (랭크 평가) · 기록 · 오늘의 도전 — 남색 + 금색 아케이드 판넬 ═══ */
+.rk-medal { image-rendering: auto; object-fit: contain; vertical-align: middle; }
+.rk-medal.sm { width: 26px; height: 26px; }
+.rk-medal.big { width: 96px; height: 96px; filter: drop-shadow(0 3px 0 #0c0618); }
+.sky-panel.res { width: 92%; max-width: 360px; padding: 6px 10px 12px; gap: 6px; background: linear-gradient(#1c1446, #120a2e); border: 3px solid #e8b53c; outline: 2px solid #120a26; box-shadow: 0 0 0 5px #3a2a66, 0 6px 0 rgba(0, 0, 0, 0.45); color: #fff4d6; font-family: 'Galmuri11', monospace; }
+.res-crest { position: relative; height: 92px; display: flex; align-items: center; justify-content: center; margin: -2px -4px 0; }
+.res-crest img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.res-crest h2 { position: relative; margin: 10px 0 0; font-size: 14px; letter-spacing: 1px; color: #ffe9a0; text-shadow: 0 2px 0 #3a1a08, 0 0 6px rgba(0, 0, 0, 0.8); animation: res-pop 0.35s steps(4) both; }
+.res-main { display: flex; gap: 8px; align-items: center; }
+.res-rank { flex: 0 0 104px; display: flex; flex-direction: column; align-items: center; gap: 2px; animation: res-stamp 0.5s steps(5) 0.9s both; }
+.res-rank span { font-size: 11px; color: #cfc4ff; }
+.res-rank.r-S span { color: #ffd84a; }
+.res-items { flex: 1; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; font-size: 11px; }
+.res-items li { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; padding: 2px 5px; background: #261a5a; border-left: 3px solid #6a5ab8; animation: res-row 0.25s steps(3) both; }
+.res-items li span { color: #ffe9a0; } .res-items li em { grid-column: 1; font-style: normal; font-size: 9px; color: #b8b0e8; }
+.res-items li b { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-size: 14px; color: #fff; } .res-items li b small { font-size: 9px; color: #8a80c0; }
+.res-items li.full { border-left-color: #ffd84a; } .res-items li.full b { color: #ffd84a; }
+.res-items li.zero { opacity: 0.7; border-left-color: #6a3050; }
+.sky-panel.res .res-bonus { margin: 0; padding: 5px 8px; background: #0c0820; border: 2px solid #3a2a66; font-size: 11px; gap: 1px 10px; color: #fff4d6; }
+.res-bonus dt { color: #cfc4ff; font-weight: 400; } .res-bonus .sum { color: #ffd84a; font-weight: 700; font-size: 13px; }
+.res-new { margin: 0; font-size: 12px; color: #ffd84a; text-shadow: 0 1px 0 #3a1a08; animation: ttlblink 0.8s steps(2) infinite; }
+.res-new.miss { color: #ff9eb0; animation: none; }
+.sky-panel.res .sky-btn { margin: 0; }
+.sky-panel.res .tally-next { color: #cfc4ff; margin: 0; font-size: 11px; }
+@keyframes res-pop { from { transform: scale(1.6); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes res-stamp { 0% { transform: scale(2.6) rotate(-14deg); opacity: 0; } 60% { transform: scale(0.9) rotate(3deg); opacity: 1; } 100% { transform: none; opacity: 1; } }
+@keyframes res-row { from { transform: translateX(-12px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (max-height: 680px) { .res-crest { height: 74px; } .res-crest h2 { font-size: 12px; margin-top: 8px; } .rk-medal.big { width: 80px; height: 80px; } .res-rank { flex-basis: 88px; } .res-items { font-size: 10px; } .sky-panel.res .res-bonus { font-size: 10px; } }
+
+.ttl2-btn.ttl2-daily { border-color: #ffd84a; color: #ffe9a0; background: linear-gradient(rgba(96, 46, 18, 0.92), rgba(54, 22, 10, 0.92)); }
+
+.sky.daily .cred-scroll, .sky.recs { font-family: 'Galmuri11', monospace; }
+.daily-badge { width: 120px; height: auto; margin: 0 auto -6px; animation: res-pop 0.4s steps(4) both; }
+.sky.daily h2 { margin: 0; color: #ffd84a; }
+.daily-date { margin: 0; color: #cfc4ff; font-size: 12px; }
+.daily-card { width: min(88vw, 330px); padding: 8px 10px; background: #1c1446; border: 2px solid #e8b53c; outline: 2px solid #120a26; text-align: center; }
+.daily-card b { display: block; font-size: 15px; color: #fff4d6; margin-bottom: 4px; }
+.daily-card p { margin: 2px 0; font-size: 11px; color: #cfc4ff; }
+.daily-card .daily-fam { color: #9cd8ff; }
+
+.sky.recs { justify-content: flex-start; padding-top: calc(env(safe-area-inset-top) + 10px); gap: 6px; }
+.recs-h { margin: 0; font-size: 18px; color: #ffd84a; text-shadow: 0 2px 0 #3a1a08; }
+.recs-tabs, .recs-diff { display: flex; gap: 4px; width: min(94vw, 380px); }
+.recs-tabs button, .recs-diff button { flex: 1; min-height: 34px; font: 700 12px 'Galmuri11', monospace; color: #cfc4ff; background: #1c1446; border: 2px solid #3a2a66; cursor: pointer; }
+.recs-diff button { min-height: 28px; font-size: 11px; }
+.recs-tabs button.on, .recs-diff button.on { color: #2a1206; background: linear-gradient(#ffe9a0, #ffc23c); border-color: #120a26; }
+.recs-body { width: min(94vw, 380px); flex: 1; min-height: 0; overflow-y: auto; touch-action: pan-y; }
+.recs-table { width: 100%; border-collapse: collapse; font-size: 12px; color: #fff4d6; }
+.recs-table th { font-size: 10px; color: #e8b53c; text-align: left; padding: 2px 4px; border-bottom: 2px solid #3a2a66; }
+.recs-table td { padding: 3px 4px; border-bottom: 1px solid #2a1e5a; font-variant-numeric: tabular-nums; }
+.recs-table td small { display: block; font-size: 9px; color: #8a80c0; }
+.recs-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.recs-list li { display: grid; grid-template-columns: 38px 1fr auto; grid-template-rows: auto auto; gap: 0 6px; padding: 4px 6px; background: #1c1446; border-left: 3px solid #6a5ab8; font-size: 12px; color: #fff4d6; }
+.recs-list li b { grid-row: 1 / span 2; align-self: center; color: #ffd84a; } .recs-list li em { grid-column: 2; font-style: normal; font-size: 10px; color: #b8b0e8; }
+.recs-list li small { grid-row: 1 / span 2; grid-column: 3; align-self: center; font-size: 10px; color: #cfc4ff; }
+.recs-list li.today { border-left-color: #ffd84a; } .recs-list li.empty { display: block; color: #8a80c0; }
+
+/* 타이틀: 영문 로고 아래 한글 메인 제목 (금박 명조) + 작은 부제 */
+.ttl2-logo .ttl2-ko { margin: 0.05em 0 0; padding: 1px 18px 2px; font-family: 'Gowun Batang', 'AppleMyungjo', serif; font-weight: 700; font-size: clamp(19px, 5.8vw, 25px); letter-spacing: 0.1em; line-height: 1.25;
+  color: #ffe9a0; background: linear-gradient(90deg, rgba(30, 10, 50, 0), rgba(30, 10, 50, 0.78) 16%, rgba(30, 10, 50, 0.78) 84%, rgba(30, 10, 50, 0));
+  text-shadow: 0 2px 0 #3a1a08, 0 0 8px rgba(255, 190, 80, 0.5); animation: ttl2-fade 0.8s ease-out 0.7s both; }
+.ttl2-logo .ttl2-ko + p { margin-top: 2px; font-size: clamp(12px, 3.6vw, 15px); letter-spacing: 0.14em; }
+.sel-evo { display: flex; flex-wrap: wrap; gap: 1px 6px; font-size: 10px; } .sel-evo span { white-space: nowrap; } .sel-evo i { font-style: normal; color: #58e0ff; margin-right: 2px; }
+.sel-evo span:last-child i { color: #ffd84a; }
+/* 엔딩 일러스트 장면 (힘주기 · 뿡!) — 힘줄 때는 화면이 부들부들, 뿡! 은 살짝 확대되며 등장 */
+.pe-ill .pe-bg { object-position: 50% 40%; animation: pe-realin 1.2s ease-out both; }
+.pe-ill .pe-bg.hard { animation: pe-shake 0.09s steps(2) infinite; }
+.pe-ill.fart .pe-bg { animation: pe-jolt 0.5s steps(3) 1 both, pe-hugzoom 6s ease-out 0.5s both; }

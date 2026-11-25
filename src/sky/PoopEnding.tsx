@@ -86,6 +86,10 @@ export function PoopEnding({ onDone, startScene = 0 }: { onDone: () => void; sta
   const wake = who.startsWith('|현실');
   const kidImg = scene.id === 'fart' ? reliefImg : wake || !who ? P('opening3/b-rub.png') : hard ? P('opening3/n-strain2.png') : P('opening3/n-strain.png');
   const lastLine = scene.id === 'hug' && who.includes('가장 위대한 탈출');
+  // 아케이드 업그레이드 일러스트 (있으면 우선): 힘주기 클로즈업 · 뿡! 성공의 순간
+  const strainArt = P('ending/strain.jpg');
+  const reliefArt = P('ending/relief.jpg');
+  const ill = scene.id === 'strain' && !wake && strainArt ? strainArt : scene.id === 'fart' && reliefArt ? reliefArt : null;
   return (
     <div className={`sky end pe pes-${scene.id}`}>
       <div className="pe-stage" key={scene.id}>
@@ -100,7 +104,18 @@ export function PoopEnding({ onDone, startScene = 0 }: { onDone: () => void; sta
           </>
         )}
         {scene.id === 'white' && <div className="pe-white" />}
-        {(scene.id === 'strain' || scene.id === 'fart') && morn && kidImg && (
+        {ill && (
+          <div className={`pe-full pe-ill${scene.id === 'fart' ? ' fart' : ''}`}>
+            <img className={`pe-bg${hard ? ' hard' : ''}`} src={ill} alt={scene.id === 'fart' ? '뿡! 해낸 고나' : '있는 힘껏 힘주는 고나'} />
+            {scene.id === 'fart' && (
+              <>
+                <b className="pe-boom">뿡!</b>
+                {['a', 'b', 'c'].map((k) => <i key={k} className={`pe-puff ${k}`} style={{ backgroundImage: `url(${BASE}${packPath('fx/steam-puff.png')})` }} />)}
+              </>
+            )}
+          </div>
+        )}
+        {!ill && (scene.id === 'strain' || scene.id === 'fart') && morn && kidImg && (
           <div className="pe-full pe-real">
             <img className="pe-bg" src={morn} alt="아침 햇살이 드는 아기방" />
             <img className={`pe-kid${hard ? ' hard' : ''}${scene.id === 'fart' ? ' relief' : ''}`} src={kidImg} alt="고나" />
@@ -112,7 +127,7 @@ export function PoopEnding({ onDone, startScene = 0 }: { onDone: () => void; sta
             )}
           </div>
         )}
-        {(scene.id === 'strain' || scene.id === 'fart') && !(morn && kidImg) && (
+        {!ill && (scene.id === 'strain' || scene.id === 'fart') && !(morn && kidImg) && (
           <div className="pe-room">
             <img className={`pe-gona${hard ? ' hard' : ''}${roomImg !== gonaImg ? ' px' : ''}`} src={roomImg} alt="고나" />
             {scene.id === 'fart' && (

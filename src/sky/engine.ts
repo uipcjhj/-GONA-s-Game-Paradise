@@ -13,7 +13,8 @@
 import { type Assets, type V2Name, type CutinId, type StageArt, whiteOf } from './assets';
 import { familyText, THEME_ID } from './theme';
 import { talkLines, talkMode, barkSeconds, type TalkKey } from './story';
-import { STAGES, DIFF, ENEMIES, type StageDef, type Difficulty, type DiffDef, type EnemyName, type Move, type Fire, type ArtName, type BossDef, type Attack, type Step, type Wave } from './stages';
+import { evalRank, type Rank, type RankItem } from './rank';
+import { STAGES, DIFF, ENEMIES, type PartDef, type StageDef, type Difficulty, type DiffDef, type EnemyName, type Move, type Fire, type ArtName, type BossDef, type Attack, type Step, type Wave } from './stages';
 import { bulletLooks, type BulletLook } from './bullets';
 import { CHARACTERS } from './data/characters';
 import { sfx, stopSfx, playBgm, stopBgm } from './audio';
@@ -38,7 +39,17 @@ export interface EndInfo {
   bombs: number;
   power: number;
   noMiss: boolean;
-  bonus: { clear: number; hp: number; bomb: number; noMiss: number; total: number };
+  bonus: { clear: number; hp: number; bomb: number; noMiss: number; rank: number; total: number };
+  /** 랭크 평가 (클리어했을 때) */
+  hits: number;
+  bombsUsed: number;
+  partsBroken: number;
+  partsTotal: number;
+  /** 이번 스테이지에서 번 점수 (보너스 전) */
+  stageScore: number;
+  rank?: Rank;
+  rankPts?: number;
+  rankItems?: RankItem[];
 }
 
 /** 스테이지 시작 시 이어받는 상태 */
@@ -50,6 +61,8 @@ export interface RunOpts {
   bombs: number;
   power: number;
   score: number;
+  /** 일일 도전 규칙: 폭탄 없음 · 하트 1개 (회복 대신 점수) */
+  rules?: { noBomb?: boolean; oneLife?: boolean };
 }
 
 export interface HudInfo {
@@ -91,6 +104,8 @@ type PKind = 'shot' | 'wave' | 'charge' | 'heart' | 'star' | 'elec' | 'potion' |
 interface PBullet {
   x: number; y: number; vx: number; vy: number; r: number; dmg: number; kind: PKind; lvl: number;
   pierce: boolean; hits: number[]; life: number; scale: number; homing: number; age: number; alive: boolean;
+  /** 할아버지 방패파: 막아 줄 수 있는 적 탄 수 */
+  absorb: number;
 }
 type EBKind = 'flask' | 'smell' | 'heart' | 'wave' | 'needle' | 'ring' | 'fire';
 interface EBullet {
@@ -107,7 +122,9 @@ interface Enemy {
   hp: number; max: number; age: number; flash: number; fire: number; dir: number; hr: number; score: number; dead: boolean; ph: number; burst: number;
   holdY: number; drop?: Item['kind'];
   /** 부품: 본체 기준 위치 · 공격 */
-  parent?: Enemy; dx?: number; dy?: number; partFire?: 'aim' | 'ring' | 'needle' | 'homing'; partCd?: number;
+  parent?: Enemy; dx?: number; dy?: number; partFire?: 'aim' | 'ring' | 'needle' | 'homing' | 'none'; partCd?: number;
+  /** 응가 팩 보스 부위 (parts.png 칸 · 이름 · 파괴 효과) */
+  pdef?: PartDef;
 }
 /** 레이저: 경고선(warn) → 발사(life) */
 interface Laser { x: number; y: number; ang: number; len: number; w: number; warn: number; life: number; t: number; rot: number; owner: Enemy | null; alive: boolean }
@@ -127,6 +144,9 @@ interface BossState {
   cycle: number; mask: { w: number; h: number; m: Uint8Array }[]; life: number;
   /** 다음 공격을 필살기로 (페이즈 전환 직후 · 마지막 페이즈에서 주기적으로) */
   sigDue?: boolean;
+  /** 부위 파괴 결과: 쓰지 않게 된 공격 · 새로 열린 공격 · 약점 배율 · 쉬는 시간 배율 · 남은 잔해 */
+  cut: Attack[]; rage: Attack[]; weakMul: number; restMul: number;
+  wrecks: { dx: number; dy: number; cell: number; k: number }[];
 }
 
 /** 가족 필살기 진행 상태 */
@@ -169,6 +189,15 @@ const BOSS_BULLET_R: Record<EBKind, number> = { flask: 3.5, smell: 4.5, heart: 3
 /** 필살기 이름 (characters.ts 의 special 대신 이번 기획 이름) */
 export const SPECIAL_NAME: Record<FamilyId | 'gona', string> = {
   gona: '황금 익룡의 포효', mom: '하트 스톰', dad: '스팀 브레이커', imo: '스타 캐논 버스트', halmeoni: '골든 힐링', halabeoji: '가디언 실드', samchon: '메가 인벤션',
+};
+/** 무기 진화 이름 (동료별 Lv1~4) — 레벨업 문구 · 결과 화면 */
+export const WEAPON_NAME: Record<FamilyId, string[]> = {
+  mom: ['물방울', '물방울 부채', '목욕 물줄기', '대목욕 폭포'],
+  dad: ['물대포', '연발 물대포', '관통 수류', '초고압 물대포'],
+  imo: ['프룬탄', '3연 프룬탄', '고속 프룬탄', '별빛 프룬탄'],
+  halmeoni: ['약초 포션', '튐 포션', '쌍 포션', '삼단 포션'],
+  halabeoji: ['수호 창', '빠른 창', '방패파', '철벽 방패파'],
+  samchon: ['유산균 1기', '유산균 2기', '강화 유산균', '유산균 3기'],
 };
 const SP_DUR: Record<FamilyId, number> = { mom: 2.6, dad: 2.3, imo: 2.0, halmeoni: 1.6, halabeoji: 5.0, samchon: 3.2 };
 const SP_CUT = 0.62;
@@ -297,6 +326,13 @@ export class SkyEngine {
   private smokeT = 0;
   private armorPts: number[][] = [];
   private partSmoke: number[][] = [];
+  /** 이번 스테이지 보스 부위 파괴 수 · 전체 수 (랭크 평가) */
+  partsBroken = 0;
+  private startScore = 0;
+  private diffId: Difficulty = 'normal';
+  private bombsUsed = 0;
+  private rules: NonNullable<RunOpts['rules']> = {};
+  partsTotal = 0;
 
   // 스테이지 진행
   private st: StageDef;
@@ -359,12 +395,17 @@ export class SkyEngine {
     this.g = canvas.getContext('2d', { alpha: false })!;
     this.st = STAGES[Math.max(0, Math.min(STAGES.length - 1, opts.stage - 1))];
     this.dif = DIFF[opts.diff];
+    this.diffId = opts.diff;
     this.fam = opts.fam;
     this.hp = opts.hp;
     this.bombs = opts.bombs;
     this.power = opts.power;
     this.healLeft = this.dif.heal;
     this.score = opts.score;
+    this.startScore = opts.score;
+    this.rules = opts.rules ?? {};
+    if (this.rules.noBomb) this.bombs = 0;
+    if (this.rules.oneLife) { this.hp = 1; this.healLeft = 0; }
     this.resize();
     this.bgBaked = this.bakeBackdrop();
     this.prewarm();
@@ -479,6 +520,7 @@ export class SkyEngine {
   useBomb(): void {
     if (this.paused || this.talking || this.over || this.bombs <= 0 || this.bombT > 0 || this.sp) return;
     this.bombs--;
+    this.bombsUsed++;
     this.bombT = BOMB_T;
     this.bombHit = false;
     this.inv = Math.max(this.inv, 2.6);
@@ -656,7 +698,7 @@ export class SkyEngine {
   // ───────────── 풀 ─────────────
   private newPB(x: number, y: number, vx: number, vy: number, r: number, dmg: number, kind: PKind, pierce = false, life = 1.3): PBullet {
     const b = this.pbPool.pop() ?? ({ hits: [] as number[] } as PBullet);
-    b.x = x; b.y = y; b.vx = vx; b.vy = vy; b.r = r; b.dmg = dmg; b.kind = kind; b.pierce = pierce; b.life = life; b.scale = 1; b.homing = 0; b.age = 0; b.lvl = 1; b.alive = true;
+    b.x = x; b.y = y; b.vx = vx; b.vy = vy; b.r = r; b.dmg = dmg; b.kind = kind; b.pierce = pierce; b.life = life; b.scale = 1; b.homing = 0; b.age = 0; b.lvl = 1; b.alive = true; b.absorb = 0;
     b.hits.length = 0;
     this.pb.push(b);
     return b;
@@ -761,6 +803,7 @@ export class SkyEngine {
       this.block = 'warning';
       this.warnT = 3.6;
       sfx('warn');
+      buzz([80, 60, 80, 60, 80], 0); // 보스 경고 (iPhone 은 톡 3번 · 화면은 붉은 WARNING 으로 대체 연출)
       stopBgm(1.6);
       this.banner = null;
       // 남은 잡몹은 퇴장
@@ -947,6 +990,8 @@ export class SkyEngine {
 
   private update(dt: number): void {
     this.t += dt;
+    if (this.lvUpT > 0) this.lvUpT -= dt;
+    if (this.lvDownT > 0) this.lvDownT -= dt;
     this.updateProps(dt);
     this.shake = Math.max(0, this.shake - dt * 1.6);
     this.flashWhite = Math.max(0, this.flashWhite - dt * 1.8);
@@ -1210,7 +1255,11 @@ export class SkyEngine {
     this.kick(0.55, 0.06);
     this.flashWhite = 0.25;
     this.combo = 0;
-    this.power = Math.max(1, this.power - 1);
+    if (this.power > 1) {
+      this.power--;
+      this.lvDownT = 1;
+      this.floatText(this.px, this.py - 34, `LV DOWN ▼ Lv${this.power}`, '#ff9eb0');
+    }
     sfx('playerHit');
     buzz(70);
     this.pushHud();
@@ -1256,47 +1305,65 @@ export class SkyEngine {
     if (f === 'halabeoji') {
       if (this.shield > 0) this.shield -= dt;
       this.cN += dt;
-      if (this.cN > 1.1) {
+      this.updateGuard(dt);
+      if (this.cN > [1.2, 1.0, 1.0, 0.9][this.power - 1]) {
         this.cN = 0;
-        this.newPB(this.cx + 4, this.cy - 16, 0, -240, 3, 2.6, 'lance', true, 1.4);
+        // 수호 창: Lv1 1자루 → Lv2 빨라짐 → Lv3 + 방패파 → Lv4 창 2자루 + 방패파 강화
+        for (const dx of this.power >= 4 ? [-3, 7] : [4]) this.newPB(this.cx + dx, this.cy - 16, 0, -240, 3, [2.2, 2.4, 2.4, 2.2][this.power - 1], 'lance', true, 1.4);
         sfx('compShot', 0.8, 0.8);
         if (THEME_ID === 'poop') this.cKick = 1; // 응가 팩: 창을 쏠 때 방패 밀기(공격 프레임 2·3)를 보여 줌 (케이크 버전 동작은 그대로)
       }
       // 동료 자동 보호막 없음 — 일반 공격에서 상시 무적 금지 (보호는 필살기 중에만)
       return;
     }
+    this.updateBugs(dt);
     if (this.cCd > 0) return;
     this.cKick = 1;
+    const L = this.power; // 무기 레벨 1~4 (P 로 오르고 피격 시 1단계 내려감) — 동료 공격도 함께 진화
+    const cx = this.cx;
+    const cy = this.cy;
     if (f === 'mom') {
-      // 하트 부채꼴: 전방으로 퍼지는 하트 5발 (자동 유도 없음)
-      for (let i = -2; i <= 2; i++) {
-        const a = -Math.PI / 2 + i * 0.2;
-        this.newPB(this.cx, this.cy - 10, Math.cos(a) * 150, Math.sin(a) * 150, 3.5, 1.2, 'water', false, 1.3);
+      // 목욕물: Lv1 물방울 3 → Lv2 5갈래 → Lv3 가운데 물줄기 추가 → Lv4 넓은 7갈래 + 관통 물줄기 (평시 유도 없음)
+      const n = [3, 5, 5, 7][L - 1];
+      const spread = [0.16, 0.2, 0.2, 0.22][L - 1];
+      for (let i = 0; i < n; i++) {
+        const a = -Math.PI / 2 + (i - (n - 1) / 2) * spread;
+        this.newPB(cx, cy - 10, Math.cos(a) * 160, Math.sin(a) * 160, 3.5, 1.1, 'water', false, 1.3);
       }
+      if (L >= 3) for (const dx of L >= 4 ? [-3, 3] : [0]) { const b = this.newPB(cx + dx, cy - 14, 0, -300, 3.5, L >= 4 ? 1.5 : 1.3, 'water', L >= 4, 1.1); b.scale = 1.3; }
       sfx('compShot', 0.9, 1.2);
-      this.cCd = 0.9;
+      this.cCd = [0.85, 0.85, 0.8, 0.75][L - 1];
     } else if (f === 'dad') {
-      // 증기 볼트: 굵고 강한 직선탄 (범위는 좁음, 자동 조준 없음)
-      this.newPB(this.cx, this.cy - 16, 0, -420, 3.5, 3.6, 'shot', false, 1.1).lvl = 3;
+      // 고압 물대포: Lv1 굵은 직선 → Lv2 연사 ↑ → Lv3 관통 수류 → Lv4 초고압 관통포 (탄 지우기 없음 · 필살기 전용)
+      const dmg = [3.0, 3.2, 3.0, 4.2][L - 1];
+      const b = this.newPB(cx, cy - 16, 0, L >= 3 ? -460 : -420, L >= 4 ? 5 : 3.5, dmg, 'water', L >= 3, 1.1);
+      b.scale = [1.25, 1.3, 1.45, 1.7][L - 1]; // 굵은 물대포 (고나 탄과 구분되게 큰 물방울)
       sfx('shotHeavy', 0.6);
-      this.cCd = 0.9;
+      this.cCd = [1.0, 0.8, 0.72, 0.7][L - 1];
     } else if (f === 'imo') {
-      // 별빛 연사: 빠른 직선 별 3발 (가운데 + 살짝 벌어진 두 발 · 자동 유도 없음) — 적이 움직여도 맞도록 넓게 퍼뜨리되 조준은 플레이어 몫
+      // 프룬 마법탄: Lv1 2발 → Lv2 3발 → Lv3 빠른 연사 → Lv4 + 아주 약한 유도 별 2발 (유도는 Lv4 에서만)
       this.cN++;
-      for (const a of [0, -0.12, 0.12]) this.newPB(this.cx, this.cy - 14, Math.sin(a) * 220, -Math.cos(a) * 220, 3.5, 1.2, 'prune', false, 1.2);
+      const angs = L === 1 ? [-0.05, 0.05] : [0, -0.12, 0.12];
+      const sp = L >= 3 ? 280 : 220;
+      for (const a of angs) this.newPB(cx, cy - 14, Math.sin(a) * sp, -Math.cos(a) * sp, 3.5, 1.1, 'prune', false, 1.2);
+      if (L >= 4 && this.cN % 2 === 0) for (const sd of [-1, 1]) { const b = this.newPB(cx + sd * 6, cy - 10, sd * 60, -200, 3, 0.9, 'star', false, 1.4); b.homing = 1.6; }
       if (this.cN % 2) sfx('compShot', 0.7, 1.4);
-      this.cCd = 0.55;
+      this.cCd = [0.6, 0.55, 0.42, 0.42][L - 1];
     } else if (f === 'samchon') {
-      // 전기 탄 2발: 직선 (자동 유도 없음 — 유도는 필살기에만)
-      for (const sd of [-1, 1]) this.newPB(this.cx + sd * 5, this.cy - 12, 0, -200, 3, 1.8, 'elec', false, 1.2);
+      // 유산균 소환: 전기탄 2발은 그대로, 레벨마다 고나 주변 유산균 드론이 늘어 함께 쏨 (드론 공격은 updateBugs)
+      for (const sd of [-1, 1]) this.newPB(cx + sd * 5, cy - 12, 0, -200, 3, L >= 3 ? 1.6 : 1.4, 'elec', false, 1.2);
       sfx('compShot', 0.6, 0.9);
-      this.cCd = 0.62;
+      this.cCd = L >= 4 ? 0.55 : 0.62;
     } else if (f === 'halmeoni') {
-      // 연금 포션: 앞으로 던지는 병
+      // 연금 포션 (화력 최약 · 맞으면 주변에 튐): Lv1 1병 → Lv2 튐 범위 ↑ → Lv3 2병 → Lv4 3병
       this.cN++;
-      this.newPB(this.cx, this.cy - 14, rand(-12, 12), -150, 4, 2.4, 'potion', false, 1.6);
+      const n = [1, 1, 2, 3][L - 1];
+      for (let i = 0; i < n; i++) {
+        const b = this.newPB(cx, cy - 14, (i - (n - 1) / 2) * 45 + rand(-8, 8), -150, 4, [1.8, 2.0, 1.9, 1.8][L - 1], 'potion', false, 1.6);
+        b.lvl = L;
+      }
       sfx('compShot', 0.7, 0.7);
-      this.cCd = 1.1;
+      this.cCd = [1.2, 1.1, 1.1, 1.0][L - 1];
       // 자동 회복 없음: 14발마다 '스테이지 회복 보급'이 남아 있을 때만 하트 1
       if (this.cN % 14 === 0 && this.hp < MAX_HP && this.healLeft > 0) {
         this.healLeft--;
@@ -1308,6 +1375,42 @@ export class SkyEngine {
       }
     }
   }
+
+  /** 삼촌 유산균 드론: 무기 레벨만큼 (Lv1 1 · Lv2 2 · Lv3 2 · Lv4 3) 고나 둘레를 돌며 작은 탄을 쏨 */
+  private bugT = 0;
+  private bugCount(): number {
+    return this.fam === 'samchon' && !this.sp ? [1, 2, 2, 3][this.power - 1] : 0;
+  }
+  private bugPos(i: number, n: number): [number, number] {
+    const a = this.t * 2.6 + (i * TAU) / Math.max(1, n);
+    return [this.px + Math.cos(a) * 22, this.py - 4 + Math.sin(a) * 9];
+  }
+  private updateBugs(dt: number): void {
+    const n = this.bugCount();
+    if (!n) return;
+    this.bugT -= dt;
+    if (this.bugT > 0) return;
+    this.bugT = this.power >= 4 ? 0.42 : 0.5;
+    for (let i = 0; i < n; i++) {
+      const [x, y] = this.bugPos(i, n);
+      this.newPB(x, y - 6, 0, -240, 2.5, this.power >= 3 ? 0.7 : 0.6, 'elec', false, 1.0);
+    }
+  }
+
+  /** 할아버지 방패파: 방패 모양 관통 파동 — 닿은 작은 적 탄을 몇 개까지 막아 줌 (Lv3~4) */
+  private updateGuard(dt: number): void {
+    if (this.fam !== 'halabeoji' || this.power < 3 || this.bombT > 0.9 || this.sp) return;
+    this.guardT -= dt;
+    if (this.guardT > 0) return;
+    this.guardT = this.power >= 4 ? 1.4 : 2.0;
+    const b = this.newPB(this.cx, this.cy - 18, 0, -150, 9, 1.6, 'wave', true, 1.3);
+    b.lvl = 4;
+    b.absorb = this.power >= 4 ? 3 : 2;
+    sfx('shield', 0.4);
+  }
+  private guardT = 1;
+  private lvUpT = 0;
+  private lvDownT = 0;
 
   // ───────────── 필살기 ─────────────
   private updateSpecial(dt: number): void {
@@ -1431,16 +1534,17 @@ export class SkyEngine {
       const php = Math.round(pd.hp * this.dif.bhp);
       this.en.push({
         id: this.nextId++, kind: 'part', type: '', art: pd.art, k: pd.k, pat: 'boss', fireKind: 'none', x: e.x + pd.dx, y: e.y + pd.dy, x0: 0, vx: 0, vy: 0,
-        hp: php, max: php, age: 0, flash: 0, fire: pd.cd * rand(0.6, 1.2), dir: 1, hr: pd.hr, score: 3000, dead: false, ph: 0, burst: 0, holdY: 0,
-        parent: e, dx: pd.dx, dy: pd.dy, partFire: pd.fire, partCd: pd.cd,
+        hp: php, max: php, age: 0, flash: 0, fire: pd.cd * rand(0.6, 1.2), dir: 1, hr: pd.hr, score: pd.bonus ?? 3000, dead: false, ph: 0, burst: 0, holdY: 0,
+        parent: e, dx: pd.dx, dy: pd.dy, partFire: pd.fire, partCd: pd.cd, pdef: pd.cell != null ? pd : undefined,
       });
     }
     const bs: BossState = {
       def, mode: 'enter', atk: '', at: 0, rest: 1, last: '', phase: 1, n: 0, tx: W / 2, sub: 0, minion: 8, dyingT: 0, teleT: 0, cycle: 0,
-      mask: this.maskOf(def), life: 0,
+      mask: this.maskOf(def), life: 0, cut: [], rage: [], weakMul: 1.5, restMul: 1, wrecks: [],
     };
     (e as Enemy & { bs: BossState }).bs = bs;
     if (!def.mid) {
+      this.partsTotal = def.parts.length;
       this.bs = bs;
       this.bossTrail = 1;
       this.armorStage = 0;
@@ -1686,6 +1790,7 @@ export class SkyEngine {
     if (b.mode === 'tele' || (b.mode === 'atk' && /^(laser|curtain|wallGap|gatling)/.test(b.atk))) return;
     e.fire -= dt;
     if (e.fire > 0) return;
+    if (e.partFire === 'none') return;
     e.fire = (e.partCd ?? 2) * this.dif.cd * this.sk().cd * rand(0.85, 1.15);
     const aim = this.aimAt(e.x, e.y);
     switch (e.partFire) {
@@ -1848,7 +1953,9 @@ export class SkyEngine {
     if (b.mode === 'idle') {
       b.rest -= dt;
       if (b.rest <= 0) {
-        const pool = def.phases[b.phase - 1];
+        // 부위 파괴: 부서진 부위가 맡던 공격은 빠지고, 봉인·왕관이 깨지며 열린 위험한 공격이 더해짐
+        const base = def.phases[b.phase - 1].filter((a) => !b.cut.includes(a));
+        const pool = [...(base.length ? base : def.phases[b.phase - 1]), ...b.rage];
         // 순서대로 돌되 같은 공격 연속 금지 · 매 바퀴 시작점 변화
         let atk = pool[(b.cycle + Math.floor(b.life)) % pool.length];
         if (atk === b.last) atk = pool[(pool.indexOf(atk) + 1) % pool.length];
@@ -1884,7 +1991,7 @@ export class SkyEngine {
     if (this.runAttack(e, b, dt)) {
       b.mode = 'idle';
       const base = def.mid ? 1.0 : 0.85;
-      b.rest = (base - (b.phase - 1) * 0.12) * this.dif.cd * this.sk().cd;
+      b.rest = (base - (b.phase - 1) * 0.12) * this.dif.cd * this.sk().cd * b.restMul;
     }
   }
 
@@ -2239,6 +2346,15 @@ export class SkyEngine {
           b.vy = Math.sin(na) * ns;
         }
       }
+      if (b.absorb > 0) {
+        for (const q of this.eb) {
+          if (q.alive && q.age >= 0 && q.r <= 4 && (q.x - b.x) ** 2 + (q.y - b.y) ** 2 < (b.r + q.r) ** 2) {
+            q.alive = false;
+            this.starFrom(q.x, q.y);
+            if (--b.absorb <= 0) break;
+          }
+        }
+      }
       b.x += b.vx * dt;
       b.y += b.vy * dt;
       b.life -= dt;
@@ -2322,22 +2438,27 @@ export class SkyEngine {
           this.floatText(it.x, it.y - 6, `${v}`, '#ffe34a');
         } else if (it.kind === 'strawberry') {
           sfx('heal');
-          if (this.hp < MAX_HP && this.healLeft > 0) {
+          if (this.hp < MAX_HP && this.healLeft > 0 && !this.rules.oneLife) {
             this.healLeft--;
             this.hp++;
             this.pushHud();
             this.floatText(this.px, this.py - 24, 'HP +1', '#ff9ec0');
-          } else this.addScore(500, this.px, this.py - 20);
+          } else this.addScore(this.rules.oneLife ? 3000 : 500, this.px, this.py - 20);
         } else if (it.kind === 'banana') {
           sfx('item');
-          this.bombs = Math.min(5, this.bombs + 1);
-          this.pushHud();
-          this.floatText(this.px, this.py - 24, 'BOMB +1', '#ffe34a');
+          if (this.rules.noBomb) this.addScore(3000, this.px, this.py - 20);
+          else {
+            this.bombs = Math.min(5, this.bombs + 1);
+            this.pushHud();
+            this.floatText(this.px, this.py - 24, 'BOMB +1', '#ffe34a');
+          }
         } else {
           sfx('powerUp');
           if (this.power < 4) {
             this.power++;
-            this.floatText(this.px, this.py - 24, `POWER UP! Lv${this.power}`, '#58e0ff');
+            this.floatText(this.px, this.py - 24, this.power >= 4 ? 'MAX POWER!' : `POWER UP! Lv${this.power}`, '#58e0ff');
+            this.floatText(this.px, this.py - 12, WEAPON_NAME[this.fam][this.power - 1], '#bff4ff');
+            this.lvUpT = 0.5;
           } else this.addScore(1000, this.px, this.py - 20);
         }
       }
@@ -2433,11 +2554,18 @@ export class SkyEngine {
       if (special || src === 'bomb') dmg *= 0.5;
       // 부품(포탑)이 남아 있으면 본체는 장갑으로 덜 받음
       if (b.def.shielded && this.en.some((p) => p.kind === 'part' && p.parent === e && !p.dead)) dmg *= b.def.shielded;
+      // 부위 파괴: 방패·봉인이 살아 있으면 본체 장갑 · 흉갑/뚜껑이 약점을 가림
+      let covered = false;
+      for (const p of this.en) {
+        if (p.kind !== 'part' || p.parent !== e || p.dead || !p.pdef?.fx) continue;
+        if (p.pdef.fx.armor) dmg *= p.pdef.fx.armor;
+        if (p.pdef.fx.cover) covered = true;
+      }
       const wk = b.def.weak;
-      const weak = !!wk && (hx - e.x - wk.dx) ** 2 + (hy - e.y - wk.dy) ** 2 < wk.r * wk.r;
+      const weak = !covered && !!wk && (hx - e.x - wk.dx) ** 2 + (hy - e.y - wk.dy) ** 2 < wk.r * wk.r;
       if (src !== 'beam' && src !== 'bomb') {
         if (weak) {
-          dmg *= 1.5;
+          dmg *= b.weakMul;
           this.addFx('weak', hx, hy, strong ? 1.6 : 1.15, 0.24);
           if (Math.random() < 0.35) this.addFx('ring', hx, hy, 0.55, 0.2);
           for (let i = 0; i < 2; i++) this.part(hx, hy, rand(-70, 70), rand(-90, -10), 0.35, i ? '#ffb8d8' : '#ffffff', 2, 160);
@@ -2488,7 +2616,11 @@ export class SkyEngine {
           this.flashWhite = 0.6;
           // 남은 잡몹도 함께 폭발
           for (const o of this.en) if (o.kind === 'small') this.damage(o, 999, 'bomb', o.x, o.y);
-        } else sfx('boomL', 0.8);
+        } else {
+          sfx('boomL', 0.8);
+          // 중간보스 격파 보상: P 1개 (무기 진화의 확실한 기회)
+          this.items.push({ x: e.x, y: e.y, kind: 'star', age: 0, alive: true });
+        }
         this.bossSay(`${b.def.name} 격파!`, '#ffe34a');
         this.talk(b.def.mid ? 'midDown' : 'bossDown');
         this.kick(1, 0.12);
@@ -2530,10 +2662,11 @@ export class SkyEngine {
     else {
       const r = Math.random();
       // 회복(딸기)은 일반 적에게서 떨어지지 않음 — 회복은 스테이지 보급(난이도별 횟수)과 정해진 자리에서만
-      if (e.type === 'gunship') drop(r < 0.6 ? 'star' : 'cookie');
-      else if (r < 0.10) drop('star');
-      else if (r < 0.18) drop('cookie');
-      else if (r < 0.20) drop('banana');
+      // 드랍 밸런스: P(무기 진화)는 귀하게 · 폭탄은 더 귀하게 · 큰 적(포함)은 확실한 보상
+      if (e.type === 'gunship') drop(r < 0.55 ? 'star' : r < 0.75 ? 'banana' : 'cookie');
+      else if (r < 0.075) drop('star');
+      else if (r < 0.155) drop('cookie');
+      else if (r < 0.17) drop('banana');
     }
   }
 
@@ -2543,15 +2676,33 @@ export class SkyEngine {
     for (let i = 0; i < 4; i++) this.addBoom(p.x + rand(-8, 8), p.y + rand(-8, 8), rand(0.6, 0.9), i * 0.07);
     this.addFx('ring', p.x, p.y, 0.9, 0.3);
     this.debris(p.x, p.y, 12, ['#d8a040', '#5a5a66', '#3a2a2a']);
+    const pd = p.pdef;
+    const b = p.parent ? this.bsOf(p.parent) : null;
+    // 부서진 자리에 파손 그림이 그대로 남음 (응가 팩 부위)
+    if (pd && b && pd.cell != null) b.wrecks.push({ dx: p.dx ?? 0, dy: p.dy ?? 0, cell: pd.cell + 1, k: pd.k });
     if (!reward) return;
     sfx('armorBreak');
-    this.kick(0.4, 0.05);
+    this.kick(0.5, 0.06);
     this.score += p.score;
-    this.floatText(p.x, p.y - 8, `${p.score}`, '#ffc040');
-    this.items.push({ x: p.x, y: p.y, kind: 'cookie', age: 0, alive: true });
+    this.partsBroken++;
+    this.floatText(p.x, p.y - 8, `+${p.score}`, '#ffc040');
+    this.items.push({ x: p.x, y: p.y, kind: pd ? 'star' : 'cookie', age: 0, alive: true });
+    buzz([30, 30, 50]);
     // 부품 자리에 계속 연기
     if (p.parent === this.boss) this.partSmoke.push([p.dx ?? 0, p.dy ?? 0]);
     this.addGauge(0.08);
+    if (pd && b) {
+      const fx = pd.fx ?? {};
+      if (fx.cut) b.cut.push(...fx.cut.filter((a) => !b.cut.includes(a)));
+      if (fx.rage) b.rage.push(...fx.rage.filter((a) => !b.rage.includes(a)));
+      if (fx.weak) b.weakMul = Math.max(b.weakMul, fx.weak);
+      if (fx.slow) b.restMul *= fx.slow;
+      // 무엇이 바뀌었는지 짧게 알려 줌 (전략이 보이도록)
+      const what = fx.cover ? '약점 노출!' : fx.armor ? (fx.rage ? '봉인 해제! 그러나 발악…!' : '방어력 저하!') : fx.rage ? '분노! 새 공격이 열렸다!' : fx.cut ? '공격 하나 봉쇄!' : '';
+      this.banner = { text: `${pd.name ?? '부위'} 파괴!`, sub: what, t: 1.6, col: '#ffc040' };
+      this.flashWhite = Math.max(this.flashWhite, 0.25);
+      for (let i = 0; i < 6; i++) this.addBoom(p.x + rand(-12, 12), p.y + rand(-10, 10), rand(0.7, 1.1), 0.05 + i * 0.06);
+    }
   }
 
   // ───────────── 충돌 ─────────────
@@ -2577,7 +2728,8 @@ export class SkyEngine {
         if (hit) {
           this.damage(e, b.dmg, b.kind, hx, hy);
           if (b.kind === 'potion') {
-            for (const o of this.en) if (o !== e && (o.x - b.x) ** 2 + (o.y - b.y) ** 2 < 26 * 26) this.damage(o, 2, 'potion', o.x, o.y);
+            const pr = 18 + b.lvl * 4; // 할머니 포션 튐 범위: 레벨마다 넓어짐
+            for (const o of this.en) if (o !== e && (o.x - b.x) ** 2 + (o.y - b.y) ** 2 < pr * pr) this.damage(o, 1.5, 'potion', o.x, o.y);
             this.addBoom(b.x, b.y, 0.35, 0);
           }
           // 차지 폭발탄(삼촌 미사일 · 할머니 플라스크): 주변에 절반 피해
@@ -2637,7 +2789,9 @@ export class SkyEngine {
     this.setCharging(false);
     this.endT = 0;
     const final = won && this.st.id === STAGES.length;
-    const bonus = { clear: 0, hp: 0, bomb: 0, noMiss: 0, total: 0 };
+    const bonus = { clear: 0, hp: 0, bomb: 0, noMiss: 0, rank: 0, total: 0 };
+    const stageScore = this.score - this.startScore;
+    let rk: ReturnType<typeof evalRank> | null = null;
     if (!won) {
       playBgm('over', 0.3);
       this.banner = { text: 'GAME OVER', t: 9, col: '#ff7a8a' };
@@ -2648,13 +2802,20 @@ export class SkyEngine {
       bonus.hp = Math.max(0, Math.min(this.hp, MAX_HP)) * 2000;
       bonus.bomb = this.bombs * 1000;
       bonus.noMiss = this.hits === 0 ? 20000 * this.st.id : 0;
-      bonus.total = bonus.clear + bonus.hp + bonus.bomb + bonus.noMiss;
+      rk = evalRank({
+        stage: this.st.id, diff: this.diffId, time: this.t, hits: this.hits, bombsUsed: this.bombsUsed, maxCombo: this.maxCombo,
+        partsBroken: this.partsBroken, partsTotal: this.partsTotal, stageScore,
+      });
+      bonus.rank = rk.bonus;
+      bonus.total = bonus.clear + bonus.hp + bonus.bomb + bonus.noMiss + bonus.rank;
       this.score += bonus.total;
       this.banner = { text: final ? 'ALL CLEAR!' : 'STAGE CLEAR!', t: 9, col: '#ffe34a' };
     }
     const info: EndInfo = {
       won, final, stage: this.st.id, score: this.score, time: this.t, maxCombo: this.maxCombo, hp: Math.max(0, Math.min(this.hp, MAX_HP)), bombs: this.bombs, power: this.power,
       noMiss: this.hits === 0, bonus,
+      hits: this.hits, bombsUsed: this.bombsUsed, partsBroken: this.partsBroken, partsTotal: this.partsTotal, stageScore,
+      rank: rk?.rank, rankPts: rk?.points, rankItems: rk?.items,
     };
     this.endInfo = info;
     window.setTimeout(() => this.alive && this.onEnd(info), won ? 3200 : 1800);
@@ -3169,7 +3330,16 @@ export class SkyEngine {
   /** 보스 그림 반폭·반높이 (화면 안에 머물도록 이동 범위 계산) */
   private bossHalf(def: BossDef): [number, number] {
     const im = this.art[def.art];
-    return [((im.width / def.frames) * def.k) / 2, (im.height * def.k) / 2];
+    let hw = ((im.width / def.frames) * def.k) / 2;
+    let hh = (im.height * def.k) / 2;
+    // 보스 고유 부위가 몸 밖으로 튀어나오면 그만큼 더 (화면 가장자리에서 잘리지 않게)
+    const pim = this.art.parts;
+    if (pim) for (const p of def.parts) if (p.cell != null) {
+      const ph = ((pim.width / 4) * p.k) / 2;
+      hw = Math.max(hw, Math.abs(p.dx) + ph);
+      hh = Math.max(hh, -p.dy + ph);
+    }
+    return [hw, hh];
   }
   /** 머무는 높이: 위쪽 상태 표시줄(40px) 아래로 그림 전체가 보이게 */
   private restOf(def: BossDef): number {
@@ -3191,7 +3361,7 @@ export class SkyEngine {
       const b0 = e.kind === 'boss' ? this.bsOf(e) : null;
       const pm = e.kind === 'part' && e.parent ? this.bsOf(e.parent).mode : '';
       if (pm !== 'enter' && pm !== 'dying' && (!b0 || (b0.mode !== 'enter' && b0.mode !== 'dying'))) {
-        const fw0 = b0 ? im.width / b0.def.frames : im.width;
+        const fw0 = b0 ? im.width / b0.def.frames : e.pdef ? im.width / 4 : im.width;
         this.noteCrop(`${b0?.def.mid ? 'mid' : e.kind}:${this.st.art}/${e.art}`, e.x, e.y, fw0 * (b0 ? b0.def.k : e.k), im.height * (b0 ? b0.def.k : e.k));
       }
     }
@@ -3210,6 +3380,13 @@ export class SkyEngine {
       return;
     }
     if (e.kind === 'part') {
+      if (e.pdef?.cell != null) {
+        // 보스 고유 부위 (A · B): 맞을수록 붉게 깜빡 → 거의 부서지면 계속 깜빡
+        const fw = im.width / 4;
+        this.drawV2(im, e.x, e.y, white || (e.hp < e.max * 0.3 && Math.floor(this.t * 8) % 2 === 0), 0, e.pdef.cell * fw, fw, e.k);
+        if (e.hp < e.max) this.hpBar(e.x - 9, e.y + e.hr, 18, e.hp / e.max);
+        return;
+      }
       this.drawV2(im, e.x, e.y, white, 0, 0, im.width, e.k);
       if (e.hp < e.max) this.hpBar(e.x - 8, e.y + 9, 16, e.hp / e.max);
       return;
@@ -3221,6 +3398,12 @@ export class SkyEngine {
     const recoil = e === this.boss ? Math.round(this.bossRecoil) : 0;
     const sx = this.bossFrame(b) * fw;
     this.drawV2(im, e.x + shakeX, e.y - recoil, white, 0, sx, fw, def.k);
+    if (b.wrecks.length && this.art.parts) {
+      // 부서진 부위 잔해 (본체와 함께 흔들림)
+      const pim = this.art.parts;
+      const pfw = pim.width / 4;
+      for (const w of b.wrecks) this.drawV2(pim, e.x + shakeX + w.dx, e.y - recoil + w.dy, white, 0, w.cell * pfw, pfw, w.k);
+    }
     if (def.core) {
       // 최종 보스: 성채 위의 심장 코어 (부품이 남아 있으면 어둡게 봉인)
       const cim = this.art[def.core.art];
@@ -3274,13 +3457,24 @@ export class SkyEngine {
         else this.blit(this.pbSprite(name, Math.atan2(b.vy, b.vx) + Math.PI / 2, fi, 2), b.x, b.y + 7);
         return;
       }
-      case 'wave': this.blit(this.pbSprite('fx/shot-wave', Math.atan2(b.vy, b.vx) + Math.PI / 2), b.x, b.y); return;
+      case 'wave': {
+        if (b.r >= 9 && this.fam === 'halabeoji') {
+          // 할아버지 방패파: 은빛 방패가 앞으로 밀려 나감
+          const sh = this.a.img['fx-shield'];
+          this.g.globalAlpha = 0.85;
+          this.g.drawImage(sh, Math.round(b.x - sh.width / 2), Math.round(b.y - sh.height / 2));
+          this.g.globalAlpha = 1;
+          return;
+        }
+        this.blit(this.pbSprite('fx/shot-wave', Math.atan2(b.vy, b.vx) + Math.PI / 2), b.x, b.y);
+        return;
+      }
       case 'charge': this.frame(v['fx/charge'], Math.floor(b.age * 16) % 4, 4, b.x, b.y + 8, b.scale * 1.3); return;
       case 'heart': this.frame(v['fx/heart-p'], Math.floor(b.age * 8) % 2, 2, b.x, b.y, b.scale > 1 ? 2 : 1.5); return;
       // 물방울 (엄마): 하늘색 물방울 + 흰 하이라이트 — 단순 탄환 모양 (임시 효과)
       case 'water': {
         const wd = this.a.extra['fx/water-drop'];
-        if (wd) { this.frame(wd, 0, 1, b.x, b.y, b.scale > 1 ? 1.15 : 0.85); return; }
+        if (wd) { this.frame(wd, 0, 1, b.x, b.y, b.scale > 1.2 ? b.scale : b.scale > 1 ? 1.15 : 0.85); return; }
         const g = this.g;
         const r = (b.scale > 1 ? 3 : 2.2) * (1 + Math.sin(b.age * 14) * 0.08);
         g.fillStyle = '#2f9fd8'; g.beginPath(); g.arc(b.x, b.y, r + 0.8, 0, TAU); g.fill();
@@ -3337,6 +3531,10 @@ export class SkyEngine {
 
   private drawCompanion(): void {
     const g = this.g;
+    // 삼촌 유산균 드론 (무기 레벨만큼)
+    const nb = this.bugCount();
+    const pr = nb ? this.a.extra['chars/samchon/probiotic'] : null;
+    if (pr) for (let i = 0; i < nb; i++) { const [x, y] = this.bugPos(i, nb); this.cell(pr, 3, i % 3, 4, 3, x, y, 0.8); }
     const fly = this.a.v2[`chars/${this.fam}/fly` as V2Name];
     const attacking = this.cKick > 0.15 || (this.fam === 'halabeoji' && this.shield > 0) || (this.sp !== null && this.sp.id !== 'gona');
     const f = (attacking ? 2 : 0) + (Math.floor(this.t * (attacking ? 10 : 6)) % 2);
@@ -3469,13 +3667,14 @@ export class SkyEngine {
   private text(s: string, x: number, y: number, col = '#fff7dc', align: 'left' | 'center' | 'right' = 'left', size = 11): void {
     if (s.length >= 4 && /^\d+$/.test(s)) {
       // 점수처럼 자주 바뀌는 숫자: 숫자 한 글자씩 캐시된 그림을 이어 그림 (바뀔 때마다 새 캔버스를 만들지 않음)
-      const adv = (textImg('0', col, size).width - 4 * R) / R;
-      const w0 = s.length * adv + 4;
+      // 글자마다 실제 폭만큼 진행 (글꼴의 숫자 폭이 서로 달라도 틈이 생기지 않게)
+      let w0 = 4;
+      for (const ch of s) w0 += (textImg(ch, col, size).width - 4 * R) / R;
       let x0 = align === 'left' ? x - 2 : align === 'center' ? x - w0 / 2 : x - w0 + 2;
       for (const ch of s) {
         const im = textImg(ch, col, size);
         this.g.drawImage(im, Math.round(x0 * R) / R, Math.round((y - 1) * R) / R, im.width / R, im.height / R);
-        x0 += adv;
+        x0 += (im.width - 4 * R) / R;
       }
       return;
     }
@@ -3503,8 +3702,14 @@ export class SkyEngine {
     for (let i = 0; i < MAX_HP; i++) g.drawImage(this.a.img[i < hearts ? 'icon-heart' : 'icon-heart-empty'], 4 + i * 10, 3);
     for (let i = 0; i < this.bombs; i++) g.drawImage(this.a.img['icon-bomb'], 4 + i * 10, 14);
     this.text(String(this.score).padStart(8, '0'), W - 4, 2, '#ffe9a8', 'right');
-    for (let i = 0; i < 4; i++) { g.fillStyle = i < this.power ? '#58e0ff' : '#2a3060'; g.fillRect(W - 46 + i * 7, 16, 5, 5); }
-    this.text('P', W - 54, 13, '#58e0ff', 'left', 11);
+    // 무기 레벨: LV + 4칸 (최대면 금색 MAX · 레벨이 내려가면 잠깐 붉게 깜빡)
+    const lvCol = this.lvDownT > 0 && Math.floor(this.lvDownT * 10) % 2 ? '#ff6f8a' : this.power >= 4 ? '#ffd84a' : '#58e0ff';
+    for (let i = 0; i < 4; i++) {
+      g.fillStyle = '#120a26'; g.fillRect(W - 47 + i * 7, 15, 7, 7);
+      g.fillStyle = i < this.power ? lvCol : '#2a3060'; g.fillRect(W - 46 + i * 7, 16, 5, 5);
+    }
+    if (this.lvUpT > 0) { g.fillStyle = '#ffffff'; g.globalAlpha = this.lvUpT * 2; g.fillRect(W - 47, 15, 28, 7); g.globalAlpha = 1; }
+    this.text(this.power >= 4 ? 'MAX' : 'LV', W - 50, 13, lvCol, 'right', 11);
     // 임시 그래픽 스테이지: 화면 아래쪽에 항상 작게 표시 (최종본으로 오해하지 않게)
     if (THEME_ID === 'poop' && this.st.temp && !this.over) this.text('※ 임시 그래픽', W / 2, H - 11, '#cfc4ff', 'center', 9);
     // 필살 게이지·차지 게이지는 조작 버튼과 고나 발밑에 표시 (가운데 일시정지 버튼과 겹치지 않게 HUD 에서는 생략)

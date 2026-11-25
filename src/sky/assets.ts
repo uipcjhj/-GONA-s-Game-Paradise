@@ -125,7 +125,8 @@ export function loadStageArt(key: StageDef['art']): Promise<StageArt> {
     const dir = key === 'stage1' ? 'v2/stage1/' : `v2/temp/${key}/`;
     const pd = stageDir(key);
     // 팩에 있는 그림은 v3-poop/<스테이지>/ 에서, 나머지는 기존 폴더에서 (중간보스 전용 그림은 팩에 있을 때만)
-    const names: ArtName[] = hasPack(`${pd}/midboss.png`) ? [...ART_NAMES, 'midboss'] : ART_NAMES;
+    const names: ArtName[] = hasPack(`${pd}/midboss.png`) ? [...ART_NAMES, 'midboss'] : [...ART_NAMES];
+    if (hasPack(`${pd}/parts.png`)) names.push('parts');
     p = Promise.all(names.map((n) => loadUrl(`${BASE}${packPath(`${pd}/${n}.png`, `${dir}${n}.png`)}`, false))).then((list) => {
       const out = {} as StageArt;
       names.forEach((n, i) => (out[n] = list[i]!));

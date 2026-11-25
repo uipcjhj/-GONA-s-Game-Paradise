@@ -77,9 +77,18 @@ const [s0, s1] = RANGE.split('-').map(Number);
     log.push(...chk.lines.map((l) => `S${st} ${l}`));
     log.push(`S${st} 검증: 열린 키 ${chk.keys.length}개 [${chk.keys.join(' ')}] · 정지 대화 ${chk.talk.shown}/${chk.talk.n} 순서 ${chk.talk.order ? 'OK' : '틀림'} · 무전창 ${chk.bark.shown}/${chk.bark.n} 순서 ${chk.bark.order ? 'OK' : '틀림'} (보스 대화로 생략 ${chk.dropped}줄)` + (chk.talk.miss.length + chk.bark.miss.length ? ` · 누락 ${JSON.stringify([...chk.talk.miss, ...chk.bark.miss])}` : ''));
     await shot(`s${st}-clear`);
+    await page.waitForTimeout(3600);
+    const rk = await page.evaluate(() => window.__sky && window.__sky.endInfo && [window.__sky.endInfo.rank, window.__sky.endInfo.rankPts, Math.round(window.__sky.endInfo.time), window.__sky.endInfo.partsBroken + '/' + window.__sky.endInfo.partsTotal]).catch(() => null);
+    if (rk) log.push(`S${st} 랭크 ${rk[0]} (${rk[1]}점) · 시간 ${rk[2]}초 · 부위 ${rk[3]}`);
     if (st < s1) {
       fromIdx = await page.evaluate(() => (window.__talkSeen || []).length);
       await page.waitForSelector('.tally .sky-btn-go', { timeout: 15000 });
+      await page.tap('.tally .sky-btn-go');
+      await page.waitForTimeout(300);
+    } else if (st === 6) {
+      // FINAL 도 결과(랭크) 화면을 먼저 보여 줌 → '엔딩으로'
+      await page.waitForSelector('.tally .sky-btn-go', { timeout: 15000 });
+      log.push(`FINAL 결과 화면: ${await page.$eval('.tally', (e) => e.innerText.replace(/\s+/g, ' ').slice(0, 120))}`);
       await page.tap('.tally .sky-btn-go');
       await page.waitForTimeout(300);
     }

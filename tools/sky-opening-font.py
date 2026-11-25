@@ -24,7 +24,7 @@ OUT = os.path.join(ROOT, 'src/sky/fonts')
 
 src = open(os.path.join(ROOT, 'src/sky/OpeningCinematic.tsx'), encoding='utf-8').read()
 texts = re.findall(r"text: '([^']*)'", src)
-extra = ['고나의 응가 대탈출 대작전', '“막힌 운명을 뚫어라!”', '터치하여 시작', "GONA's Sky Adventure — The Great Poo Escape",
+extra = ['고나의 응가 대탈출 대작전', '고나의 스카이 어드벤처', '응가 대탈출 대작전', '“막힌 운명을 뚫어라!”', '터치하여 시작', "GONA's Sky Adventure — The Great Poo Escape",
          '0123456789', 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', ' .,…!?“”‘’\'"-—:;()·']
 chars = set(''.join(texts + extra).replace('[[', '').replace(']]', ''))
 cps = sorted(ord(c) for c in chars)
