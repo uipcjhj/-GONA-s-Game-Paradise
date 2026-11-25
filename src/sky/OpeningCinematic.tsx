@@ -119,7 +119,7 @@ interface Art {
   r3: Record<string, Img>;
 }
 /** 리마스터 그림 목록: 아기방(저녁·흐림·밤) · 꿈 터널 · 마왕성 · 고나 연속동작 프레임 · 세로 키아트 */
-const R3 = ['opening3/eat-full.jpg', 'opening3/sleep-full.jpg', 'opening3/strain-full.jpg', 'opening3/cry-full.jpg', 'opening3/sortie.jpg', 'opening3/room-eve.jpg', 'opening3/room-eve-blur.jpg', 'opening3/room-night.jpg', 'opening3/dream.jpg', 'opening3/castle.jpg', 'title/keyart-tall.jpg',
+const R3 = ['opening3/eat-full.jpg', 'opening3/sleep-full.jpg', 'opening3/strain-full.jpg', 'opening3/cry-full.jpg', 'opening3/sortie.jpg', 'opening3/room-eve.jpg', 'opening3/room-eve-blur.jpg', 'opening3/room-night.jpg', 'opening3/dream.jpg', 'opening3/castle.jpg', 'title/keyart-tall.jpg', 'opening3/guard-bg.jpg',
   ...['bite', 'chew', 'full', 'pat', 'clutch', 'drowsy'].map((n) => `opening3/a-${n}.png`),
   ...['strain0', 'sleep', 'wake', 'fly', 'rub', 'giggle'].map((n) => `opening3/b-${n}.png`),
   ...['eat2', 'startle', 'strain', 'strain2', 'cry'].map((n) => `opening3/n-${n}.png`)];
@@ -1436,12 +1436,17 @@ class Painter {
       const f = FAMILY[m];
       const col = FAM_COL[f];
       const dir = m % 2 ? -1 : 1;
+      const gb = this.a.r3['guard-bg'];
+      if (gb) {
+        // 리마스터: 수호자들이 모이는 새벽 하늘 (컷인마다 카메라가 조금씩 다른 쪽으로 흐름)
+        this.cam(cx + dir * (18 - v * 30), H / 2 - m * 6, 1.12 + v * 0.06, () => this.cover(gb, cx, H / 2, 1));
+      }
       const bg = g.createRadialGradient(cx, cy, 10, cx, cy, H * 0.7);
       bg.addColorStop(0, col);
-      bg.addColorStop(0.35, '#140a26');
-      bg.addColorStop(1, '#05030a');
+      bg.addColorStop(0.35, gb ? 'rgba(20,10,38,0.55)' : '#140a26');
+      bg.addColorStop(1, gb ? 'rgba(5,3,10,0.85)' : '#05030a');
       g.fillStyle = bg;
-      g.globalAlpha = 0.85;
+      g.globalAlpha = gb ? 0.6 : 0.85;
       g.fillRect(-40, -40, W + 80, H + 80);
       g.globalAlpha = 1;
       this.rays(cx, cy, 14, H, t * 0.6 * dir, 0.3, '255,255,255');
@@ -1851,8 +1856,7 @@ export function OpeningCinematic({ onDone, startAt = 0 }: { onDone: () => void; 
       )}
       {titleOn && (
         <div className="oc-title">
-          <img className="oc-logo" src={`${BASE}${packPath('title/logo.png')}`} alt="GONA's SKY ADVENTURE" />
-          <p className="oc-sub">응가 대탈출 대작전</p>
+          <img className="oc-logo" src={`${BASE}${packPath('title/logo-v9.png')}`} alt="GONA's SKY ADVENTURE" />
           <p className="oc-copy">“막힌 운명을 뚫어라!”</p>
           {t >= OPENING_END && <p className="oc-press">▶ 터치하여 시작</p>}
         </div>

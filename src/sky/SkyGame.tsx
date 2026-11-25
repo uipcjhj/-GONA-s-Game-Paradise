@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactElement } from 'rea
 import { loadAssets, loadStageArt, type Assets, type StageArt } from './assets';
 import { initAudio, preloadAudio, prepareBgm, playBgm, stopBgm, sfx, isMuted, setMuted, audioUnlocked, audioState, audioTap, audioDiag, unlockAudio, reviveAudio, testBeep, forceHtmlAudio } from './audio';
 import { SkyEngine, SPECIAL_NAME, WEAPON_NAME, type EndInfo, type FamilyId, type RunOpts } from './engine';
-import { josaWa, submit, bestOf, topOf, stageBoard, runBoard, dailyBoard, dailyFor, dailyState, dailyTry, dailyHistory, today, recordClear, setFlags, clears, clearKey, achievements, markSeen, DIFF_ORDER, recordStage, stampBoard, missions, type Daily, type Submitted } from './records';
+import { josaWa, submit, bestOf, topOf, stageBoard, runBoard, dailyBoard, dailyFor, dailyState, dailyTry, dailyHistory, today, recordClear, setFlags, clears, clearKey, achievements, markSeen, DIFF_ORDER, recordStage, photos, photoKey, stampBoard, missions, type Daily, type Submitted } from './records';
 import { activeProfile, createProfile, renameProfile, profiles, switchProfile, profileKey, exportProfile, importProfile } from './profile';
 import { parTime } from './rank';
 import { STAGES, DIFF, type Difficulty } from './stages';
@@ -45,6 +45,10 @@ function saveRecords(r: Records): void {
 }
 const DANGER = ['쌀알 병사 · 떡주먹 포 조심', '포자 소나기 · 가스 폭발 주의', '톱니 레이저 · 개틀링 탄막', '유도 촉수 · 물결 탄막', '방패 돌진 · 저격 비', '마왕의 봉인 · 십자 레이저 · 모든 것의 끝'];
 const FAM_KO: Record<FamilyId, string> = { mom: '엄마', dad: '아빠', imo: '이모', halmeoni: '할머니', halabeoji: '할아버지', samchon: '삼촌' };
+/** 기념사진 속 패배한 보스의 한마디 */
+const BOSS_CRY = ['으앙… 내 떡이 다 풀어졌어…', '뿌우… 내 가스가 다 빠졌잖아…', '삐빅… 믹서 과열… 엉엉…', '말랑… 내 바다가 다시 흐른다니… 흑흑', '갑옷이… 말랑해졌어… 부끄러워…', '꽉… 꽉 막혀야 하는데… 뻥 뚫려 버렸다아…!'];
+/** 보스 격파 기념사진 (동료 × 난이도 × 보스 = 108장) · 작은 썸네일은 앨범 목록용 */
+const bossPhotoSrc = (f: FamilyId, d: Difficulty, n: number, thumb = false): string => `${BASE}${packPath(`album/${thumb ? 't' : 'p'}/${f}-${d}-${n}.jpg`, '')}`;
 /** 기념사진을 폴라로이드 PNG 한 장으로 (닉네임 · 동료 · 난이도 · 날짜 · 점수 · 랭크 · 배지 도장) → 공유 또는 내려받기 */
 async function savePhotoPng(src: string, badge: string | null, face: string | null, lines: [string, string, string], fileName: string): Promise<string> {
   const load = (u: string): Promise<HTMLImageElement> => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = u; });
@@ -140,8 +144,12 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   const dailyRef = useRef<Daily | null>(null);
   /** 이번 클리어로 얻은 기념사진 (결과 화면 획득 연출) */
   const [photo, setPhoto] = useState<{ fam: FamilyId; diff: Difficulty; isNew: boolean } | null>(null);
+  /** 이번 보스 격파로 받은 기념사진 (동료 × 난이도 × 보스) */
+  const [bossPhoto, setBossPhoto] = useState<{ fam: FamilyId; diff: Difficulty; stage: number; isNew: boolean } | null>(null);
+  const [snap, setSnap] = useState(false);
   const [albTab, setAlbTab] = useState<'hall' | 'photo' | 'badge' | 'mission' | 'ach'>('hall');
   const [albView, setAlbView] = useState<string | null>(null);
+  const [albFam, setAlbFam] = useState<FamilyId>('mom');
   const [prof, setProf] = useState(activeProfile);
   const [nickEdit, setNickEdit] = useState<'new' | 'rename' | null>(null);
   const [nickVal, setNickVal] = useState('');
@@ -163,6 +171,8 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   /** 오프닝 종료: 다음부터는 자동 재생하지 않음 (타이틀의 '오프닝'으로 다시 볼 수 있음) */
   /** 오프닝을 어디서 열었는지: 첫 시작(→ 선택 화면) · 타이틀의 '오프닝 다시보기'(→ 타이틀) */
   const openingFrom = useRef<'start' | 'title' | 'first'>('start');
+  const firstVisit = useRef(true);
+  const gateGone = useRef(false);
   const finishOpening = (): void => {
     try { localStorage.setItem(OPENED_KEY, '1'); } catch { /* 무시 */ }
     setSlide(0);
@@ -194,7 +204,9 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
         // 응가판 첫 실행: 오프닝부터 (소리를 켜려면 터치가 한 번 필요 → '터치하여 시작' 관문) · 재방문은 타이틀
         let seen = true;
         try { seen = localStorage.getItem(OPENED_KEY) === '1'; } catch { /* 무시 */ }
-        setPhase(HUB && THEME.id === 'poop' ? 'hub' : THEME.id === 'poop' && HAS_OPENING && !seen && (!location.search.includes('skytest') || location.search.includes('firstrun')) ? 'gate' : 'title');
+        // 접속할 때마다 '터치하여 시작' 관문 (소리 켜기) → 처음이면 오프닝, 재방문이면 타이틀
+        firstVisit.current = !seen;
+        setPhase(HUB && THEME.id === 'poop' ? 'hub' : THEME.id === 'poop' && HAS_OPENING && (!location.search.includes('skytest') || location.search.includes('firstrun') || (location.search.includes('gate') && !seen)) ? 'gate' : 'title');
         void preloadAudio('game');
       })
       .catch((e: unknown) => setErr(String(e)));
@@ -265,11 +277,13 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
           const sb = submit(stageBoard(r.stage, opts.diff), e);
           // 업적 깃발 · FINAL 클리어면 기념사진(동료 × 난이도) 획득
           const doneBefore = new Set([...missions(), ...achievements()].filter((m) => m.done).map((m) => m.id));
-          recordStage({ fam: opts.fam, diff: opts.diff, stage: r.stage, rank: r.rank, hits: r.hits, bombs: r.bombsUsed, allParts: r.partsTotal > 0 && r.partsBroken === r.partsTotal });
+          const got = recordStage({ fam: opts.fam, diff: opts.diff, stage: r.stage, rank: r.rank, hits: r.hits, bombs: r.bombsUsed, allParts: r.partsTotal > 0 && r.partsBroken === r.partsTotal, score: sc });
+          setBossPhoto(dl ? null : { fam: opts.fam, diff: opts.diff, stage: r.stage, isNew: got.isNew });
+          setSnap(!dl && !r.final);
           setFlags({ 'nobomb-s1': r.stage === 1 && r.bombsUsed === 0, nomiss: r.hits === 0, rankS: r.rank === 'S', allparts: r.partsTotal > 0 && r.partsBroken === r.partsTotal });
           if (r.final && !dl) { setPhoto({ fam: opts.fam, diff: opts.diff, ...recordClear(opts.fam, opts.diff, r.score, r.rank) }); setCer(true); }
           else setPhoto(null);
-          setUnlocks([...missions().filter((m) => m.done && !doneBefore.has(m.id)).map((m) => `MISSION CLEAR · ${m.name} ${'★'.repeat(m.stars)}`), ...achievements().filter((a) => a.done && !doneBefore.has(a.id)).map((a) => `NEW BADGE · ${a.name}`)]);
+          setUnlocks([...(!dl && got.isNew ? [`NEW PHOTO · ${FAM_KO[opts.fam]} × ${THEME.stages[r.stage - 1]?.bossName ?? ''} (${opts.diff.toUpperCase()})`] : []), ...missions().filter((m) => m.done && !doneBefore.has(m.id)).map((m) => `MISSION CLEAR · ${m.name} ${'★'.repeat(m.stars)}`), ...achievements().filter((a) => a.done && !doneBefore.has(a.id)).map((a) => `NEW BADGE · ${a.name}`)]);
           if (dl) {
             const time = dl.rule === 'speed' && r.time > parTime(dl.stage) ? undefined : e.time;
             const ok = dl.rule !== 'speed' || time != null;
@@ -474,7 +488,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     // 자동 검수: 스테이지·순간별로 보여야 하는 대사 (방식 · 순서)
     __skyExpected: (st: number, key: TalkKey, f: FamilyId) => resolveLines(talkLines(st, key) ?? [], f, STAGES[st - 1], key).map((l) => ({ mode: talkMode(st, key), text: l.text })),
   });
-  if (location.search.includes('skytest')) Object.assign(window, { __skyFlow: { nextStage, doContinue, start: (st: number, d: Difficulty = 'normal') => start(fam, d, st), phase } });
+  if (location.search.includes('skytest')) Object.assign(window, { __skyFlow: { nextStage, doContinue, start: (st: number, d: Difficulty = 'normal') => start(fam, d, st), phase, ending: () => { setSlide(0); playBgm('ending', 1.2); setPhase('ending'); } } });
 
   useEffect(() => {
     if (!paused) return;
@@ -532,14 +546,19 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   if (phase === 'hub') return <TestHub go={hubGo} />;
   if (phase === 'gate') {
     // 첫 실행 관문: 검은 화면 + 문장 하나 → 터치하면 소리와 함께 오프닝 (브라우저는 터치 전 소리를 막음)
-    const go = (): void => { unlockAudio(); setSoundOn(true); openingFrom.current = 'first'; setSlide(0); setPhase('opening'); };
+    const go = (): void => {
+      if (gateGone.current) return; // 연타해도 한 번만
+      gateGone.current = true;
+      unlockAudio(); setSoundOn(true);
+      if (firstVisit.current) { openingFrom.current = 'first'; setSlide(0); setPhase('opening'); } else { playBgm('title', 0.6); setPhase('title'); }
+    };
     return (
       <div className="sky gate" onPointerDown={go} role="button" tabIndex={0} aria-label="터치하여 오프닝 시작">
         <img className="gate-bg" src={`${BASE}${packPath('opening3/room-eve-blur.jpg', '')}`} alt="" />
         <div className="gate-dust" aria-hidden>{Array.from({ length: 14 }, (_, i) => <i key={i} style={{ left: `${(i * 41) % 100}%`, animationDelay: `${(i * 0.53) % 4}s`, animationDuration: `${4 + (i % 5)}s` }} />)}</div>
-        <p className="gate-chron">서기 2026년 11월, 어느 저녁…</p>
-        <p className="gate-line">고나의 모험이 시작됩니다</p>
-        <p className="gate-tap">— TOUCH TO BEGIN —</p>
+        <p className="gate-chron">{firstVisit.current ? '서기 2026년 11월, 어느 저녁…' : '다시 꿈나라로…'}</p>
+        <p className="gate-line">{firstVisit.current ? '고나의 모험이 시작됩니다' : '고나가 기다리고 있어요'}</p>
+        <p className="gate-tap">{firstVisit.current ? '— TOUCH TO BEGIN —' : '— TOUCH TO START —'}</p>
         <p className="gate-note">♪ 소리를 켜고 감상하세요</p>
       </div>
     );
@@ -582,9 +601,11 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
       );
     }
     return (
-      <div className="sky end cred">
+      <div className="sky end cred cred-fin">
+        {THEME.id === 'poop' && <img className="cred-bg" src={`${BASE}${packPath('ending/finale.jpg', '')}`} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
         <div className="cred-scroll">
           <h2>ALL CLEAR!</h2>
+          {THEME.id === 'poop' && <p className="cred-thanks">고나와 가족의 대모험, 정말 수고했어요!<br />{prof?.nick ?? '모험가'} 님의 추억 앨범 · 기념사진 {Object.keys(photos()).length}/108</p>}
           {result && (
             <dl className="cred-score">
               <dt>최종 점수</dt><dd>{String(result.score).padStart(8, '0')}</dd>
@@ -630,8 +651,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
             {Array.from({ length: 10 }, (_, i) => <i key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.37) % 2.6}s`, animationDuration: `${2.2 + (i % 4) * 0.5}s` }} />)}
           </div>
           <header className="ttl2-logo">
-            <img src={`${BASE}${packPath('title/logo.png')}`} alt="GONA's SKY ADVENTURE" />
-            <p className="ttl2-sub"><span>응가 대탈출 대작전</span></p>
+            <img src={`${BASE}${packPath('title/logo-v9.png')}`} alt="GONA's SKY ADVENTURE" />
           </header>
           <div className="ttl2-menu">
             <button type="button" className="ttl2-start ttl-start" onClick={go}>PRESS START</button>
@@ -723,7 +743,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
             <p>GONA&apos;s Sky Adventure — The Great Poo Escape</p>
           </div>
         ) : (
-          <img className="ttl-logo" style={{ width: logoW }} src={`${BASE}${packPath('title/logo.png')}`} alt="GONA's Sky Adventure" />
+          <img className="ttl-logo" style={{ width: logoW }} src={`${BASE}${packPath('title/logo-v9.png')}`} alt="GONA's Sky Adventure" />
         )}
         <div className="ttl-menu" style={{ height: menuH }}>
           <div className="ttl-row">
@@ -844,11 +864,16 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   if (phase === 'album') {
     const cl = clears();
     const FAM_NAME = (f: FamilyId): string => (f === 'samchon' ? '삼촌' : CHARACTERS[f].name);
-    const got = Object.keys(cl).length;
+    const runs = Object.keys(cl).length; // 완주 기념 엽서 (동료 × 난이도 = 18)
+    const ph = photos();
+    const has = (f: FamilyId, d: Difficulty, n: number): boolean => !!ph[photoKey(f, d, n)];
+    const got = FAMILY.reduce((a, f) => a + DIFF_ORDER.reduce((b, d) => b + STAGES.filter((st) => has(f, d, st.id)).length, 0), 0); // 보스 기념사진 (108)
+    const famGot = (f: FamilyId): number => DIFF_ORDER.reduce((b, d) => b + STAGES.filter((st) => has(f, d, st.id)).length, 0);
+    const diffGot = (d: Difficulty): number => FAMILY.reduce((b, f) => b + STAGES.filter((st) => has(f, d, st.id)).length, 0);
     const ach = achievements();
     const mis = missions();
     const stamps = stampBoard();
-    const master = got >= 18;
+    const master = got >= 108;
     const VICTORY: Record<FamilyId, [string, string, string]> = {
       mom: ['우리 고나 최고! 사진 한 장 더~', '물보라처럼 시원하게 해냈어!', '엄마의 목욕물은 전설이 되었다…!'],
       dad: ['아빠 어깨 위가 제일 높지?', '급수 완료! 임무 성공이다!', '소방관의 명예를 걸고… 대성공!'],
@@ -861,8 +886,8 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     return (
       <div className="sky end cred album">
         <h2 className="recs-h">ALBUM · 추억 앨범</h2>
-        <div className="alb-rate"><i style={{ width: `${Math.round((got / 18) * 100)}%` }} /><span>앨범 완성률 {Math.round((got / 18) * 100)}%</span></div>
-        <p className="alb-who">{prof ? <><b>{prof.nick}</b> 님의 앨범</> : '모험가'} · 기념사진 {got}/18 · 미션 ★{mis.filter((x) => x.done).reduce((a, x) => a + x.stars, 0)}/{mis.reduce((a, x) => a + x.stars, 0)} · 업적 {ach.filter((a) => a.done).length}/{ach.length}
+        <div className="alb-rate"><i style={{ width: `${Math.round((got / 108) * 100)}%` }} /><span>앨범 완성률 {Math.round((got / 108) * 100)}% · 기념사진 {got}/108</span></div>
+        <p className="alb-who">{prof ? <><b>{prof.nick}</b> 님의 앨범</> : '모험가'} · 완주 엽서 {runs}/18 · 미션 ★{mis.filter((x) => x.done).reduce((a, x) => a + x.stars, 0)}/{mis.reduce((a, x) => a + x.stars, 0)} · 업적 {ach.filter((a) => a.done).length}/{ach.length}
           <button type="button" className="alb-mini" onClick={() => { setNickVal(prof?.nick ?? ''); setNickEdit('rename'); setPhase('title'); }}>이름 바꾸기</button>
           {profiles().length > 1 && <button type="button" className="alb-mini" onClick={() => { const ps = profiles(); const i = ps.findIndex((p) => p.id === prof?.id); switchProfile(ps[(i + 1) % ps.length].id); setProf(activeProfile()); setRecords(loadRecords()); }}>다른 모험가</button>}
           <button type="button" className="alb-mini" onClick={() => { setNickVal(''); setNickEdit('new'); setPhase('title'); }}>새 모험가</button>
@@ -875,7 +900,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
             <div className="hall">
               <div className="hall-top">
                 <img src={`${BASE}${packPath('ui/master.png', '')}`} alt="" className={master ? '' : 'off'} />
-                <div><b>{prof?.nick ?? '모험가'}</b><span>총 완성도 {Math.round(((got + ach.filter((a) => a.done).length + mis.filter((m) => m.done).length) / (18 + ach.length + mis.length)) * 100)}%</span><small>사진 {got}/18 · 업적 {ach.filter((a) => a.done).length}/{ach.length} · 미션 {mis.filter((m) => m.done).length}/{mis.length}</small></div>
+                <div><b>{prof?.nick ?? '모험가'}</b><span>총 완성도 {Math.round(((got + runs + ach.filter((a) => a.done).length + mis.filter((m) => m.done).length) / (108 + 18 + ach.length + mis.length)) * 100)}%</span><small>사진 {got}/108 · 엽서 {runs}/18 · 업적 {ach.filter((a) => a.done).length}/{ach.length} · 미션 {mis.filter((m) => m.done).length}/{mis.length}</small></div>
               </div>
               <p className="alb-sub">난이도 정복 — 동료 6명 모두로 클리어하면 칭호</p>
               {DIFF_ORDER.map((d) => { const n = FAMILY.filter((f) => cl[clearKey(f, d)]).length; return (
@@ -888,25 +913,50 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
               <p className="alb-sub">최고 기록 ({prof?.nick ?? '모험가'})</p>
               <div className="hall-scores">{DIFFS.map((d) => <span key={d}><em>{DIFF[d].name}</em>{String(records[d].score).padStart(8, '0')}{records[d].clear ? ' ★' : ''}</span>)}</div>
               <p className="alb-sub">다음 목표</p>
-              <ul className="hall-next">{mis.filter((m) => !m.done).slice(0, 3).map((m) => <li key={m.id}>▶ {m.name} <small>{m.desc} ({m.prog[0]}/{m.prog[1]})</small></li>)}{!master && <li>▶ 기념사진 18장 모으기 <small>({got}/18 · 다 모으면 MASTER 배지와 온 가족 특별 사진)</small></li>}</ul>
+              <ul className="hall-next">{mis.filter((m) => !m.done).slice(0, 3).map((m) => <li key={m.id}>▶ {m.name} <small>{m.desc} ({m.prog[0]}/{m.prog[1]})</small></li>)}{!master && <li>▶ 기념사진 108장 모으기 <small>({got}/108 · 동료마다 · 난이도마다 · 보스마다 1장 · 다 모으면 MASTER 배지와 온 가족 특별 사진)</small></li>}</ul>
             </div>
           )}
           {albTab === 'photo' && (
-            <div className="alb-grid">
-              {FAMILY.map((f) => DIFF_ORDER.map((d) => {
-                const k = clearKey(f, d);
-                const on = !!cl[k];
-                return (
-                  <button key={k} type="button" className={`alb-card d-${d}${on ? '' : ' locked'}`} onClick={() => { if (on) { sfx('menuOk'); markSeen(k); setAlbView(k); } else sfx('menuMove'); }}>
-                    <img src={photoSrc(f, d)} alt={on ? `${FAM_NAME(f)} ${d} 기념사진` : '잠긴 기념사진'} loading="lazy" decoding="async" />
-                    <span>{on ? FAM_NAME(f) : '???'}</span><em>{d.toUpperCase()}</em>
+            <div className="alb-photos">
+              <div className="alb-fams">
+                {FAMILY.map((f) => (
+                  <button key={f} type="button" className={albFam === f ? 'on' : ''} onClick={() => { sfx('menuMove'); setAlbFam(f); }}>
+                    <img src={`${BASE}${packPath(`chars/${f}/face.png`)}`} alt="" /><span>{FAM_NAME(f)}</span><em>{Math.round((famGot(f) / 18) * 100)}%</em>
                   </button>
-                );
-              }))}
-              <button type="button" className={`alb-card special${master ? '' : ' locked'}`} onClick={() => { if (master) { sfx('menuOk'); setAlbView('special'); } else sfx('menuMove'); }}>
-                <img src={`${BASE}${packPath('album/special.jpg', '')}`} alt={master ? '온 가족 특별 기념사진' : '잠긴 특별 사진'} loading="lazy" decoding="async" />
-                <span>{master ? '온 가족 SPECIAL' : '??? (18장 모두 모으면)'}</span>
-              </button>
+                ))}
+              </div>
+              <div className="alb-diffrate">{DIFF_ORDER.map((d) => <span key={d} className={`d-${d}`}><b>{d.toUpperCase()}</b><i><i style={{ width: `${(diffGot(d) / 36) * 100}%` }} /></i><em>{diffGot(d)}/36</em></span>)}</div>
+              {DIFF_ORDER.map((d) => (
+                <div key={d} className={`alb-prow d-${d}`}>
+                  <p className="alb-sub">{FAM_NAME(albFam)} · {d.toUpperCase()} <small>{STAGES.filter((st) => has(albFam, d, st.id)).length}/6</small></p>
+                  <div className="alb-grid">
+                    {STAGES.map((st) => {
+                      const on = has(albFam, d, st.id);
+                      const k = `p:${albFam}:${d}:${st.id}`;
+                      return (
+                        <button key={k} type="button" className={`alb-card d-${d}${on ? '' : ' locked'}`} onClick={() => { if (on) { sfx('menuOk'); markSeen(k); setAlbView(k); } else sfx('menuMove'); }}>
+                          <img src={bossPhotoSrc(albFam, d, st.id, true)} alt={on ? `${FAM_NAME(albFam)} ${d} ${THEME.stages[st.id - 1]?.bossName} 기념사진` : '잠긴 기념사진'} loading="lazy" decoding="async" />
+                          <span>{on ? (THEME.stages[st.id - 1]?.bossName ?? '') : '???'}</span><em>{st.id === 6 ? 'FINAL' : `ST${st.id}`}</em>
+                          {on && ph[photoKey(albFam, d, st.id)]?.rank && <img className="alb-rk" src={`${BASE}${packPath(`ui/rank-${ph[photoKey(albFam, d, st.id)].rank}.png`, '')}`} alt="" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              <p className="alb-sub">완주 기념 엽서 — 한 동료와 전 스테이지를 끝까지 깨면</p>
+              <div className="alb-grid alb-runs">
+                {DIFF_ORDER.map((d) => { const k = clearKey(albFam, d); const on = !!cl[k]; return (
+                  <button key={k} type="button" className={`alb-card d-${d}${on ? '' : ' locked'}`} onClick={() => { if (on) { sfx('menuOk'); markSeen(k); setAlbView(k); } else sfx('menuMove'); }}>
+                    <img src={photoSrc(albFam, d)} alt={on ? `${FAM_NAME(albFam)} ${d} 완주 엽서` : '잠긴 엽서'} loading="lazy" decoding="async" />
+                    <span>{on ? '완주!' : '???'}</span><em>{d.toUpperCase()}</em>
+                  </button>
+                ); })}
+                <button type="button" className={`alb-card special${master ? '' : ' locked'}`} onClick={() => { if (master) { sfx('menuOk'); setAlbView('special'); } else sfx('menuMove'); }}>
+                  <img src={`${BASE}${packPath('album/special.jpg', '')}`} alt={master ? '온 가족 특별 기념사진' : '잠긴 특별 사진'} loading="lazy" decoding="async" />
+                  <span>{master ? '온 가족 SPECIAL' : '??? (108장)'}</span>
+                </button>
+              </div>
             </div>
           )}
           {albTab === 'mission' && (
@@ -921,7 +971,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
           )}
           {albTab === 'badge' && (
             <div className="alb-stamps">
-              <div className={`alb-master${master ? '' : ' locked'}`}><img src={`${BASE}${packPath('ui/master.png', '')}`} alt="마스터 배지" /><span>{master ? 'MASTER · 모든 동료 · 모든 난이도 클리어!' : 'MASTER 배지 — 기념사진 18장을 모두 모으면'}</span></div>
+              <div className={`alb-master${master ? '' : ' locked'}`}><img src={`${BASE}${packPath('ui/master.png', '')}`} alt="마스터 배지" /><span>{master ? 'MASTER · 모든 동료 · 모든 난이도 클리어!' : 'MASTER 배지 — 기념사진 108장을 모두 모으면'}</span></div>
               <p className="alb-sub">스테이지 도장판 (스테이지 최고 랭크)</p>
               {DIFF_ORDER.map((d) => (
                 <div key={d} className={`stamp-row d-${d}`}>
@@ -969,7 +1019,25 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
             <p>터치하면 닫기</p>
           </div>
         )}
-        {albView && albView !== 'special' && (() => { const [f, d] = albView.split(':') as [FamilyId, Difficulty]; const di = DIFF_ORDER.indexOf(d); return (
+        {albView?.startsWith('p:') && (() => { const [, f, d, ns] = albView.split(':') as [string, FamilyId, Difficulty, string]; const n = +ns; const di = DIFF_ORDER.indexOf(d); const inf = ph[photoKey(f, d, n)]; const bn = THEME.stages[n - 1]?.bossName ?? ''; const src = bossPhotoSrc(f, d, n); return (
+          <div className="alb-view" onClick={() => setAlbView(null)}>
+            <div className={`polaroid d-${d}`}>
+              <img src={src} alt="기념사진" />
+              <q>“{VICTORY[f][di]}”</q>
+              <small className="pl-boss">{bn}: {BOSS_CRY[n - 1]}</small>
+              <small>{prof?.nick ?? '모험가'} · {FAM_NAME(f)} × 고나 · {d.toUpperCase()} · {n === 6 ? 'FINAL' : `STAGE ${n}`} · {inf?.at ?? ''}{inf?.score ? ` · ${inf.score.toLocaleString()}점` : ''}</small>
+              <span className="polaroid-stamp"><img src={`${BASE}${packPath(`ui/badge-${d}.png`, '')}`} alt="" /><img className="ps-face" src={`${BASE}${packPath(`chars/${f}/face.png`)}`} alt="" /></span>
+              {inf?.rank && <img className="polaroid-rank" src={`${BASE}${packPath(`ui/rank-${inf.rank}.png`, '')}`} alt={inf.rank} />}
+              {(inf?.hits === 0 || inf?.allParts) && <span className="pl-marks">{inf.hits === 0 && <i>NO MISS</i>}{inf.bombs === 0 && <i>NO BOMB</i>}{inf.allParts && <i>ALL PARTS</i>}</span>}
+            </div>
+            <div className="alb-save" onClick={(e) => e.stopPropagation()}>
+              <button type="button" className="sky-btn sky-btn-go" onClick={() => { void savePhotoPng(src, `${BASE}${packPath(`ui/badge-${d}.png`, '')}`, `${BASE}${packPath(`chars/${f}/face.png`)}`, [`“${VICTORY[f][di]}”`, `${FAM_NAME(f)} × 고나 · ${bn} 격파 · ${d.toUpperCase()}${inf?.rank ? ` · RANK ${inf.rank}` : ''}`, `${prof?.nick ?? '모험가'} · ${inf?.at ?? ''}${inf?.score ? ` · ${inf.score.toLocaleString()}점` : ''} · GONA's SKY ADVENTURE`], `gona-${f}-${d}-${n}.png`).then(setToast); }}>PNG 저장 · 공유</button>
+              {toast && <span className="prof-toast">{toast}</span>}
+            </div>
+            <p>바깥을 터치하면 닫기</p>
+          </div>
+        ); })()}
+        {albView && albView !== 'special' && !albView.startsWith('p:') && (() => { const [f, d] = albView.split(':') as [FamilyId, Difficulty]; const di = DIFF_ORDER.indexOf(d); return (
           <div className="alb-view" onClick={() => setAlbView(null)}>
             <div className={`polaroid d-${d}`}>
               <img src={photoSrc(f, d)} alt="기념사진" />
@@ -1169,6 +1237,13 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
             </div>
           </div>
         )}
+        {phase === 'tally' && result && snap && bossPhoto && (
+          <div className={`snap d-${bossPhoto.diff}`} onPointerDown={() => { setSnap(false); sfx('menuOk'); }} ref={(el) => { if (el && !el.dataset.on) { el.dataset.on = '1'; sfx('cutin'); buzz([30, 30, 60], 0); window.setTimeout(() => setSnap(false), 2600); } }}>
+            <div className="snap-flash" />
+            <div className="snap-card"><img src={bossPhotoSrc(bossPhoto.fam, bossPhoto.diff, bossPhoto.stage, true)} alt="" /><b>찰칵!</b></div>
+            <p>{bossPhoto.isNew ? 'NEW PHOTO!' : 'PHOTO'} · {FAM_KO[bossPhoto.fam]} × {THEME.stages[bossPhoto.stage - 1]?.bossName}</p>
+          </div>
+        )}
         {phase === 'tally' && result && cer && photo && (
           <div className={`cer d-${photo.diff}`} onPointerDown={() => { setCer(false); sfx('menuOk'); }} ref={(el) => { if (el && !el.dataset.on) { el.dataset.on = '1'; buzz([40, 40, 60, 40, 120], 0); window.setTimeout(() => { sfx('cutin'); el.classList.add('snap'); }, 3000); window.setTimeout(() => setCer(false), 3600); } }}>
             <img className="cer-bg" src={`${BASE}${packPath(`ui/cer-${photo.diff}.jpg`, '')}`} alt="" />
@@ -1215,14 +1290,24 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
               )}
               {unlocks.length > 0 && <ul className="res-unlocks">{unlocks.map((u, i) => <li key={u} style={{ animationDelay: `${1.4 + i * 0.25}s` }}>{u}</li>)}</ul>}
               {daily && !subm && <p className="res-new miss">기준 시간 초과 — 도전 실패! 다시 노려 보세요</p>}
-              {result.final && photo && (
-                <div className={`res-photo d-${photo.diff}`}>
-                  <p>{photo.isNew ? '★ NEW PHOTO! · NEW BADGE! ★' : '기념사진 (이미 획득 · 기록 갱신)'}</p>
+              {bossPhoto && (
+                <div className={`res-photo d-${bossPhoto.diff}`}>
+                  <p>{bossPhoto.isNew ? '★ NEW PHOTO! 기념사진 해금 ★' : '기념사진 (이미 획득 · 기록 갱신)'}</p>
                   <div className="res-photo-card">
-                    <img src={`${BASE}${packPath(`album/${photo.fam}-${photo.diff}.jpg`, '')}`} alt="클리어 기념사진" />
+                    <img src={bossPhotoSrc(bossPhoto.fam, bossPhoto.diff, bossPhoto.stage, true)} alt="보스 격파 기념사진" />
+                    <img className="res-badge" src={`${BASE}${packPath(`ui/badge-${bossPhoto.diff}.png`, '')}`} alt="" />
+                  </div>
+                  <span>{FAM_KO[bossPhoto.fam]} × {THEME.stages[bossPhoto.stage - 1]?.bossName} · {bossPhoto.diff.toUpperCase()} · 앨범 {Object.keys(photos()).length}/108</span>
+                </div>
+              )}
+              {result.final && photo && (
+                <div className={`res-photo d-${photo.diff} res-photo-run`}>
+                  <p>{photo.isNew ? '★ 완주 기념 엽서 + NEW BADGE! ★' : '완주 기념 엽서 (기록 갱신)'}</p>
+                  <div className="res-photo-card">
+                    <img src={`${BASE}${packPath(`album/${photo.fam}-${photo.diff}.jpg`, '')}`} alt="완주 기념 엽서" />
                     <img className="res-badge" src={`${BASE}${packPath(`ui/badge-${photo.diff}.png`, '')}`} alt="" />
                   </div>
-                  <span>{photo.fam === 'samchon' ? '삼촌' : CHARACTERS[photo.fam].name} · {photo.diff.toUpperCase()} CLEAR</span>
+                  <span>{FAM_KO[photo.fam]} · {photo.diff.toUpperCase()} 전 스테이지 완주</span>
                 </div>
               )}
               {THEME.id === 'poop' && !daily && (

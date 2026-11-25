@@ -496,8 +496,20 @@ function addFormations(stages: StageDef[]): void {
       const at = Math.round(((i + 1) * last) / (forms.length + 1.5));
       let k = at;
       while (k < last && !('wait' in sc[k])) k++;
-      sc.splice(k, 0, { wave: { e, n, move, extra: true, dir: i % 2 ? -1 : 1, x0: 22, x1: 158, y: move === 'dash' ? 118 : 64, gap: move === 'vee' ? 0 : 0.22, drop: i === forms.length - 1 ? 'star' : undefined } });
+      sc.splice(k, 0, { wave: { e, n, move, extra: true, dir: i % 2 ? -1 : 1, x0: 22, x1: 158, y: move === 'dash' ? (st.id >= 5 ? 142 : 118) : 64, gap: move === 'vee' ? 0 : 0.22, drop: i === forms.length - 1 ? 'star' : undefined } });
     });
+    // STAGE 4~: 중반에 '협공 편대' — 양쪽에서 동시에 X자로 교차 + 원형 편대가 가운데를 감쌈 (가운데 아래는 비워 둠)
+    if (st.id >= 4) {
+      const mid = Math.round(last * 0.45);
+      let k = mid;
+      while (k < sc.length && !('wait' in sc[k])) k++;
+      sc.splice(k, 0,
+        { wave: { e: 'fighter', n: st.id + 1, move: 'xcross', dir: 1, extra: true, gap: 0.2 } },
+        { wave: { e: 'fighter', n: st.id + 1, move: 'xcross', dir: -1, extra: true, gap: 0.2 } },
+        { wait: 2.2 },
+        { wave: { e: 'drone', n: st.id + 2, move: 'circle', dir: 1, extra: true, gap: 0.16 } },
+        { wait: 3 });
+    }
     // 보스 직전 몰아치기 (STAGE 3~): 양쪽에서 동시에 휘어 들어옴
     const w = sc.findIndex((q) => 'warning' in q);
     if (st.id >= 3 && w > 0) {

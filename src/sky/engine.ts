@@ -2638,7 +2638,11 @@ export class SkyEngine {
       // 필살기·폭탄은 보스에게 절반 (보스를 순식간에 녹이지 않도록)
       if (special || src === 'bomb') dmg *= 0.5;
       // 부품(포탑)이 남아 있으면 본체는 장갑으로 덜 받음
-      if (b.def.shielded && this.en.some((p) => p.kind === 'part' && p.parent === e && !p.dead)) dmg *= b.def.shielded;
+      if (b.def.shielded && this.en.some((p) => p.kind === 'part' && p.parent === e && !p.dead)) {
+        dmg *= b.def.shielded;
+        // 장갑에 막힘: 둔탁한 소리 · 회색 'GUARD' (부위를 먼저 부수라는 신호)
+        if (Math.random() < 0.05) { this.floatText(hx, hy - 8, 'GUARD', '#b8c0d0'); sfx('bossHit', 0.5, 0.7); }
+      }
       // 부위 파괴: 방패·봉인이 살아 있으면 본체 장갑 · 흉갑/뚜껑이 약점을 가림
       let covered = false;
       for (const p of this.en) {
@@ -3538,15 +3542,36 @@ export class SkyEngine {
         // 보스 고유 부위 (A · B): 본체에 붙은 그림자 · 맞으면 안쪽으로 밀리며 떨림 · 체력이 줄수록 파손 그림이 서서히 드러남
         const fw = im.width / 4;
         const ht = e.hitT ?? 0;
-        const px = e.x + (ht > 0 ? Math.sin(this.t * 90) * 1.2 : 0);
-        const py = e.y - ht * 14;
+        // 본체와 한 몸: 본체의 반동 · 떨림 · 피격 번쩍임을 그대로 따라감
+        const par = e.parent;
+        const pb = par ? this.bsOf(par) : null;
+        const pShake = pb ? (pb.mode === 'dying' ? Math.sin((par?.age ?? 0) * 60) * 1.5 : pb.mode === 'tele' ? Math.sin((par?.age ?? 0) * 70) * 0.7 : 0) : 0;
+        const pRec = par && par === this.boss ? Math.round(this.bossRecoil) : 0;
+        // 맞으면 본체 바깥쪽으로 밀렸다가 돌아옴 · 체력 25% 아래면 덜렁거림
+        const ang = par ? Math.atan2(e.y - par.y, e.x - par.x) : -Math.PI / 2;
+        const loose = e.hp < e.max * 0.25 ? Math.sin(this.t * 13 + e.x) * 1.1 : 0;
+        const px = e.x + pShake + Math.cos(ang) * ht * 9 + (ht > 0 ? Math.sin(this.t * 90) * 1.2 : 0) + loose;
+        const py = e.y - pRec + Math.sin(ang) * ht * 9 - ht * 4;
+        // 붙은 자리(이음매) 그림자: 본체 쪽으로 어두운 타원 → 떠 있는 그림처럼 보이지 않게
+        if (par) {
+          const g = this.g;
+          const jx = px - Math.cos(ang) * e.hr * 0.55;
+          const jy = py - Math.sin(ang) * e.hr * 0.55;
+          g.globalAlpha = 0.32;
+          g.fillStyle = '#140818';
+          g.beginPath(); g.ellipse(jx, jy + 2, e.hr * 0.75, e.hr * 0.5, ang, 0, TAU); g.fill();
+          g.globalAlpha = 1;
+        }
+        const parWhite = par ? par.flash > 0 : false;
         // 본체와 같은 굵은 어두운 외곽선 + 붙은 자리 그림자 → '따로 얹은 그림'이 아니라 한 몸처럼
         const dk = this.darkOf(im) as unknown as HTMLImageElement;
         for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) this.drawV2(dk, px + ox, py + oy, false, 0, e.pdef.cell * fw, fw, e.k);
         this.g.globalAlpha = 0.45;
         this.drawV2(dk, px + 2, py + 3, false, 0, e.pdef.cell * fw, fw, e.k);
         this.g.globalAlpha = 1;
-        this.drawV2(im, px, py, white || (e.hp < e.max * 0.25 && Math.floor(this.t * 8) % 2 === 0), 0, e.pdef.cell * fw, fw, e.k);
+        this.drawV2(im, px, py, white || parWhite || (e.hp < e.max * 0.25 && Math.floor(this.t * 8) % 2 === 0), 0, e.pdef.cell * fw, fw, e.k);
+        // 파괴 직전: 이음매에서 붉은 열기가 새어 나옴
+        if (e.hp < e.max * 0.25) { const g = this.g; g.globalAlpha = 0.25 + 0.2 * Math.sin(this.t * 16); g.fillStyle = '#ff5030'; g.beginPath(); g.arc(px - Math.cos(ang) * e.hr * 0.5, py - Math.sin(ang) * e.hr * 0.5, 4 + Math.sin(this.t * 9) * 1.5, 0, TAU); g.fill(); g.globalAlpha = 1; }
         const dmgK = clamp((1 - e.hp / e.max - 0.3) / 0.55, 0, 0.9);
         if (dmgK > 0) { this.g.globalAlpha = dmgK; this.drawV2(im, px, py, false, 0, (e.pdef.cell + 1) * fw, fw, e.k); this.g.globalAlpha = 1; }
         // 금이 많이 갔으면 작은 불꽃 · 연기
@@ -3570,6 +3595,8 @@ export class SkyEngine {
       const pim = this.art.parts;
       const pfw = pim.width / 4;
       for (const w of b.wrecks) this.drawV2(pim, e.x + shakeX + w.dx, e.y - recoil + w.dy, white, 0, w.cell * pfw, pfw, w.k);
+      // 부서진 자리에서 가끔 연기 · 불똥 (부서진 뒤에도 자리가 어색하지 않게)
+      if (b.mode !== 'dying' && Math.random() < 0.06 * b.wrecks.length) { const w = b.wrecks[Math.floor(Math.random() * b.wrecks.length)]; this.part(e.x + w.dx + rand(-4, 4), e.y + w.dy + rand(-4, 4), rand(-6, 6), rand(-30, -12), 0.7, Math.random() < 0.3 ? '#ff9a40' : '#6a6070', 2.5, -20); }
     }
     // 약점 노출: 깨진 자리 너머 약점에 붉은 조준 고리가 맥동 (어디를 쏴야 하는지 한눈에)
     if (e === this.boss && b.weakMul > 1.5 && def.weak && b.mode !== 'dying') {

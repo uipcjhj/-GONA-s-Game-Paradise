@@ -36,7 +36,7 @@ interface Store {
   /** 수집: 동료 × 난이도 클리어(기념사진 · 배지) · 업적 깃발 · 처음 본 사진 */
   col?: { clears: Record<string, { at: string; score: number; rank?: Rank }>; flags: Record<string, boolean>; seen: Record<string, boolean>;
     /** 스테이지 클리어 최고 기록: `동료:난이도:스테이지` → 랭크 · 최소 피격 · 최소 폭탄 · 부위 전부 파괴 여부 */
-    stages?: Record<string, { rank?: Rank; hits: number; bombs: number; allParts: boolean }>;
+    stages?: Record<string, { rank?: Rank; hits: number; bombs: number; allParts: boolean; at?: string; score?: number }>;
     /** 누적 횟수 (부위 전부 파괴한 보스 수 등) */
     counts?: Record<string, number> };
 }
@@ -191,6 +191,7 @@ export function markSeen(k: string): void {
 export interface Achievement { id: string; name: string; desc: string; done: boolean; prog: [number, number] }
 const FAM_ALL: FamilyId[] = ['mom', 'dad', 'imo', 'halmeoni', 'halabeoji', 'samchon'];
 const FAM_KO2: Record<FamilyId, string> = { mom: '엄마', dad: '아빠', imo: '이모', halmeoni: '할머니', halabeoji: '할아버지', samchon: '삼촌' };
+const BOSS_KO = ['쌀떡 골렘', '뿡뿡 버섯대왕', '철벽 믹서 3000', '젤리 크라켄', '철벽 똥기사', '변비마왕 꽉막혀'];
 export function achievements(): Achievement[] {
   const st = backend.load();
   const c = st.col ?? { clears: {}, flags: {}, seen: {} };
@@ -200,6 +201,7 @@ export function achievements(): Achievement[] {
   const diffN = DIFF_ORDER.filter((d) => FAM_ALL.some((f) => has(f, d))).length;
   const hardN = FAM_ALL.filter((f) => has(f, 'hard')).length;
   const daily = Object.values(st.daily).some((d) => d.cleared);
+  const ph = Object.keys(c.stages ?? {});
   const a = (id: string, name: string, desc: string, cur: number, max: number): Achievement => ({ id, name, desc, done: cur >= max, prog: [Math.min(cur, max), max] });
   return [
     a('first', '첫 번째 탈출', '어떤 동료와든 FINAL 클리어', n, 1),
@@ -215,13 +217,17 @@ export function achievements(): Achievement[] {
     a('rankS', 'S 랭크', '스테이지 랭크 S 획득', c.flags.rankS ? 1 : 0, 1),
     a('parts', '부위 파괴왕', '보스 부위를 전부 부수고 격파', c.flags.allparts ? 1 : 0, 1),
     a('daily', '오늘의 영웅', '오늘의 도전 클리어', daily ? 1 : 0, 1),
-    a('album', '추억 앨범 완성', '기념사진 18장 모두 모으기', n, 18),
+    ...BOSS_KO.map((b, i) => a(`boss${i + 1}`, `${b} 격파`, `${i === 5 ? 'FINAL' : `STAGE ${i + 1}`} 보스 격파 (아무 동료 · 아무 난이도)`, ph.filter((k) => k.endsWith(`:${i + 1}`)).length > 0 ? 1 : 0, 1)),
+    ...BOSS_KO.map((b, i) => a(`bossall${i + 1}`, `${b} 추억 완성`, `${b} 기념사진 18장 (동료 6 × 난이도 3)`, ph.filter((k) => k.endsWith(`:${i + 1}`)).length, 18)),
+    a('runs', '완주 엽서 수집가', '완주 기념 엽서 18장 모으기', n, 18),
+    a('album', '추억 앨범 완성', '보스 기념사진 108장 모두 모으기', ph.length, 108),
   ];
 }
 
 // ───────── 스테이지 기록 · 미션 ─────────
-export interface StageResult { fam: FamilyId; diff: Difficulty; stage: number; rank?: Rank; hits: number; bombs: number; allParts: boolean }
-export function recordStage(r: StageResult): void {
+export interface StageResult { fam: FamilyId; diff: Difficulty; stage: number; rank?: Rank; hits: number; bombs: number; allParts: boolean; score?: number }
+/** 보스 격파 기록 → 이 조합(동료 × 난이도 × 보스)의 기념사진이 새로 열렸는지 */
+export function recordStage(r: StageResult): { isNew: boolean } {
   const st = backend.load();
   const c = colOf(st);
   const st2 = (c.stages ??= {});
@@ -230,12 +236,20 @@ export function recordStage(r: StageResult): void {
   st2[k] = {
     rank: rankValue(r.rank) > rankValue(p?.rank) ? r.rank : p?.rank,
     hits: Math.min(p?.hits ?? 99, r.hits), bombs: Math.min(p?.bombs ?? 99, r.bombs), allParts: !!p?.allParts || r.allParts,
+    at: p?.at ?? today(), score: Math.max(p?.score ?? 0, r.score ?? 0),
   };
   const cn = (c.counts ??= {});
   if (r.allParts) cn.allParts = (cn.allParts ?? 0) + 1;
   cn.stageClears = (cn.stageClears ?? 0) + 1;
   backend.save(st);
+  return { isNew: !p };
 }
+/** 보스 기념사진 108장: `동료:난이도:스테이지` → 해금 정보 */
+export type PhotoInfo = { rank?: Rank; at?: string; score?: number; hits: number; bombs: number; allParts: boolean };
+export function photos(): Record<string, PhotoInfo> {
+  return backend.load().col?.stages ?? {};
+}
+export const photoKey = (fam: FamilyId, diff: Difficulty, stage: number): string => `${fam}:${diff}:${stage}`;
 /** 스테이지 도장판: 난이도 × 스테이지 → 그 스테이지의 최고 랭크 (아무 동료나) */
 export function stampBoard(): Record<string, Rank | 'C0'> {
   const out: Record<string, Rank | 'C0'> = {};

@@ -131,3 +131,18 @@
 | cer-easy.png | ui/cer-easy.jpg | 승리 세리머니 배경 EASY (파스텔 무지개 무대) | 2 |
 | cer-normal.png | ui/cer-normal.jpg | 승리 세리머니 배경 NORMAL (노을 하늘) | 2 |
 | cer-hard.png | ui/cer-hard.jpg | 승리 세리머니 배경 HARD (밤하늘 불꽃놀이·트로피) | 2 |
+
+---
+
+## 2026-11-25 (6차) · 최종 리마스터 3차 (108장 추억 앨범)
+잔액 42.75 → **10.5** · **사용 32.25**
+
+| 원본 (art-src/sky-poop/v9/) | 적용 | 용도 | 모델 · 품질 | 장수 | 크레딧 |
+|---|---|---|---|---|---|
+| album/<동료>-<난이도>-<보스>.webp | album/p/*.jpg (600×800) · album/t/*.jpg (150×200) | 보스 격파 기념사진 (동료 6 × 난이도 3 × 보스 6) — 프린세스 메이커 삽화집풍, 뒤에서 우는 보스 | GPT Image 2.5 low (1장만 medium) | 108 | 27.25 |
+| logo-a.png | title/logo-v9.png | 타이틀 로고 (메인 + 한글 리본 + 작은 부제) | GPT Image 2.6 high 2k · 투명 | 1 | 2 |
+| logo-b-unused.png | (비교 후 미채택) | 로고 시안 B | GPT Image 2.6 high 2k · 투명 | 1 | 2 |
+| guard-bg.png | opening3/guard-bg.jpg | 오프닝 '여섯 수호자' 컷인 배경 (빛기둥 하늘) | GPT Image 2.5 medium | 1 | 0.5 |
+| finale.png | ending/finale.jpg | 엔딩 크레딧 뒤 마지막 장면 (잠든 고나와 가족) | GPT Image 2.5 medium | 1 | 0.5 |
+
+생성 112장 · 적용 111장 (미채택 1장: 로고 시안 B)

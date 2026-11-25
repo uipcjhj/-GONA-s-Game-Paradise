@@ -19,7 +19,7 @@ const [url, out, fam = 'imo', diff = 'normal'] = process.argv.slice(2);
   const shot = (n) => p.screenshot({ path: `${out}/${n}.png` });
   const log = [];
   // 닉네임 만들기 (firstrun)
-  await p.goto(url + '?skytest&firstrun'); await p.waitForSelector('.nick-box', { timeout: 60000 });
+  await p.goto(url + '?skytest&firstrun'); await p.waitForSelector('.gate', { timeout: 60000 }); await p.tap('.gate'); await p.waitForSelector('.nick-box', { timeout: 60000 });
   await p.fill('.nick-box input', '최종검수'); await p.tap('.nick-box .sky-btn-go'); await p.waitForTimeout(600);
   // 스테이지 인트로 카드
   await p.goto(url + '?skytest'); await p.waitForSelector('.ttl-start');

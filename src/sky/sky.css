@@ -680,3 +680,38 @@ body.sky-hub-on .hub-back { display: none; }
 .st-intro b { font-size: 20px; color: #ffe9a0; text-shadow: 0 2px 0 #3a1a08; } .st-intro span { font-size: 14px; color: #fff4d6; } .st-intro em { font-style: normal; font-size: 11px; color: #ff9eb0; }
 @keyframes st-in { 0% { opacity: 0; transform: translateX(-50%) scale(1.3); } 10% { opacity: 1; transform: translateX(-50%) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; transform: translateX(-50%) translateY(-20px); } }
 .album .recs-tabs button { white-space: nowrap; padding: 0 2px; letter-spacing: -0.5px; } .album .recs-tabs button:first-child { flex: 1.5; }
+/* ── 108장 기념사진 앨범 ── */
+.alb-photos { display: flex; flex-direction: column; gap: 4px; }
+.alb-fams { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
+.alb-fams button { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 3px 1px 2px; font: 9px 'Galmuri11', monospace; color: #cfc4ff; background: #1c1446; border: 2px solid #3a2a66; cursor: pointer; }
+.alb-fams button img { width: 30px; height: 30px; object-fit: cover; image-rendering: auto; }
+.alb-fams button em { font-style: normal; color: #ffd84a; } .alb-fams button.on { border-color: #ffd84a; background: #3a2a66; color: #fff4d6; }
+.alb-diffrate { display: flex; gap: 4px; } .alb-diffrate span { flex: 1; display: flex; align-items: center; gap: 3px; font-size: 9px; color: #cfc4ff; }
+.alb-diffrate b { font-size: 9px; } .alb-diffrate span > i { flex: 1; height: 5px; background: #120a26; border: 1px solid #3a2a66; } .alb-diffrate span > i > i { display: block; height: 100%; background: #ffd84a; }
+.alb-diffrate .d-easy b { color: #9cf0a0; } .alb-diffrate .d-normal b { color: #9cd8ff; } .alb-diffrate .d-hard b { color: #ffb84a; }
+.alb-prow .alb-grid { grid-template-columns: repeat(6, 1fr); gap: 3px; }
+.alb-prow .alb-card { padding: 2px 2px 13px; } .alb-prow .alb-card span { font-size: 7px; left: 2px; right: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; } .alb-prow .alb-card em { display: none; }
+.alb-prow .alb-sub small { color: #cfc4ff; }
+.alb-rk { position: absolute; top: -4px; right: -4px; width: 18px !important; height: auto; aspect-ratio: auto !important; }
+.alb-runs { grid-template-columns: repeat(3, 1fr); }
+.pl-boss { color: #8a3a5a !important; font-style: italic; }
+.pl-marks { display: flex; justify-content: center; gap: 4px; } .pl-marks i { font: normal 8px 'Galmuri11', monospace; padding: 1px 4px; color: #fff4d6; background: #3a1a6a; border: 1px solid #120a26; }
+.res-photo-run .res-photo-card { width: 34%; }
+/* 보스 격파 직후 '찰칵' — 사진이 떨어져 내려옴 */
+.snap { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(8, 4, 20, 0.78); }
+.snap-flash { position: absolute; inset: 0; background: #fff; animation: snap-flash 0.5s ease-out both; pointer-events: none; }
+.snap-card { position: relative; width: min(56vw, 230px); padding: 6px 6px 22px; background: #fff8ea; border: 2px solid #120a26; box-shadow: 0 6px 0 rgba(0, 0, 0, 0.5); animation: snap-drop 0.7s cubic-bezier(.2, 1.4, .5, 1) 0.25s both; }
+.snap.d-normal .snap-card { background: #e8eeff; } .snap.d-hard .snap-card { background: linear-gradient(#fff1b8, #e8b53c); }
+.snap-card img { width: 100%; display: block; }
+.snap-card b { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; font: 700 13px 'Galmuri11', monospace; color: #3a1a08; }
+.snap p { margin: 0; font-size: 13px; color: #ffd84a; text-shadow: 0 2px 0 #000; animation: ttlblink 0.8s steps(2) infinite; }
+@keyframes snap-flash { 0% { opacity: 0.95; } 100% { opacity: 0; } }
+@keyframes snap-drop { 0% { transform: translateY(-60vh) rotate(-14deg); } 100% { transform: translateY(0) rotate(-3deg); } }
+/* 크레딧: 마지막 장면 그림 위로 흐르는 크레딧 (검은 화면 대신 여운) */
+.cred-fin { background: #0a0614; }
+.cred-fin .cred-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; animation: cred-bg-in 2.4s ease-out both, ttl2-drift 26s ease-in-out infinite alternate; }
+.cred-fin::before { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(rgba(10, 6, 20, 0) 25%, rgba(10, 6, 20, 0.55) 55%, rgba(10, 6, 20, 0.88) 100%); pointer-events: none; }
+.cred-fin .cred-scroll, .cred-fin .cred-btns { position: relative; z-index: 2; }
+.cred-fin .cred-scroll { text-shadow: 0 2px 0 #000, 0 0 6px rgba(0, 0, 0, 0.8); }
+.cred-thanks { margin: 0; font-family: 'Gowun Batang', serif; font-weight: 700; font-size: 13px; line-height: 1.6; color: #fff1cc; text-align: center; }
+@keyframes cred-bg-in { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: scale(1); } }
