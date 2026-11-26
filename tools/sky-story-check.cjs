@@ -20,7 +20,7 @@ const [s0, s1] = RANGE.split('-').map(Number);
   const shot = async (name) => { if (SHOTS === '1') await page.screenshot({ path: `${out}/${tag}-${String(++n).padStart(3, '0')}-${name}.png` }); };
   await page.goto(url);
   await page.waitForSelector('.ttl-start');
-  await page.tap('.ttl-start');
+  await page.tap('.ttl-start'); await page.waitForSelector('.lob-story', { timeout: 15000 }); await page.tap('.lob-story');
   await page.waitForSelector('.sel-art, .opening-skip, .oc-skip');
   if (await page.$('.opening-skip')) await page.tap('.opening-skip'); if (await page.$('.oc-skip')) { await page.waitForTimeout(800); await page.tap('.oc-skip'); await page.waitForSelector('.sel-art'); }
   await page.waitForSelector('.sel-art');

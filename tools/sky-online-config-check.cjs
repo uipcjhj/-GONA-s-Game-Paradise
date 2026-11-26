@@ -16,7 +16,7 @@ const jwt = (role) => `eyJhbGciOiJIUzI1NiJ9.${Buffer.from(JSON.stringify({ role,
     await p.goto(url + '?skytest');
     await p.waitForSelector('.ttl-start', { timeout: 60000 });
     if (await p.waitForSelector('.nick-box', { timeout: 3000 }).catch(() => null)) { await p.fill('.nick-box input', 'QA'); await p.tap('.nick-box .sky-btn-go'); await p.waitForTimeout(300); }
-    await p.tap('.ttl2-nick');
+    await p.tap('.ttl-start'); await p.waitForSelector('.lob-story', { timeout: 15000 }); await p.tap('.lob-prof');
     await p.waitForSelector('.prof-box');
     const on = !!(await p.$('.prof-in[type=email]'));
     console.log(`${on === want ? 'PASS' : 'FAIL'} · ${n} → 온라인 ${on ? '켜짐' : '꺼짐'}`);

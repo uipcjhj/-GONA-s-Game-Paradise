@@ -10,6 +10,7 @@ import { CHARACTERS } from './data/characters';
 import { settings, saveSettings, canVibrate, iosHaptic, buzz } from './settings';
 import { NS, BETA, PROD, PREVIEW, type PreviewMode } from './ns';
 import { migrateLocal } from './sync';
+import { newRewards, ackRewards } from './lobby';
 import { pwa, onPwa, registerPwa, applyUpdate, promptInstall, precacheAll } from './pwa';
 import { ONLINE, account, signIn, signUp, signOut, deleteAccount, sync as cloudSync, setNickname as cloudNick, startPlay, reportStage, submitPlay, voidPlay, hasPlay, topBoard, myUserId, type BoardRow } from './online';
 import { THEME, familyText } from './theme';
@@ -22,6 +23,8 @@ import { HUB, HubBack, TestHub, type HubGo } from './TestHub';
 import './sky.css';
 
 const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
+/** 메뉴·결과 화면에서 돌아갈 곳: 응가판은 메인 로비(GONA'S BASE CAMP) · 다른 테마는 타이틀 */
+const HOME_KO = THEME.id === 'poop' ? '로비' : '타이틀';
 const FAMILY: FamilyId[] = ['mom', 'dad', 'imo', 'halmeoni', 'halabeoji', 'samchon'];
 const REC_KEY = `${NS}.records`;
 const DIFFS: Difficulty[] = ['easy', 'normal', 'hard'];
@@ -121,7 +124,7 @@ const SP_DESC: Record<FamilyId, string> = {
   samchon: '거대 발명 메카의 미사일 연사 + 드릴 돌진',
 };
 
-type Phase = 'loading' | 'album' | 'hunt' | 'gate' | 'hub' | 'title' | 'opening' | 'select' | 'prep' | 'play' | 'tally' | 'continue' | 'gameover' | 'ending' | 'credits' | 'records' | 'daily';
+type Phase = 'loading' | 'album' | 'hunt' | 'gate' | 'hub' | 'title' | 'lobby' | 'opening' | 'select' | 'prep' | 'play' | 'tally' | 'continue' | 'gameover' | 'ending' | 'credits' | 'records' | 'daily';
 
 /** GONA's Sky Adventure 화면 전체 (타이틀 → 동료 선택 → 플레이 → 결과). 월드맵과는 onExit 한 줄로만 연결됨 */
 /** 테스트 허브(#hub)일 때만 어느 화면에서든 '◀ 테스트 목록' 버튼을 띄움 */
@@ -231,6 +234,28 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   useEffect(() => onPwa(() => setPwaTick((n) => n + 1)), []);
   const [installOpen, setInstallOpen] = useState(false);
   const [profOpen, setProfOpen] = useState(false);
+  const [setOpen, setSetOpen] = useState(false); // 로비 설정 창
+  const HOME: Phase = (THEME.id as string) === 'poop' ? 'lobby' : 'title';
+  /** 공통 하단 내비게이션 (응가판 로비 · 앨범 · 랭킹): 홈 | 추억앨범 | 랭킹 | 프로필 */
+  const navBar = (cur: 'home' | 'album' | 'rank'): ReactElement | null => {
+    if ((THEME.id as string) !== 'poop') return null;
+    const nr = newRewards();
+    const go = (t: 'home' | 'album' | 'rank' | 'prof') => () => {
+      unlockAudio(); sfx('menuMove');
+      if (t === 'home') setPhase('lobby');
+      if (t === 'album') { setAlbTab(nr.photos.length ? 'photo' : 'hall'); ackRewards('photo'); setPhase('album'); }
+      if (t === 'rank') { setRecTab('stage'); setPhase('records'); }
+      if (t === 'prof') { setPhase('lobby'); setProfOpen(true); }
+    };
+    return (
+      <nav className="lob-nav">
+        <button type="button" className={cur === 'home' ? 'on' : ''} onClick={go('home')}><i>🏠</i>홈</button>
+        <button type="button" className={cur === 'album' ? 'on' : ''} onClick={go('album')}><i>📖</i>추억앨범{cur !== 'album' && nr.photos.length + nr.ach.length > 0 && <b className="lob-ndot" />}</button>
+        <button type="button" className={cur === 'rank' ? 'on' : ''} onClick={go('rank')}><i>🏆</i>랭킹</button>
+        <button type="button" onClick={go('prof')}><i>👤</i>프로필</button>
+      </nav>
+    );
+  };
   const [backup, setBackup] = useState('');
   const [intro, setIntro] = useState(0);
   const [recTab, setRecTab] = useState<'stage' | 'run' | 'daily' | 'online'>('stage');
@@ -251,14 +276,14 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   const [slide, setSlide] = useState(0);
   /** 오프닝 종료: 다음부터는 자동 재생하지 않음 (타이틀의 '오프닝'으로 다시 볼 수 있음) */
   /** 오프닝을 어디서 열었는지: 첫 시작(→ 선택 화면) · 타이틀의 '오프닝 다시보기'(→ 타이틀) */
-  const openingFrom = useRef<'start' | 'title' | 'first'>('start');
+  const openingFrom = useRef<'start' | 'title' | 'first' | 'lobby'>('start');
   const firstVisit = useRef(true);
   const gateGone = useRef(false);
   const finishOpening = (): void => {
     try { localStorage.setItem(OPENED_KEY, '1'); } catch { /* 무시 */ }
     setSlide(0);
     // 첫 실행(관문 → 오프닝) · 타이틀의 '오프닝 다시보기' → 끝나면 타이틀 / (예전 흐름) START 뒤 첫 오프닝 → 선택
-    setPhase(openingFrom.current === 'start' ? 'select' : 'title');
+    setPhase(openingFrom.current === 'start' ? 'select' : openingFrom.current === 'lobby' ? 'lobby' : 'title');
     if (openingFrom.current !== 'start') playBgm('title', 0.6);
   };
   const best = Math.max(records.easy.score, records.normal.score, records.hard.score);
@@ -300,14 +325,14 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
 
   // 응가판: 타이틀·선택·오프닝·엔딩(허브 테스트 중엔 항상)에서 세로 BETA 띠 숨김 — CSS :has 대신 body 클래스 (사파리 성능)
   useEffect(() => {
-    const hide = (THEME.id as string) === 'poop' && (HUB || phase === 'title' || phase === 'select' || phase === 'opening' || phase === 'ending' || phase === 'hub');
+    const hide = (THEME.id as string) === 'poop' && (HUB || phase === 'title' || phase === 'lobby' || phase === 'select' || phase === 'opening' || phase === 'ending' || phase === 'hub');
     document.body.classList.toggle('sky-nobeta', hide);
   }, [phase]);
   useEffect(() => () => document.body.classList.remove('sky-nobeta'), []);
 
   // 화면별 BGM (첫 터치 전에는 예약만 → 잠금이 풀리는 순간 재생)
   useEffect(() => {
-    if (phase === 'title') playBgm('title', 0.5);
+    if (phase === 'title' || phase === 'lobby') playBgm('title', 0.5);
     if (phase === 'select') playBgm('select', 0.4);
   }, [phase]);
   useEffect(() => {
@@ -753,7 +778,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
             </>
           ) : (
             <>
-              <button type="button" className="sky-btn sky-btn-go" onClick={() => { sfx('menuOk'); setPhase('title'); }}>타이틀로</button>
+              <button type="button" className="sky-btn sky-btn-go" onClick={() => { sfx('menuOk'); setPhase(HOME); }}>{HOME_KO}로</button>
               <button type="button" className="sky-btn" onClick={onExit}>월드맵으로</button>
             </>
           )}
@@ -762,7 +787,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     );
   }
 
-  if (phase === 'title') {
+  if (phase === 'title' || phase === 'lobby') {
     const go = () => {
       unlockAudio(); // iOS: START 터치 안에서 직접 오디오 잠금 해제
       if (leaving) return;
@@ -773,52 +798,14 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
         // 응가 대탈출 팩은 첫 플레이 때 오프닝을 자동으로 보여 줌 (스킵 가능 · 타이틀의 '오프닝'으로 다시 보기)
         let seen = true;
         try { seen = localStorage.getItem(OPENED_KEY) === '1'; } catch { /* 무시 */ }
-        if (HAS_OPENING && !seen && THEME.id !== 'poop') { openingFrom.current = 'start'; setSlide(0); setPhase('opening'); } else setPhase('select');
+        if (HAS_OPENING && !seen && THEME.id !== 'poop') { openingFrom.current = 'start'; setSlide(0); setPhase('opening'); } else setPhase((THEME.id as string) === 'poop' ? 'lobby' : 'select');
       }, 520);
     };
     // 응가 대탈출: 세로 키아트를 화면 전체에 깔고 로고(위) · 버튼 HUD(아래, 그라데이션으로 이어짐)
     if ((THEME.id as string) === 'poop') {
       const sub = (f: () => void) => () => { unlockAudio(); sfx('menuMove'); f(); };
-      return (
-        <div className={`sky ttl ttl2 poop${leaving ? ' out' : ''}`} onPointerDown={() => { unlockAudio(); setSoundOn(true); }}>
-          <img className="ttl2-art" src={`${BASE}${packPath('title/keyart-tall.jpg', 'v2/title/keyart.jpg')}`} alt="고나와 가족 여섯 명이 노을 진 하늘로 출격하는 그림" />
-          <div className="ttl2-shade" aria-hidden />
-          <div className="ttl-sparks" aria-hidden>
-            {Array.from({ length: 10 }, (_, i) => <i key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.37) % 2.6}s`, animationDuration: `${2.2 + (i % 4) * 0.5}s` }} />)}
-          </div>
-          <header className={`ttl2-logo${LOGO_CAND ? ` cand cand-${LOGO_CAND}` : ' v10'}`}>
-            <img src={LOGO_CAND ? `${BASE}v3-poop/title/cand/${LOGO_CAND}.png` : `${BASE}${packPath('title/logo-v10.png')}`} alt="GONA's SKY ADVENTURE" />
-            {!LOGO_CAND && <img className="ttl2-subimg" src={`${BASE}${packPath('title/sub-v10.png')}`} alt="응가 대탈출 대작전" />}
-            {LOGO_CAND && SUB_CAND && <img className={`cand-subimg k${SUB_CAND}`} src={`${BASE}v3-poop/title/sub/${/^\d$/.test(SUB_CAND) ? `K${SUB_CAND}` : SUB_CAND}.png`} alt="응가 대탈출 대작전" />}
-            {LOGO_CAND && !SUB_CAND && LOGO_CAND !== 'D' && <p className="cand-sub"><span>응가 대탈출 대작전</span></p>}
-          </header>
-          {LOGO_CAND && (
-            <nav className="cand-pick" onPointerDown={(e) => e.stopPropagation()}>
-              <b>로고 시안 미리보기</b>
-              {(['A', 'B', 'C', 'D', 'E', 'F'] as const).map((c) => <a key={c} className={c === LOGO_CAND ? 'on' : ''} href={candHref(c, SUB_CAND)}>{c}</a>)}
-              <i />
-              {([null, '1', '2', '3', '4', 'C1', 'C3', 'C4', 'P1'] as const).map((k) => <a key={k ?? '0'} className={k === SUB_CAND ? 'on' : ''} href={candHref(LOGO_CAND, k)}>{k ? (/^\d$/.test(k) ? `K${k}` : k) : '기존'}</a>)}
-            </nav>
-          )}
-          <div className="ttl2-menu">
-            <button type="button" className="ttl2-start ttl-start" onClick={() => { setHuntStage(0); go(); }}>PRESS START</button>
-            <button type="button" className="ttl2-btn ttl2-hunt" onClick={sub(() => setPhase('hunt'))}>📷 MEMORY HUNT <small>스테이지 골라 추억사진 모으기</small></button>
-            <div className="ttl2-row">
-              {HAS_OPENING && <button type="button" className="ttl2-btn" onClick={sub(() => { openingFrom.current = 'title'; setSlide(0); setPhase('opening'); })}>오프닝 다시보기</button>}
-              {DEV && <button type="button" className="ttl2-btn ttl-test" onClick={sub(() => { setSlide(0); playBgm('ending', 1.2); setPhase('ending'); })}>엔딩</button>}
-              <button type="button" className="ttl2-btn" onClick={sub(() => onExit())}>월드맵</button>
-            </div>
-            <div className="ttl2-row">
-              <button type="button" className="ttl2-btn ttl2-daily" onClick={sub(() => setPhase('daily'))}>★ 오늘의 도전{dailyState().cleared ? ' ✓' : ''}</button>
-              <button type="button" className="ttl2-btn" onClick={sub(() => { setRecTab('stage'); setPhase('records'); })}>랭킹</button>
-              <button type="button" className="ttl2-btn ttl2-album" onClick={sub(() => { setAlbTab('hall'); setPhase('album'); })}>앨범 · 업적</button>
-            </div>
-            {prof && (() => { const nx = missions().find((m) => !m.done); return nx ? <p className="ttl2-next">NEXT ▶ {nx.name} · {nx.desc}</p> : null; })()}
-            {pwa.update && <button type="button" className="pwa-update" onPointerDown={(e) => { e.stopPropagation(); applyUpdate(); }}>✨ 새 버전이 있어요 · 눌러서 업데이트</button>}
-            {!pwa.standalone && <button type="button" className="pwa-install" onPointerDown={(e) => { e.stopPropagation(); setInstallOpen(true); }}>📱 홈 화면에 추가하기</button>}
-            <p className="ttl2-foot">{prof && <b className="ttl2-nick" onPointerDown={(e) => { e.stopPropagation(); setProfOpen(true); }}>👤 {prof.nick}</b>}{!soundOn ? ' ♪ 화면을 터치하면 음악이 켜져요' : <>{best > 0 && <b>HI-SCORE {String(best).padStart(8, '0')}</b>} 6 STAGES · {BETA ? '공개 테스트판' : PROD ? 'VER 1.1' : '개발판'}</>}</p>
-          </div>
-          <div className="ttl-wipe" aria-hidden />
+      const modals = (
+        <>
           {((!prof && (!location.search.includes('skytest') || location.search.includes('firstrun'))) || nickEdit) && (
             <div className="nick-modal" onPointerDown={(e) => e.stopPropagation()}>
               <div className="nick-box">
@@ -907,6 +894,136 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
               </div>
             </div>
           )}
+          {setOpen && (
+            <div className="nick-modal" onPointerDown={(e) => e.stopPropagation()}>
+              <div className="nick-box prof-box lob-set">
+                <h2>설정</h2>
+                <div className="sky-opt"><span>소리</span><button type="button" className={!mute ? 'on' : ''} onClick={() => { setMuted(!mute); setMute(!mute); }}>{mute ? '꺼짐' : '켜짐'}</button></div>
+                <div className="sky-opt"><span>화면 흔들림</span>{([0, 0.5, 1] as const).map((v) => <button type="button" key={v} className={opts.shake === v ? 'on' : ''} onClick={() => setOpt({ shake: v })}>{v === 0 ? '끔' : v === 0.5 ? '약' : '보통'}</button>)}</div>
+                <div className="sky-opt"><span>진동</span>{canVibrate ? <button type="button" className={opts.vibrate ? 'on' : ''} onClick={() => setOpt({ vibrate: !opts.vibrate })}>{opts.vibrate ? '켜짐' : '꺼짐'}</button> : <em>이 브라우저는 진동 미지원</em>}</div>
+                <div className="sky-opt"><span>근접 공격</span><button type="button" className={opts.autoMelee ? 'on' : ''} onClick={() => setOpt({ autoMelee: !opts.autoMelee })}>{opts.autoMelee ? '자동' : '끔'}</button></div>
+                <div className="prof-btns">
+                  {HAS_OPENING && <button type="button" className="sky-btn" onClick={() => { setSetOpen(false); sfx('menuMove'); openingFrom.current = 'lobby'; setSlide(0); setPhase('opening'); }}>오프닝 다시보기</button>}
+                  {!pwa.standalone && <button type="button" className="sky-btn pwa-install" onClick={() => { setSetOpen(false); setInstallOpen(true); }}>📱 홈 화면에 추가</button>}
+                </div>
+                <div className="prof-btns">
+                  <button type="button" className="sky-btn" onClick={() => { setSetOpen(false); setProfOpen(true); }}>프로필 · 백업</button>
+                  <button type="button" className="sky-btn" onClick={() => onExit()}>월드맵</button>
+                </div>
+                <button type="button" className="sky-btn sky-btn-go" onClick={() => setSetOpen(false)}>닫기</button>
+              </div>
+            </div>
+          )}
+        </>
+      );
+      if (phase === 'lobby') {
+        const ph = photos();
+        const nPh = Object.keys(ph).length;
+        const mis = missions();
+        const misDone = mis.filter((m) => m.done).length;
+        const nextM = mis.find((m) => !m.done);
+        const nr = newRewards();
+        const ach = achievements();
+        const clearedAny = Object.keys(clears()).length > 0;
+        const photoMax = Object.keys(ph).reduce((m, k) => Math.max(m, +k.split(':')[2] || 0), 0);
+        const huntOpen = Math.min(STAGES.length, Math.max(1, records.easy.reach, records.normal.reach, records.hard.reach, photoMax + 1, clearedAny ? STAGES.length : 1));
+        const bestD = DIFF_ORDER.reduce((a, d) => (records[d].reach > records[a].reach ? d : a), 'easy' as Difficulty);
+        const runs = Object.keys(clears()).length;
+        const dl = dailyState();
+        const acctLabel = acct ? '계정 연결됨' : ONLINE ? '게스트' : '게스트 · 온라인 준비 중';
+        const goNav = (t: 'home' | 'album' | 'rank' | 'prof') => () => {
+          unlockAudio(); sfx('menuMove');
+          if (t === 'album') { setAlbTab(nr.photos.length ? 'photo' : 'hall'); ackRewards('photo'); setPhase('album'); }
+          if (t === 'rank') { setRecTab('stage'); setPhase('records'); }
+          if (t === 'prof') setProfOpen(true);
+        };
+        return (
+          <div className="sky lobby" onPointerDown={() => { unlockAudio(); setSoundOn(true); }}>
+            <img className="lob-bg" src={`${BASE}${packPath('title/keyart-tall.jpg', 'v2/title/keyart.jpg')}`} alt="" aria-hidden />
+            <div className="lob-shade" aria-hidden />
+            <header className="lob-top">
+              <button type="button" className="lob-prof" onClick={goNav('prof')}>
+                <img src={`${import.meta.env.BASE_URL}pwa/icon-192-v2.png`} alt="" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+                <span><b>{prof?.nick ?? '모험가'}</b><small>{acctLabel}</small></span>
+              </button>
+              <div className="lob-rate"><small>추억사진</small><b>{nPh}<em>/108</em></b><i><i style={{ width: `${(nPh / 108) * 100}%` }} /></i></div>
+              <button type="button" className="lob-gear" aria-label="설정" onClick={() => { sfx('menuMove'); setSetOpen(true); }}>⚙</button>
+            </header>
+            <p className="lob-title">GONA&apos;S BASE CAMP <small>고나의 모험 준비실</small></p>
+            <main className="lob-scroll">
+              <section className="lob-card lob-story" onClick={sub(() => { setHuntStage(0); setPhase('select'); })}>
+                <img className="lob-hero" src={`${BASE}${packPath('opening2/gona-hero.png', '')}`} alt="" />
+                <div className="lob-txt">
+                  <span className="lob-kicker">STORY MODE</span>
+                  <h3>대탈출 대작전</h3>
+                  <p>6개 스테이지 연속 · 동료와 난이도를 골라 출격</p>
+                  <p className="lob-meta">{records[bestD].reach > 1 || runs > 0 ? `최고 도달 ${bestD.toUpperCase()} ${records[bestD].reach >= 6 ? 'FINAL' : `STAGE ${records[bestD].reach}`} · 완주 ${runs}회` : '아직 기록 없음 · 첫 모험을 떠나요'}{best > 0 ? ` · HI ${String(best).padStart(8, '0')}` : ''}</p>
+                  <button type="button" className="lob-go">모험 시작 ▶</button>
+                </div>
+              </section>
+              <section className="lob-card lob-hunt" onClick={sub(() => setPhase('hunt'))}>
+                <div className="lob-txt">
+                  <span className="lob-kicker">MEMORY HUNT</span>
+                  <h3>추억 사냥</h3>
+                  <p>열린 스테이지 {huntOpen}/6 · 추억사진 {nPh}/108</p>
+                </div>
+                <span className="lob-arrow">▶</span>
+              </section>
+              <div className="lob-row">
+                <section className="lob-card lob-mini" onClick={sub(() => { setAlbTab('mission'); ackRewards('mis'); setPhase('album'); })}>
+                  <span className="lob-kicker">오늘의 미션</span>
+                  <b className="lob-big">{misDone}<em>/{mis.length}</em></b>
+                  {nextM ? <><p className="lob-next">{nextM.name}</p><small>{nextM.desc}</small><i className="lob-bar"><i style={{ width: `${(nextM.prog[0] / nextM.prog[1]) * 100}%` }} /></i></> : <p className="lob-next">모든 미션 달성!</p>}
+                  {nr.mis.length > 0 && <span className="lob-dot">{nr.mis.length}</span>}
+                </section>
+                <section className="lob-card lob-mini lob-reward" onClick={sub(() => { setAlbTab(nr.photos.length ? 'photo' : nr.ach.length ? 'ach' : 'hall'); ackRewards('all'); setPhase('album'); })}>
+                  <span className="lob-kicker">획득 보상</span>
+                  {nr.total > 0 ? (
+                    <ul className="lob-new">
+                      {nr.photos.length > 0 && <li><em className="t-photo">NEW PHOTO</em> {nr.photos.length}장</li>}
+                      {nr.ach.length > 0 && <li><em className="t-badge">NEW BADGE</em> {nr.ach[0].name}{nr.ach.length > 1 ? ` 외 ${nr.ach.length - 1}` : ''}</li>}
+                      {nr.mis.length > 0 && <li><em className="t-mis">MISSION CLEAR</em> {nr.mis[0].name}{nr.mis.length > 1 ? ` 외 ${nr.mis.length - 1}` : ''}</li>}
+                    </ul>
+                  ) : <p className="lob-next">새 보상 없음<small>배지 {ach.filter((a) => a.done).length}/{ach.length} 모음</small></p>}
+                  {nr.total > 0 && <span className="lob-dot">{nr.total}</span>}
+                </section>
+              </div>
+              <section className="lob-card lob-daily" onClick={sub(() => setPhase('daily'))}>
+                <span className="lob-kicker">★ 오늘의 도전</span>
+                <p>{dl.cleared ? '오늘 클리어 완료 ✓ · 기록을 더 올려 보세요' : `오늘의 특별 규칙으로 도전 · 시도 ${dl.tries}회`}</p>
+                <span className="lob-arrow">▶</span>
+              </section>
+              {pwa.update && <button type="button" className="pwa-update" onClick={() => applyUpdate()}>✨ 새 버전이 있어요 · 눌러서 업데이트</button>}
+            </main>
+            {navBar('home')}
+            {modals}
+          </div>
+        );
+      }
+      return (
+        <div className={`sky ttl ttl2 poop${leaving ? ' out' : ''}`} onPointerDown={() => { unlockAudio(); setSoundOn(true); }}>
+          <img className="ttl2-art" src={`${BASE}${packPath('title/keyart-tall.jpg', 'v2/title/keyart.jpg')}`} alt="고나와 가족 여섯 명이 노을 진 하늘로 출격하는 그림" />
+          <div className="ttl2-shade" aria-hidden />
+          <header className={`ttl2-logo${LOGO_CAND ? ` cand cand-${LOGO_CAND}` : ' v10'}`}>
+            <img src={LOGO_CAND ? `${BASE}v3-poop/title/cand/${LOGO_CAND}.png` : `${BASE}${packPath('title/logo-v10.png')}`} alt="GONA's SKY ADVENTURE" />
+            {!LOGO_CAND && <img className="ttl2-subimg" src={`${BASE}${packPath('title/sub-v10.png')}`} alt="응가 대탈출 대작전" />}
+            {LOGO_CAND && SUB_CAND && <img className={`cand-subimg k${SUB_CAND}`} src={`${BASE}v3-poop/title/sub/${/^\d$/.test(SUB_CAND) ? `K${SUB_CAND}` : SUB_CAND}.png`} alt="응가 대탈출 대작전" />}
+            {LOGO_CAND && !SUB_CAND && LOGO_CAND !== 'D' && <p className="cand-sub"><span>응가 대탈출 대작전</span></p>}
+          </header>
+          {LOGO_CAND && (
+            <nav className="cand-pick" onPointerDown={(e) => e.stopPropagation()}>
+              <b>로고 시안 미리보기</b>
+              {(['A', 'B', 'C', 'D', 'E', 'F'] as const).map((c) => <a key={c} className={c === LOGO_CAND ? 'on' : ''} href={candHref(c, SUB_CAND)}>{c}</a>)}
+              <i />
+              {([null, '1', '2', '3', '4', 'C1', 'C3', 'C4', 'P1'] as const).map((k) => <a key={k ?? '0'} className={k === SUB_CAND ? 'on' : ''} href={candHref(LOGO_CAND, k)}>{k ? (/^\d$/.test(k) ? `K${k}` : k) : '기존'}</a>)}
+            </nav>
+          )}
+          <div className="ttl2-menu ttl3">
+            <button type="button" className="ttl2-start ttl-start" onClick={() => { setHuntStage(0); go(); }}>PRESS START</button>
+            <p className="ttl2-foot">{!soundOn ? '♪ 화면을 터치하면 음악이 켜져요' : `${prof ? `${prof.nick} 님 · ` : ''}VER 1.2`}</p>
+          </div>
+          <div className="ttl-wipe" aria-hidden />
+          {modals}
         </div>
       );
     }
@@ -988,7 +1105,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
         </div>
         <p className="hunt-note">시작 장비는 스테이지마다 같아요 (무기 Lv · 폭탄 · 체력) · 점수는 스토리 모드와 따로 기록 · 완주 엽서는 스토리 모드 완주 때만</p>
         <div className="sel-btns cred-btns">
-          <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setPhase('title'); }}>타이틀</button>
+          <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setPhase(HOME); }}>{HOME_KO}</button>
         </div>
       </div>
     );
@@ -1088,7 +1205,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
         <div className="sel-btns cred-btns">
           <button type="button" className="sky-btn sky-btn-go" onClick={() => { unlockAudio(); sfx('menuOk'); start(d.fam, d.diff, d.stage, d); }}>도전 시작!</button>
           <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setRecTab('daily'); setPhase('records'); }}>기록</button>
-          <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setPhase('title'); }}>타이틀</button>
+          <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setPhase(HOME); }}>{HOME_KO}</button>
         </div>
       </div>
     );
@@ -1117,13 +1234,13 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     };
     const photoSrc = (f: FamilyId, d: Difficulty): string => `${BASE}${packPath(`album/${f}-${d}.jpg`, '')}`;
     return (
-      <div className="sky end cred album">
+      <div className={`sky end cred album${(THEME.id as string) === 'poop' ? ' has-nav' : ''}`}>
         <h2 className="recs-h">ALBUM · 추억 앨범</h2>
         <div className="alb-rate"><i style={{ width: `${Math.round((got / 108) * 100)}%` }} /><span>앨범 완성률 {Math.round((got / 108) * 100)}% · 기념사진 {got}/108</span></div>
         <p className="alb-who">{prof ? <><b>{prof.nick}</b> 님의 앨범</> : '모험가'} · 완주 엽서 {runs}/18 · 미션 ★{mis.filter((x) => x.done).reduce((a, x) => a + x.stars, 0)}/{mis.reduce((a, x) => a + x.stars, 0)} · 업적 {ach.filter((a) => a.done).length}/{ach.length}
-          <button type="button" className="alb-mini" onClick={() => { setNickVal(prof?.nick ?? ''); setNickEdit('rename'); setPhase('title'); }}>이름 바꾸기</button>
+          <button type="button" className="alb-mini" onClick={() => { setNickVal(prof?.nick ?? ''); setNickEdit('rename'); setPhase(HOME); }}>이름 바꾸기</button>
           {profiles().length > 1 && <button type="button" className="alb-mini" onClick={() => { const ps = profiles(); const i = ps.findIndex((p) => p.id === prof?.id); switchProfile(ps[(i + 1) % ps.length].id); setProf(activeProfile()); setRecords(loadRecords()); }}>다른 모험가</button>}
-          <button type="button" className="alb-mini" onClick={() => { setNickVal(''); setNickEdit('new'); setPhase('title'); }}>새 모험가</button>
+          <button type="button" className="alb-mini" onClick={() => { setNickVal(''); setNickEdit('new'); setPhase(HOME); }}>새 모험가</button>
         </p>
         <nav className="recs-tabs">
           {(['hall', 'photo', 'badge', 'mission', 'ach'] as const).map((t) => <button key={t} type="button" className={albTab === t ? 'on' : ''} onClick={() => { sfx('menuMove'); setAlbTab(t); }}>{t === 'hall' ? '명예의 전당' : t === 'photo' ? '사진' : t === 'badge' ? '배지' : t === 'mission' ? '미션' : '업적'}</button>)}
@@ -1287,15 +1404,16 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
           </div>
         ); })()}
         <div className="sel-btns cred-btns">
-          <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setPhase('title'); }}>타이틀</button>
+          <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setPhase(HOME); }}>{HOME_KO}</button>
         </div>
+        {navBar('album')}
       </div>
     );
   }
 
   if (phase === 'records') {
     return (
-      <div className="sky end cred recs">
+      <div className={`sky end cred recs${(THEME.id as string) === 'poop' ? ' has-nav' : ''}`}>
         <h2 className="recs-h">RANKING · 기록</h2>
         <nav className="recs-tabs">
           {(['stage', 'run', 'daily', 'online'] as const).map((t) => (
@@ -1336,7 +1454,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
                 {FAMILY.map((f) => <button key={f} type="button" className={olFam === f ? 'on' : ''} onClick={() => setOlFam(f)} style={{ backgroundImage: `url(${BASE}${packPath(`chars/${f}/face.png`)})` }} aria-label={FAM_KO[f]} />)}
               </div>
               {!ONLINE ? (
-                <p className="ol-msg">온라인 랭킹 서버가 아직 연결되지 않았어요.<br />지금은 이 기기 기록(스테이지 · 전체 런 탭)만 볼 수 있어요.</p>
+                <p className="ol-msg">🌐 온라인 랭킹 · 연결 준비 중<br />서버 설정이 끝나면 열려요. 지금은 이 기기 기록(스테이지 · 전체 런 · 오늘의 도전 탭)을 볼 수 있어요.</p>
               ) : olRows === 'loading' ? <p className="ol-msg">불러오는 중…</p> : !olRows ? <p className="ol-msg">서버에 닿지 않아요. 잠시 뒤 다시 열어 주세요.</p> : (
                 <ol className="recs-list ol-list">
                   {olRows.length === 0 && <li className="empty">아직 기록이 없어요 · 첫 1위가 되어 보세요!</li>}
@@ -1360,8 +1478,9 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
         </div>
         <div className="sel-btns cred-btns">
           <button type="button" className="sky-btn sky-btn-go" onClick={() => { sfx('menuMove'); setPhase('daily'); }}>오늘의 도전</button>
-          <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setPhase('title'); }}>타이틀</button>
+          <button type="button" className="sky-btn" onClick={() => { sfx('menuMove'); setPhase(HOME); }}>{HOME_KO}</button>
         </div>
+        {navBar('rank')}
       </div>
     );
   }
@@ -1380,7 +1499,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
         </div>
         <div className="sel-btns cred-btns">
           <button type="button" className="sky-btn sky-btn-go" onClick={() => { sfx('menuOk'); setPhase('select'); }}>다시 도전</button>
-          <button type="button" className="sky-btn" onClick={() => setPhase('title')}>타이틀</button>
+          <button type="button" className="sky-btn" onClick={() => setPhase(HOME)}>{HOME_KO}</button>
           <button type="button" className="sky-btn" onClick={onExit}>월드맵</button>
         </div>
       </div>
@@ -1596,7 +1715,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
                     <>
                       <p className="tally-next">NEXT ▶ STAGE {result.stage + 1} · {THEME.stages[result.stage]?.name ?? STAGES[result.stage]?.name}</p>
                       <button type="button" className="sky-btn sky-btn-go" onClick={nextStage}>다음 스테이지</button>
-                      <button type="button" className="sky-btn" onClick={() => { recordRun(result, false); setPhase('title'); }}>타이틀로</button>
+                      <button type="button" className="sky-btn" onClick={() => { recordRun(result, false); setPhase(HOME); }}>{HOME_KO}로</button>
                     </>
                   )}
                 </>

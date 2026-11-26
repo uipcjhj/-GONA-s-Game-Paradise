@@ -36,7 +36,7 @@ const [url, out, w = '393', h = '636'] = process.argv.slice(2);
   await p.goto(url + '?skytest');
   await p.waitForSelector('.ttl-start');
   await p.waitForTimeout(600);
-  await p.tap('text=앨범 · 업적');
+  await p.tap('.ttl-start'); await p.waitForSelector('.lob-story', { timeout: 15000 }); await p.tap('.lob-nav button:nth-child(2)');
   await p.waitForSelector('.hall');
   await p.tap('.recs-tabs button:nth-child(2)');
   await p.waitForTimeout(400);

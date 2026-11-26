@@ -53,7 +53,7 @@ const [url, out] = process.argv.slice(2);
   await p.evaluate(() => localStorage.setItem('gona.skyadv.rec2', JSON.stringify({ v: 2, boards: {}, daily: {}, col: { clears: {}, flags: {}, seen: {}, stages: { 'mom:easy:1': { rank: 'B', hits: 2, bombs: 1, allParts: false, at: '2026-11-26', score: 40000 } }, counts: {} } })));
   await p.goto(url + '?skytest');
   await p.waitForSelector('.ttl-start');
-  await p.tap('.ttl2-nick');
+  await p.tap('.ttl-start'); await p.waitForSelector('.lob-story', { timeout: 15000 }); await p.tap('.lob-prof');
   await p.waitForSelector('.prof-box');
   await p.fill('.prof-in[type=email]', 'qa@example.com');
   await p.fill('.prof-in[type=password]', 'secret123');
@@ -71,7 +71,7 @@ const [url, out] = process.argv.slice(2);
   chk('스토리 도달 기록: 더 좋은 쪽 (HARD reach 2)', recs && recs.hard.reach === 2, JSON.stringify(recs?.hard));
   await p.tap('.prof-box .sky-btn-go:has-text("닫기")');
   // 플레이 → 세션 → 보스 격파 (MEMORY HUNT STAGE 1) → 제출
-  await p.tap('.ttl2-hunt');
+  await p.tap('.ttl-start'); await p.waitForSelector('.lob-story', { timeout: 15000 }); await p.tap('.lob-hunt');
   await p.waitForSelector('.hunt-grid');
   await p.tap('.hunt-card:nth-child(1)');
   await p.waitForSelector('.sel-main');
@@ -92,7 +92,7 @@ const [url, out] = process.argv.slice(2);
   // 온라인 랭킹 화면
   await p.goto(url + '?skytest');
   await p.waitForSelector('.ttl-start');
-  await p.tap('text=랭킹');
+  await p.tap('.ttl-start'); await p.waitForSelector('.lob-story', { timeout: 15000 }); await p.tap('.lob-nav button:nth-child(3)');
   await p.tap('.recs-tabs button:has-text("온라인")');
   await p.waitForSelector('.ol-list li');
   await p.waitForTimeout(400);

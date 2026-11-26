@@ -36,7 +36,7 @@ const [url, out, w = '393', h = '636'] = process.argv.slice(2);
   await p.tap('.nick-box .sky-btn-go');
   await p.waitForTimeout(1600);
   await shot('04-title');
-  log.push('3) 타이틀: 로고 ' + !!(await p.$('.ttl2-logo img')) + ' · 닉네임 ' + (await p.$eval('.ttl2-nick', (e) => e.innerText).catch(() => '없음')) + ' · 가로 넘침 ' + (await overflow()));
+  log.push('3) 타이틀: 로고 ' + !!(await p.$('.ttl2-logo img')) + ' · 닉네임 ' + (await p.$eval('.ttl2-foot', (e) => e.innerText).catch(() => '없음')) + ' · 가로 넘침 ' + (await overflow()));
   // 2) 재방문: 관문(TOUCH TO START) → 타이틀 (오프닝 없음)
   await p.goto(url + '?skytest&firstrun');
   await p.waitForSelector('.gate');
@@ -78,7 +78,7 @@ const [url, out, w = '393', h = '636'] = process.argv.slice(2);
   await p.goto(url + '?skytest');
   await p.waitForSelector('.ttl-start');
   await p.waitForTimeout(800);
-  await p.tap('text=앨범 · 업적');
+  await p.tap('.ttl-start'); await p.waitForSelector('.lob-story', { timeout: 15000 }); await p.tap('.lob-nav button:nth-child(2)');
   await p.waitForSelector('.hall');
   await p.waitForTimeout(600);
   await shot('08-hall');

@@ -823,3 +823,68 @@ body.sky-hub-on .hub-back { display: none; }
 .ttl2-logo.v10 img { width: min(86vw, 400px); }
 .ttl2-logo.v10 img.ttl2-subimg { width: min(88vw, 370px); margin-top: -14px; animation: ttl2-fade 0.8s ease-out 0.9s both; filter: drop-shadow(0 3px 0 #1a0400) drop-shadow(0 0 5px rgba(20, 4, 0, 0.95)) drop-shadow(0 0 10px rgba(20, 4, 0, 0.7)); }
 .oc-title .oc-sublogo { display: block; width: min(86vw, 380px); height: auto; margin: -10px auto 0; filter: drop-shadow(0 3px 0 #1a0400) drop-shadow(0 0 6px rgba(20, 4, 0, 0.95)); animation: ttl2-fade 0.7s ease-out 0.45s both; }
+
+/* ═══ 타이틀 v3: 포스터처럼 — 로고 · 일러스트 · PRESS START 하나 ═══ */
+.ttl2-menu.ttl3 { gap: 6px; padding-bottom: calc(env(safe-area-inset-bottom) + 18px); }
+.ttl2-menu.ttl3 .ttl2-start { width: min(80vw, 320px); min-height: 60px; font-size: 24px; }
+.ttl2-menu.ttl3 .ttl2-foot { margin: 2px 0 0; font-size: 11px; color: #f4e6c8; text-shadow: 0 1px 0 #000; opacity: 0.85; }
+
+/* ═══ 메인 로비 GONA'S BASE CAMP — 90년대 아케이드 판타지 메뉴 (남색 패널 · 금테 · 각진 모서리 · 도트 글꼴) ═══ */
+.sky.lobby { position: fixed; inset: 0; overflow: hidden; background: #120a26; font-family: 'Galmuri11', monospace; color: #fff4d6; display: flex; flex-direction: column; }
+.lob-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; opacity: 0.5; pointer-events: none; }
+.lob-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18, 10, 38, 0.55) 0%, rgba(18, 10, 38, 0.78) 45%, rgba(18, 10, 38, 0.94) 100%); pointer-events: none; }
+.lob-top { position: relative; z-index: 2; display: flex; align-items: center; gap: 8px; padding: calc(env(safe-area-inset-top) + 8px) 10px 6px; }
+.lob-prof { display: flex; align-items: center; gap: 7px; min-width: 0; flex: 1 1 auto; padding: 4px 8px 4px 4px; background: rgba(14, 8, 36, 0.92); border: 2px solid #e8b53c; outline: 2px solid #0a0618; color: inherit; font: inherit; text-align: left; }
+.lob-prof img { width: 38px; height: 38px; flex: none; image-rendering: auto; border: 2px solid #0a0618; }
+.lob-prof span { display: flex; flex-direction: column; min-width: 0; }
+.lob-prof b { font-size: 14px; color: #ffe34a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lob-prof small { font-size: 10px; color: #cfc6f0; white-space: nowrap; }
+.lob-rate { flex: none; width: 86px; padding: 4px 6px; background: rgba(14, 8, 36, 0.92); border: 2px solid #6a5ab8; outline: 2px solid #0a0618; }
+.lob-rate small { display: block; font-size: 9px; color: #cfc6f0; }
+.lob-rate b { font-size: 15px; color: #fff4d6; } .lob-rate b em { font-style: normal; font-size: 10px; color: #9a8ac8; }
+.lob-rate > i { display: block; height: 4px; margin-top: 2px; background: #2a1a5a; } .lob-rate > i i { display: block; height: 100%; background: #ffe34a; }
+.lob-gear { flex: none; width: 44px; height: 44px; font-size: 22px; background: rgba(14, 8, 36, 0.92); border: 2px solid #e8b53c; outline: 2px solid #0a0618; color: #ffe34a; }
+.lob-title { position: relative; z-index: 2; margin: 2px 0 4px; text-align: center; font-size: 13px; font-weight: 700; letter-spacing: 2px; color: #ffe34a; text-shadow: 0 2px 0 #3a0c18; }
+.lob-title small { display: block; font-size: 10px; letter-spacing: 0; color: #e8dcc0; font-weight: 400; }
+.lob-scroll { position: relative; z-index: 2; flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 10px calc(env(safe-area-inset-bottom) + 76px); display: flex; flex-direction: column; gap: 9px; }
+.lob-card { position: relative; display: block; padding: 10px 12px; background: rgba(20, 12, 48, 0.92); border: 3px solid #6a5ab8; outline: 2px solid #0a0618; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); cursor: pointer; }
+.lob-card:active { transform: translateY(2px); }
+.lob-kicker { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #120a26; background: #ffe34a; padding: 1px 5px; }
+.lob-card h3 { margin: 4px 0 2px; font-size: 20px; color: #fff4d6; text-shadow: 0 2px 0 #3a0c18; }
+.lob-card p { margin: 2px 0; font-size: 11px; line-height: 1.5; color: #e8dcc0; word-break: keep-all; }
+.lob-story { min-height: 150px; padding-right: 128px; border-color: #e8b53c; background: linear-gradient(135deg, rgba(64, 26, 90, 0.95), rgba(26, 14, 60, 0.95)); }
+.lob-story h3 { font-size: 24px; color: #ffe34a; }
+.lob-hero { position: absolute; right: -4px; bottom: 0; height: 160px; max-width: 46%; object-fit: contain; object-position: bottom right; pointer-events: none; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.6)); }
+.lob-meta { color: #9cd8ff !important; }
+.lob-go { margin-top: 8px; min-height: 44px; padding: 0 16px; font: 700 16px 'Galmuri11', monospace; color: #2a1206; background: linear-gradient(#ffe9a0, #ffb43a); border: 3px solid #ffd76a; outline: 2px solid #3a1a08; letter-spacing: 1px; }
+.lob-hunt { display: flex; align-items: center; gap: 8px; border-color: #5ec8ff; }
+.lob-hunt .lob-txt { flex: 1 1 auto; }
+.lob-hunt h3 { font-size: 17px; }
+.lob-arrow { flex: none; font-size: 18px; color: #ffe34a; }
+.lob-row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.lob-mini { min-height: 118px; padding: 9px 10px; }
+.lob-big { display: block; margin: 4px 0 2px; font-size: 22px; color: #ffe34a; } .lob-big em { font-style: normal; font-size: 12px; color: #9a8ac8; }
+.lob-next { font-weight: 700; color: #fff4d6 !important; }
+.lob-next small { display: block; font-weight: 400; color: #cfc6f0; }
+.lob-mini small { display: block; font-size: 10px; line-height: 1.45; color: #cfc6f0; word-break: keep-all; }
+.lob-bar { display: block; height: 5px; margin-top: 5px; background: #2a1a5a; } .lob-bar i { display: block; height: 100%; background: #7ff0a0; }
+.lob-reward { border-color: #ff8ac8; }
+.lob-new { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 11px; line-height: 1.35; word-break: keep-all; }
+.lob-new em { font-style: normal; font-size: 9px; font-weight: 700; padding: 0 3px; color: #120a26; }
+.lob-new .t-photo { background: #ffe34a; } .lob-new .t-badge { background: #9cd8ff; } .lob-new .t-mis { background: #7ff0a0; }
+.lob-dot { position: absolute; top: -8px; right: -8px; min-width: 22px; height: 22px; padding: 0 5px; font-size: 12px; font-weight: 700; line-height: 18px; text-align: center; color: #fff; background: #e0304a; border: 2px solid #fff4d6; outline: 2px solid #0a0618; }
+.lob-daily { display: flex; align-items: center; gap: 8px; border-color: #e8b53c; }
+.lob-daily p { flex: 1 1 auto; }
+.lob-nav { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); padding: 0 6px env(safe-area-inset-bottom); background: #0c0720; border-top: 3px solid #e8b53c; box-shadow: 0 -2px 0 #0a0618; }
+.lob-nav button { position: relative; min-height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font: 700 11px 'Galmuri11', monospace; color: #cfc6f0; background: none; border: 0; }
+.lob-nav button i { font-style: normal; font-size: 20px; line-height: 1; }
+.lob-nav button.on { color: #ffe34a; } .lob-nav button.on::before { content: ''; position: absolute; top: 0; left: 18%; right: 18%; height: 3px; background: #ffe34a; }
+.lob-ndot { position: absolute; top: 8px; right: 26%; width: 9px; height: 9px; background: #e0304a; border: 2px solid #fff4d6; }
+.lob-set .sky-opt { color: #fff4d6; }
+.lob-scroll .pwa-update { position: static; }
+@media (max-height: 680px) { .lob-story { min-height: 132px; } .lob-hero { height: 138px; } .lob-mini { min-height: 104px; } .lob-card h3 { font-size: 18px; } .lob-story h3 { font-size: 21px; } }
+.lob-scroll > * { flex: none; }
+/* 공통 하단 내비가 있는 화면(앨범 · 랭킹): 아래 버튼 줄은 내비로 대신 · 내용이 가려지지 않게 여백 */
+.has-nav { padding-bottom: calc(env(safe-area-inset-bottom) + 64px) !important; }
+.has-nav > .cred-btns { display: none; }
+.has-nav > .lob-nav { position: fixed; }

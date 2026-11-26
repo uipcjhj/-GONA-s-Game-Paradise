@@ -23,7 +23,7 @@ const [url, out, dist] = process.argv.slice(2);
     await p.waitForTimeout(1500);
     const scroll = await p.evaluate(() => document.scrollingElement.scrollHeight - innerHeight);
     await p.screenshot({ path: `${out}/title-${w}x${h}.png` });
-    ok(`${w}×${h} 타이틀: 설치 버튼 · 세로 스크롤 없음`, !!(await p.$('.pwa-install')) && scroll <= 0, `스크롤 ${scroll}px`);
+    ok(`${w}×${h} 타이틀: PRESS START · 세로 스크롤 없음`, !!(await p.$('.ttl-start')) && scroll <= 0, `스크롤 ${scroll}px`);
     if (w !== 393) { await ctx.close(); continue; }
     const man = await p.evaluate(async () => { const l = document.querySelector('link[rel=manifest]'); const r = await fetch(l.href); return r.ok ? r.json() : null; });
     ok('manifest: standalone · 세로 · 시작/범위 = 이 폴더', man && man.display === 'standalone' && man.orientation === 'portrait' && man.scope === './' && man.start_url.startsWith('./'), man ? `${man.short_name} · icons ${man.icons.length}` : '없음');
@@ -40,7 +40,7 @@ const [url, out, dist] = process.argv.slice(2);
     // 오프라인 전체 받기 → 비행기 모드 → 다시 열기 → 스테이지 1 시작
     await p.tap('.gate');
     await p.waitForSelector('.ttl-start');
-    await p.tap('.pwa-install');
+    await p.tap('.ttl-start'); await p.waitForSelector('.lob-story', { timeout: 15000 }); await p.tap('.lob-gear'); await p.tap('.lob-set .pwa-install');
     await p.tap('text=오프라인용 전체 받기');
     await p.waitForFunction(() => /완료/.test(document.body.innerText), null, { timeout: 180000 });
     ok('오프라인용 전체 받기 완료', true, await p.$eval('.prof-box button.sky-btn:not(.sky-btn-go)', (e) => e.innerText).catch(() => ''));
@@ -50,7 +50,7 @@ const [url, out, dist] = process.argv.slice(2);
     await p.waitForSelector('.gate', { timeout: 30000 });
     await p.tap('.gate');
     await p.waitForSelector('.ttl-start', { timeout: 30000 });
-    await p.tap('.ttl-start');
+    await p.tap('.ttl-start'); await p.waitForSelector('.lob-story', { timeout: 15000 }); await p.tap('.lob-story');
     await p.waitForSelector('.sel-main', { timeout: 15000 });
     await p.tap('text=출격!');
     const started = await p.waitForSelector('.sky-canvas', { timeout: 30000 }).then(() => true).catch(() => false);
