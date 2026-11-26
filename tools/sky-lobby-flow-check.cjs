@@ -34,7 +34,7 @@ const [url, out, w = '393', h = '636'] = process.argv.slice(2);
   await p.tap('.ttl-start');
   ok('PRESS START → 메인 로비', !!(await p.waitForSelector('.lob-story', { timeout: 10000 }).catch(() => null)));
   const nickShown = await p.$eval('.lob-prof b', (e) => e.innerText);
-  ok('로비 프로필: 닉네임 · 게스트/온라인 상태', nickShown === '흐름검수' && /게스트/.test(await p.$eval('.lob-prof small', (e) => e.innerText)), nickShown);
+  ok('로비 프로필: 닉네임', nickShown === '흐름검수', nickShown);
   const ov = await p.evaluate(() => document.scrollingElement.scrollWidth - innerWidth);
   ok('로비 가로 넘침 없음', ov <= 0, `${ov}px`);
   // 하단 내비 → 앨범 · 랭킹 · 홈
@@ -63,17 +63,16 @@ const [url, out, w = '393', h = '636'] = process.argv.slice(2);
   const back = !!(await p.waitForSelector('.lob-story', { timeout: 10000 }).catch(() => null));
   await p.waitForTimeout(500);
   await p.screenshot({ path: `${out}/3-lobby-after.png` });
-  const dot = await p.$eval('.lob-reward .lob-dot', (e) => +e.innerText).catch(() => 0);
-  const newTxt = await p.$eval('.lob-reward', (e) => e.innerText.replace(/\s+/g, ' ')).catch(() => '');
-  const rate = await p.$eval('.lob-rate b', (e) => e.innerText).catch(() => '');
-  ok('결과 → 로비 복귀 · 새 보상 알림 (NEW PHOTO)', back && dot > 0 && /NEW PHOTO/.test(newTxt), `알림 ${dot} · ${newTxt.slice(0, 60)}`);
-  ok('로비 추억사진 수 갱신', /^1\b|^1\//.test(rate.replace(/\s/g, '')), rate);
+  const dot = await p.$eval('.lb2-new b', (e) => +e.innerText).catch(() => 0);
+  const rate = await p.$eval('.lb2-chip', (e) => e.innerText.replace(/\s/g, '')).catch(() => '');
+  ok('결과 → 로비 복귀 · 새 보상 알림 (NEW n)', back && dot > 0, `알림 ${dot}`);
+  ok('로비 추억사진 수 갱신', /1$/.test(rate), rate);
   const albDot = !!(await p.$('.lob-nav .lob-ndot'));
   ok('하단 내비 추억앨범에 알림 점', albDot);
   // 보상 카드 확인 → 앨범 → 홈: 알림 사라짐 · 사진은 그대로
-  await p.tap('.lob-reward'); await p.waitForSelector('.album');
+  await p.tap('.lb2-new'); await p.waitForSelector('.album');
   await p.tap('.lob-nav button:nth-child(1)'); await p.waitForSelector('.lob-story');
-  const dot2 = await p.$('.lob-reward .lob-dot');
+  const dot2 = await p.$('.lb2-new');
   const keep = await p.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('gona.skyadv.rec2')).col.stages || {}).length);
   ok('보상 확인 후 알림 사라짐 · 사진 기록은 유지', !dot2 && keep === 1, `사진 ${keep}장`);
   // 3) MEMORY HUNT: 로비 → 스테이지 선택 → 동료 선택

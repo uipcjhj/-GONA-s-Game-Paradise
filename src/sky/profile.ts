@@ -65,7 +65,7 @@ export function profileKey(base: string): string {
 // ───────── 기기 옮기기 (백업 코드) ─────────
 // 서버 없이 다른 기기·브라우저로 옮기는 방법: 지금 모험가의 기록 전체를 문자열(백업 코드)로 내보내고, 다른 기기에서 붙여 넣으면 새 모험가로 들어옴.
 // 나중에 서버 동기화를 붙일 때도 이 묶음(JSON)을 그대로 업로드 단위로 쓰면 됨.
-const DATA_KEYS = (): string[] => [`${NS}.rec2`, `${NS}.records`];
+const DATA_KEYS = (): string[] => [`${NS}.rec2`, `${NS}.records`, `${NS}.story`]; // story = 스토리 체크포인트 (없던 백업 코드도 그대로 불러옴)
 export function exportProfile(): string {
   const p = activeProfile();
   const data: Record<string, string | null> = {};

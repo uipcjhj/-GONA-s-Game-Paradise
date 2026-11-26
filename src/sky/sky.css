@@ -977,3 +977,51 @@ body.sky-hub-on .hub-back { display: none; }
 .res-unlocks li.u-badge em { color: #7a2408; font-weight: 700; }
 .res-unlocks li.u-badge span { color: #2a1206; font-weight: 700; }
 .bd-view .bd-zoom img.bd-img { display: block; margin: 0 auto; }
+
+/* ═══ 로비 v3: 무게중심을 위로 — 메뉴 묶음이 위쪽 1/3 부터 · 배경은 이어지는 바탕 · 알림 줄은 하단 탭 바로 위 ═══ */
+.lb2-shade { background: linear-gradient(180deg, rgba(18, 10, 38, 0.5) 0%, rgba(18, 10, 38, 0.12) 12%, rgba(18, 10, 38, 0.28) 40%, rgba(14, 8, 34, 0.55) 70%, rgba(12, 7, 30, 0.88) 100%); }
+.lb2-main { justify-content: flex-start; gap: clamp(8px, 1.6vh, 14px); padding-top: clamp(10px, 6vh, 64px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.lb2-main > * { flex: none; }
+.lb2-widgets { margin-top: auto; padding-top: 6px; }
+.lb2-story { min-height: clamp(150px, 24vh, 210px); padding-right: 46%; }
+.lb2-story-art { height: min(88%, 176px); max-width: 44%; right: 2px; bottom: 4px; }
+.lb2-story-name { font-size: clamp(22px, 6.4vw, 28px); margin: 6px 0 4px; }
+.lb2-cont { display: block; margin: 0 0 8px; font-size: 12px; font-weight: 700; color: #9cd8ff; text-shadow: 0 1px 0 #000; }
+.lb2-pick { position: absolute; right: 10px; top: 10px; padding: 4px 8px; font: 700 11px 'Galmuri11', monospace; color: #fff4d6; background: rgba(12, 7, 30, 0.85); border: 2px solid #ffd76a; outline: 2px solid #2a0c08; z-index: 2; }
+.lb2-pair .lb2-mode { min-height: clamp(112px, 17vh, 160px); }
+.lb2-mode img { height: clamp(58px, 9.5vh, 92px); }
+.lb2-mode img.lb2-polar { height: clamp(56px, 8.6vh, 84px); }
+@media (max-height: 680px) { .lb2-story { min-height: 140px; } .lb2-story-art { height: 128px; } }
+
+/* ═══ 스토리 체크포인트 · ARCADE / CONTINUE ═══ */
+.arc-tag { display: inline-block; margin-right: 5px; padding: 1px 5px; font: 700 9px 'Galmuri11', monospace; font-style: normal; letter-spacing: 1px; color: #2a0c08; background: linear-gradient(#fff0a8, #e8a830); border: 1px solid #2a0c08; vertical-align: middle; }
+.sel-ck { position: absolute; right: -4px; bottom: -4px; padding: 0 3px; font: 700 9px 'Galmuri11', monospace; font-style: normal; color: #2a0c08; background: #7ff0a0; border: 1px solid #0a0618; }
+.sel-opts button { position: relative; }
+.sel-opts button .sel-ck { position: static; margin-left: 4px; }
+.sel-roster button { position: relative; }
+.sel-save { margin: 2px 12px 0; }
+.sel-ckinfo { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 12px; color: #fff4d6; text-align: center; text-shadow: 0 1px 0 #000; }
+.sel-ckinfo b { color: #ffe34a; font-size: 13px; } .sel-ckinfo span { color: #9cd8ff; font-size: 12px; }
+.sel-ckinfo.new { flex-direction: row; justify-content: center; gap: 4px; color: #cfc6f0; font-size: 11px; }
+.sel-ckinfo.new span { color: #cfc6f0; font-size: 11px; }
+.sel-btns .sel-resume { font-size: 16px; }
+.sel-btns .sel-fresh { font-size: 12px; opacity: 0.9; }
+.sel-btns .sel-fresh.armed { opacity: 1; background: #5a1420; color: #fff4d6; border-color: #ff8a8a; font-size: 11px; line-height: 1.35; white-space: normal; }
+.res-ck { margin: 4px 0 0; padding: 4px 8px; font: 700 12px 'Galmuri11', monospace; color: #7ff0a0; background: rgba(10, 30, 20, 0.85); border: 2px solid #3a8a50; text-align: center; animation: res-pop 0.35s steps(4) both; }
+.res-ck.arc { color: #ffe34a; background: rgba(40, 20, 8, 0.9); border-color: #e8a830; }
+.cont .arc-end { color: #ff8a8a; }
+.run-kinds { margin: 0 0 6px; }
+.lb2-new { display: inline-flex; align-items: center; gap: 3px; } .lb2-new .bd-mini { width: 22px; height: 22px; margin: 0; }
+/* 키 큰 화면: 메뉴 묶음을 화면 가운데쪽으로 · 카드도 조금 크게 (빈 아래쪽 줄이기) */
+@media (min-height: 760px) { .lb2-main { padding-top: 9vh; gap: 16px; } .lb2-story { min-height: 230px; } .lb2-story-art { height: 200px; } .lb2-pair .lb2-mode { min-height: 178px; } .lb2-mode img { height: 100px; } .lb2-mode img.lb2-polar { height: 92px; } }
+/* 메뉴 묶음을 세로 가운데로: 위 여백 = 알림 줄 위 여백 */
+.lb2-main { padding-top: 8px; }
+.lb2-main > .lb2-story { margin-top: auto; }
+.lb2-pick { position: static; display: inline-block; margin-left: 8px; vertical-align: middle; padding: 6px 9px; }
+@media (min-height: 760px) { .lb2-main { padding-top: 8px; } }
+.lb2-widgets .pwa-update { position: static; width: auto; margin: 0; animation: none; }
+.lb2-go { white-space: nowrap; font-size: clamp(14px, 4.4vw, 18px); padding: 8px 12px; }
+.sel-btns.has-ck { flex-wrap: wrap; }
+.sel-btns.has-ck .sel-resume { flex: 1 1 100%; min-height: 50px; }
+.sel-btns.has-ck .sel-fresh { flex: 1 1 60%; }
+.sel-btns.has-ck > .sky-btn:last-child { flex: 0 1 30%; }

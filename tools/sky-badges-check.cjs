@@ -73,7 +73,7 @@ const seed = () => {
   // 로비 알림
   const lob = await p.$('.res button:has-text("로비로")'); if (lob) await lob.tap();
   await p.waitForSelector('.lob-story, .lb2-story', { timeout: 10000 }); await p.waitForTimeout(500);
-  const mini = await p.$('.lob-reward .bd-mini');
+  const mini = await p.$('.lb2-new .bd-mini');
   ok('로비 획득 보상: NEW BADGE 배지 그림', !!mini);
   await p.screenshot({ path: `${out}/${w}x${h}-7-lobby-new-badge.png` });
   const keep = await p.evaluate(() => { const r = JSON.parse(localStorage.getItem('gona.skyadv.rec2')).col; return [Object.keys(r.stages).length, Object.keys(r.clears).length, !!r.flags.nomiss]; });
