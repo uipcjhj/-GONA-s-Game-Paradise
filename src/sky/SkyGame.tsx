@@ -64,6 +64,8 @@ function safeBottom(): number {
 const HUNT_POWER = [1, 2, 3, 3, 4, 4];
 /** 타이틀 로고 시안 미리보기 (?logo=A~F) — 사용자 선택 전까지 라이브 기본 로고는 그대로 */
 /** 개발자용 엔딩 미리보기 (?preview=ending): 터치 → 엔딩 → 에필로그 → 크레딧 · 기록·앨범·랭킹에 아무것도 쓰지 않음 */
+/** 로비 v2 미리보기 (?lobby=2) — 승인 전에는 기본 로비 그대로 */
+const LOBBY_V2 = /[?&]lobby=2\b/.test(location.search);
 const SUB_CAND = ((): string | null => { const v = new URLSearchParams(location.search).get('sub') ?? ''; return /^([1-4]|C[134]|P1)$/.test(v) ? v : null; })();
 /** 로고 시안 미리보기(?logo=A..F · 한글 부제 레터링 ?sub=1..4) — 라이브 기본 로고는 바뀌지 않음 · 부제만 고르면 영문 로고는 E */
 const LOGO_CAND = ((): string | null => { const v = (new URLSearchParams(location.search).get('logo') ?? '').toUpperCase(); return 'ABCDEF'.includes(v) && v.length === 1 ? v : SUB_CAND ? 'E' : null; })();
@@ -937,6 +939,54 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
           if (t === 'rank') { setRecTab('stage'); setPhase('records'); }
           if (t === 'prof') setProfOpen(true);
         };
+        if (LOBBY_V2) {
+          // 추억 사냥 상징: 가장 최근에 얻은 추억사진(폴라로이드) · 없으면 쌀떡 골렘 원화
+          const lastPh = Object.entries(ph).sort((x, y) => (y[1].at ?? '').localeCompare(x[1].at ?? ''))[0]?.[0];
+          const huntArt = lastPh ? (() => { const [f, d, n] = lastPh.split(':'); return bossPhotoSrc(f as FamilyId, d as Difficulty, +n, true); })() : `${BASE}${packPath('opening2/v-golem.png', '')}`;
+          return (
+            <div className="sky lobby lb2" onPointerDown={() => { unlockAudio(); setSoundOn(true); }}>
+              <img className="lb2-bg" src={`${BASE}${packPath('title/keyart-tall.jpg', 'v2/title/keyart.jpg')}`} alt="" aria-hidden />
+              <div className="lb2-shade" aria-hidden />
+              <header className="lb2-hud">
+                <button type="button" className="lb2-me" onClick={goNav('prof')} aria-label="프로필">
+                  <img src={`${import.meta.env.BASE_URL}pwa/icon-192-v2.png`} alt="" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+                  <b>{prof?.nick ?? '모험가'}</b>
+                </button>
+                <button type="button" className="lb2-chip" onClick={goNav('album')} aria-label="추억사진"><i>📷</i>{nPh}</button>
+                <button type="button" className="lb2-gear" aria-label="설정" onClick={() => { sfx('menuMove'); setSetOpen(true); }}>⚙</button>
+              </header>
+              <main className="lb2-main">
+                <button type="button" className="lb2-story" onClick={sub(() => { setHuntStage(0); setPhase('select'); })}>
+                  <img className="lb2-story-art" src={`${BASE}${packPath('opening2/gona-hero.png', '')}`} alt="" />
+                  <span className="lb2-tag">STORY MODE</span>
+                  <b className="lb2-story-name">대탈출<br />대작전</b>
+                  <span className="lb2-go">▶ 출격</span>
+                </button>
+                <div className="lb2-pair">
+                  <button type="button" className="lb2-mode lb2-hunt" onClick={sub(() => setPhase('hunt'))}>
+                    <img className={lastPh ? 'lb2-polar' : ''} src={huntArt} alt="" />
+                    <b>추억 사냥</b>
+                    <small>MEMORY HUNT</small>
+                  </button>
+                  <button type="button" className={`lb2-mode lb2-daily${dl.cleared ? ' done' : ''}`} onClick={sub(() => setPhase('daily'))}>
+                    <img src={`${BASE}${packPath('ui/daily.png', '')}`} alt="" />
+                    <b>오늘의 도전</b>
+                    <small>{dl.cleared ? 'CLEAR ✓' : 'DAILY'}</small>
+                  </button>
+                </div>
+                <div className="lb2-widgets">
+                  {nr.total > 0 ? (
+                    <button type="button" className="lb2-new" onClick={sub(() => { setAlbTab(nr.photos.length ? 'photo' : nr.ach.length ? 'ach' : 'mission'); ackRewards('all'); setPhase('album'); })}>🎁 NEW <b>{nr.total}</b></button>
+                  ) : null}
+                  <button type="button" className="lb2-mis" onClick={sub(() => { setAlbTab('mission'); ackRewards('mis'); setPhase('album'); })}>★ 미션 <b>{misDone}/{mis.length}</b></button>
+                  {pwa.update && <button type="button" className="lb2-mis" onClick={() => applyUpdate()}>✨ 업데이트</button>}
+                </div>
+              </main>
+              {navBar('home')}
+              {modals}
+            </div>
+          );
+        }
         return (
           <div className="sky lobby" onPointerDown={() => { unlockAudio(); setSoundOn(true); }}>
             <img className="lob-bg" src={`${BASE}${packPath('title/keyart-tall.jpg', 'v2/title/keyart.jpg')}`} alt="" aria-hidden />

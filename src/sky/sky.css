@@ -888,3 +888,55 @@ body.sky-hub-on .hub-back { display: none; }
 .has-nav { padding-bottom: calc(env(safe-area-inset-bottom) + 64px) !important; }
 .has-nav > .cred-btns { display: none; }
 .has-nav > .lob-nav { position: fixed; }
+
+/* ═══ 로비 v2 (?lobby=2 미리보기): 모드 선택 중심 베이스캠프 — 큰 배너 1 + 모드 2 + 작은 알림 위젯 ═══ */
+.lb2 .lb2-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; pointer-events: none; }
+.lb2-shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(18, 10, 38, 0.55) 0%, rgba(18, 10, 38, 0.15) 22%, rgba(18, 10, 38, 0.35) 55%, rgba(12, 7, 30, 0.92) 100%); }
+.lb2-hud { position: relative; z-index: 2; display: flex; align-items: center; gap: 8px; padding: calc(env(safe-area-inset-top) + 8px) 10px 0; }
+.lb2-me { display: flex; align-items: center; gap: 6px; max-width: 52%; padding: 3px 12px 3px 3px; font: 700 13px 'Galmuri11', monospace; color: #fff4d6; background: rgba(12, 7, 30, 0.85); border: 2px solid #e8b53c; outline: 2px solid #0a0618; }
+.lb2-me img { width: 34px; height: 34px; flex: none; border: 2px solid #0a0618; }
+.lb2-me b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 0 #000; }
+.lb2-chip { margin-left: auto; height: 40px; padding: 0 10px; display: flex; align-items: center; gap: 4px; font: 700 15px 'Galmuri11', monospace; color: #ffe34a; background: rgba(12, 7, 30, 0.85); border: 2px solid #6a5ab8; outline: 2px solid #0a0618; }
+.lb2-chip i { font-style: normal; font-size: 16px; }
+.lb2-gear { width: 42px; height: 42px; font-size: 21px; color: #ffe34a; background: rgba(12, 7, 30, 0.85); border: 2px solid #e8b53c; outline: 2px solid #0a0618; }
+.lb2-main { position: relative; z-index: 2; flex: 1 1 auto; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding: 8px 12px calc(env(safe-area-inset-bottom) + 72px); }
+/* 1순위: STORY 큰 배너 — 고나 원화가 프레임 밖으로 튀어나옴 */
+.lb2-story { position: relative; display: block; width: 100%; min-height: 150px; padding: 16px 16px 14px; text-align: left; color: #fff4d6; font-family: 'Galmuri11', monospace; cursor: pointer;
+  background: linear-gradient(120deg, rgba(120, 34, 40, 0.96) 0%, rgba(70, 22, 70, 0.96) 55%, rgba(30, 14, 60, 0.96) 100%);
+  border: 4px solid #ffd76a; outline: 3px solid #2a0c08; box-shadow: inset 0 0 0 3px #8a4c0c, inset 0 0 0 5px rgba(255, 224, 140, 0.35), 0 6px 0 rgba(0, 0, 0, 0.55); overflow: visible; }
+.lb2-story::before, .lb2-story::after { content: ''; position: absolute; width: 10px; height: 10px; background: #ff3a4a; border: 2px solid #2a0c08; transform: rotate(45deg); top: -8px; }
+.lb2-story::before { left: 14px; } .lb2-story::after { right: 14px; }
+.lb2-story-art { position: absolute; right: -6px; bottom: -4px; height: 190px; max-width: 58%; object-fit: contain; object-position: bottom right; pointer-events: none; filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.55)); animation: lb2-bob 3s ease-in-out infinite; will-change: transform; }
+@keyframes lb2-bob { 50% { transform: translateY(-6px); } }
+.lb2-tag { display: inline-block; padding: 2px 7px; font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #2a0c08; background: #ffd76a; }
+.lb2-story-name { display: block; margin: 6px 0 10px; font-size: 30px; line-height: 1.12; color: #ffe34a; text-shadow: 0 3px 0 #3a0c18, 2px 0 0 #3a0c18, -2px 0 0 #3a0c18; }
+.lb2-go { display: inline-block; padding: 8px 18px; font-size: 18px; font-weight: 700; letter-spacing: 1px; color: #2a1206; background: linear-gradient(#fff0a8, #ffb43a); border: 3px solid #fff4d6; outline: 3px solid #3a1a08; animation: lb2-pulse 1.6s ease-in-out infinite; }
+@keyframes lb2-pulse { 50% { filter: brightness(1.18); } }
+.lb2-story:active, .lb2-mode:active { transform: translateY(3px); }
+/* 2순위 모드: 그림 + 굵은 이름 두 줄만 */
+.lb2-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lb2-mode { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-height: 128px; padding: 8px 6px 10px; color: #fff4d6; font-family: 'Galmuri11', monospace; cursor: pointer; overflow: hidden;
+  border: 3px solid #9cd8ff; outline: 3px solid #0a0618; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.12), 0 5px 0 rgba(0, 0, 0, 0.5); }
+.lb2-hunt { background: radial-gradient(120% 90% at 50% 20%, rgba(70, 120, 210, 0.95), rgba(20, 26, 80, 0.97)); }
+.lb2-daily { border-color: #ffd76a; background: radial-gradient(120% 90% at 50% 20%, rgba(220, 120, 40, 0.95), rgba(80, 24, 40, 0.97)); }
+.lb2-mode img { height: 76px; max-width: 92%; object-fit: contain; margin-bottom: 2px; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.55)); }
+.lb2-mode b { font-size: 17px; text-shadow: 0 2px 0 #000; }
+.lb2-mode small { font-size: 10px; letter-spacing: 2px; color: #ffe34a; }
+.lb2-daily.done small { color: #7ff0a0; }
+/* 3순위: 작은 알림 위젯 */
+.lb2-widgets { display: flex; justify-content: center; gap: 8px; min-height: 34px; }
+.lb2-new, .lb2-mis { height: 34px; padding: 0 12px; font: 700 13px 'Galmuri11', monospace; color: #fff4d6; background: rgba(12, 7, 30, 0.88); border: 2px solid #6a5ab8; outline: 2px solid #0a0618; }
+.lb2-new { color: #fff; background: #c02040; border-color: #ffd0d8; animation: lb2-pulse 1.2s ease-in-out infinite; }
+.lb2-new b, .lb2-mis b { color: #ffe34a; margin-left: 3px; }
+/* 하단 탭: 게임 메뉴판처럼 (금테 · 활성 탭 금 명판) */
+.lb2 .lob-nav { background: linear-gradient(#1c1040, #0c0720); border-top: 4px solid #ffd76a; box-shadow: 0 -3px 0 #2a0c08; }
+.lb2 .lob-nav button { min-height: 60px; }
+.lb2 .lob-nav button i { font-size: 23px; }
+.lb2 .lob-nav button.on { color: #2a1206; background: linear-gradient(#fff0a8, #e8a830); }
+.lb2 .lob-nav button.on::before { display: none; }
+@media (max-height: 680px) {
+  .lb2-story { min-height: 132px; padding: 12px 14px 12px; } .lb2-story-art { height: 162px; } .lb2-story-name { font-size: 26px; margin: 4px 0 8px; }
+  .lb2-mode { min-height: 112px; } .lb2-mode img { height: 62px; }
+}
+.lb2-mode img.lb2-polar { height: 70px; padding: 3px 3px 9px; background: #fff8e8; border: 2px solid #0a0618; transform: rotate(-6deg); filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, 0.55)); margin-bottom: 6px; }
+.lb2-main, .lb2-hud { align-self: stretch; width: 100%; box-sizing: border-box; } .lb2-pair, .lb2-story { width: 100%; box-sizing: border-box; }
