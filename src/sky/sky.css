@@ -813,3 +813,6 @@ body.sky-hub-on .hub-back { display: none; }
 .pv-box .sky-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; min-height: 48px; text-decoration: none; }
 .pv-box .sky-btn small { font-size: 10px; font-weight: 400; opacity: 0.85; }
 .pv-note { margin: 2px 0; font: 400 11px/1.45 'Galmuri11', monospace; color: #cfc6f0; text-align: center; }
+/* 부제 붓글씨(C*) · 픽셀(P1) 시안 */
+.ttl2-logo.cand img.cand-subimg.kC1, .ttl2-logo.cand img.cand-subimg.kC3, .ttl2-logo.cand img.cand-subimg.kC4 { width: min(82vw, 350px); margin-top: -12px; filter: drop-shadow(0 2px 0 rgba(20, 4, 0, 0.8)); }
+.ttl2-logo.cand img.cand-subimg.kP1 { width: min(82vw, 326px); margin-top: -4px; image-rendering: pixelated; filter: none; }

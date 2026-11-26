@@ -7,7 +7,7 @@ const [gpath, out, mode] = process.argv.slice(2);
 const G = JSON.parse(fs.readFileSync(gpath, 'utf8'));
 const TEXT = '응가 대탈출 대작전';
 /** 글자 배치: 크기 · 자간 · 아치(위로 휜 정도) · 글자별 기울기 · 통통 튀는 높이 */
-function layout(font, { size = 120, track = 0, arc = 0, bounce = 0, space = 0.32 }) {
+function layout(font, { size = 120, track = 0, arc = 0, bounce = 0, space = 0.32, tilt = 0, skewX = 0 }) {
   const f = G[font];
   const k = size / f.upm;
   let x = 0;
@@ -23,8 +23,8 @@ function layout(font, { size = 120, track = 0, arc = 0, bounce = 0, space = 0.32
     const cx = it.x + it.w / 2;
     const u = (cx - W / 2) / (W / 2);                     // -1 … 1
     const dy = arc * (u * u) + (bounce ? (it.i % 2 ? bounce : -bounce) : 0);
-    const rot = arc ? (u * arc) / 9 : 0;
-    return { ...it, t: `translate(${it.x.toFixed(1)} ${dy.toFixed(1)}) rotate(${rot.toFixed(2)} ${(it.w / 2).toFixed(1)} ${(size * 0.5).toFixed(1)}) scale(${k})` };
+    const rot = (arc ? (u * arc) / 9 : 0) + (tilt ? [-1, 0.6, -0.4, 1, -0.7, 0.5, -1, 0.8][it.i % 8] * tilt : 0);
+    return { ...it, t: `translate(${it.x.toFixed(1)} ${dy.toFixed(1)}) rotate(${rot.toFixed(2)} ${(it.w / 2).toFixed(1)} ${(size * 0.5).toFixed(1)}) scale(${k})${skewX ? ` skewX(${skewX})` : ''}` };
   }).concat([{ W, H: size }]);
 }
 function svg(name, font, o) {
@@ -43,12 +43,15 @@ function svg(name, font, o) {
     <path d="M${px - n} ${py + ph / 2} L${px} ${py} L${px + pw} ${py} L${px + pw + n} ${py + ph / 2} L${px + pw} ${py + ph} L${px} ${py + ph} Z" fill="${o.plate[0]}" stroke="${o.plate[1]}" stroke-width="6"/>
     <path d="M${px + 8} ${py + 9} L${px + pw - 8} ${py + 9}" stroke="${o.plate[2]}" stroke-width="3"/>
     <path d="M${px + 8} ${py + ph - 9} L${px + pw - 8} ${py + ph - 9}" stroke="${o.plate[2]}" stroke-width="3" opacity="0.6"/></g>` : '';
-  const halo = o.halo ? glyphs(`fill="${o.halo}" stroke="${o.halo}" stroke-width="${(o.outer + 7) * 2}" stroke-linejoin="round" opacity="0.85"`) : '';
+  const hw = o.ring ? o.outer + 9 : o.outer + 7;
+  const ringSvg = o.ring ? [0, o.depth].map((dy) => `<g transform="translate(0 ${dy})">${glyphs(`fill="${o.ring}" stroke="${o.ring}" stroke-width="${(hw + 4) * 2}" stroke-linejoin="round"`)}</g>`).join('') : '';
+  const halo = o.halo ? [0, o.ring ? o.depth : 0].map((dy) => `<g transform="translate(0 ${dy})">${glyphs(`fill="${o.halo}" stroke="${o.halo}" stroke-width="${hw * 2}" stroke-linejoin="round"${o.ring ? '' : ' opacity="0.85"'}`)}</g>`).join('') : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-pad - (o.orn || o.plate ? 72 : 0)} ${-pad - Math.abs(o.arc ?? 0)} ${W + pad * 2 + (o.orn || o.plate ? 144 : 0)} ${H + pad * 2 + Math.abs(o.arc ?? 0) * 2 + (o.depth ?? 0)}" data-name="${name}">
   <defs><linearGradient id="f-${name}" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">${grad}</linearGradient>
   <linearGradient id="h-${name}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.75"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
   ${plate}
   ${orn}
+  ${ringSvg}
   ${halo}
   ${ext.join('')}
   ${glyphs(`fill="${o.outerCol}" stroke="${o.outerCol}" stroke-width="${o.outer * 2}" stroke-linejoin="round"`)}
@@ -67,6 +70,12 @@ const DESIGNS = {
   K3: ['jua', { size: 118, track: 3, bounce: 4, fill: ['#fffbe0', '#fce93f', '#f7b82e', '#df8227', '#a8400a'], inner: 3, innerCol: '#fbf2d2', outer: 10, outerCol: '#2f0601', depth: 8, ext: '#8a2106', gloss: true, plate: ['#5a0e04', '#f7b82e', '#8a2106'] }],
   // 4 판타지 명판체: 명조 계열 · 금빛 · 짙은 적갈색 외곽 · 양쪽 마름모 장식 (B/F 날개·왕관 문장과 짝)
   K4: ['song-myung', { size: 118, track: 6, arc: 0, fill: ['#fff8d8', '#ffd870', '#d08a28'], inner: 4, innerCol: '#3a0c10', outer: 10, outerCol: '#fff0b8', depth: 7, ext: '#2a0610', gloss: true, orn: '#ffd870', plate: ['#a01828', '#ffd870', '#d04050'] }],
+  // 캘리그라피 시안 (명판 없음 · F 로고 색): 붓글씨 폰트 + 글자별 기울기 흔들림 · 두꺼운 적갈 외곽 · 입체
+  C1: ['east-sea-dokdo', { size: 150, track: -2, tilt: 3, bounce: 3, fill: ['#fffbe0', '#fce93f', '#f7b82e', '#df8227', '#a8400a'], inner: 3, innerCol: '#fbf2d2', outerCol: '#2f0601', ext: '#8a2106', gloss: true, outer: 11, depth: 8, halo: '#2f0601', ring: '#e8a830' }],
+  C2: ['dokdo', { size: 140, track: 0, tilt: 2.5, bounce: 3, fill: ['#fffbe0', '#fce93f', '#f7b82e', '#df8227', '#a8400a'], inner: 3, innerCol: '#fbf2d2', outerCol: '#2f0601', ext: '#8a2106', gloss: true, outer: 11, depth: 8, halo: '#2f0601', ring: '#e8a830' }],
+  C3: ['nanum-brush-script', { size: 150, track: -4, tilt: 3, bounce: 4, fill: ['#fffbe0', '#fce93f', '#f7b82e', '#df8227', '#a8400a'], inner: 3, innerCol: '#fbf2d2', outerCol: '#2f0601', ext: '#8a2106', gloss: true, outer: 11, depth: 8, halo: '#2f0601', ring: '#e8a830' }],
+  C4: ['yeon-sung', { size: 130, track: 2, tilt: 2, bounce: 3, fill: ['#fffbe0', '#fce93f', '#f7b82e', '#df8227', '#a8400a'], inner: 3, innerCol: '#fbf2d2', outerCol: '#2f0601', ext: '#8a2106', gloss: true, outer: 11, depth: 8, halo: '#2f0601', ring: '#e8a830' }],
+  C5: ['black-and-white-picture', { size: 140, track: 0, tilt: 2.5, bounce: 3, fill: ['#fffbe0', '#fce93f', '#f7b82e', '#df8227', '#a8400a'], inner: 3, innerCol: '#fbf2d2', outerCol: '#2f0601', ext: '#8a2106', gloss: true, outer: 11, depth: 8, halo: '#2f0601', ring: '#e8a830' }],
   K5: ['do-hyeon', { size: 120, track: 4, arc: 8, fill: ['#ffffff', '#ffd6e6', '#ff6fa0'], inner: 4, innerCol: '#ffffff', outer: 11, outerCol: '#3a0a30', depth: 8, ext: '#1a0418', gloss: true }],
   K6: ['gugi', { size: 116, track: 4, arc: 8, fill: ['#fffbe0', '#9ff07a', '#3aa83a'], inner: 4, innerCol: '#ffffff', outer: 11, outerCol: '#0a2a10', depth: 8, ext: '#06180a', gloss: true }],
 };
@@ -74,7 +83,9 @@ const DESIGNS = {
   fs.mkdirSync(out, { recursive: true });
   const b = await chromium.launch();
   const p = await b.newPage({ deviceScaleFactor: 1 });
+  const only = process.argv[5] ? process.argv[5].split(',') : null;
   for (const [name, [font, o]] of Object.entries(DESIGNS)) {
+    if (only && !only.includes(name)) continue;
     const s = svg(name, font, o);
     fs.writeFileSync(`${out}/${name}.svg`, s);
     await p.setContent(`<html><body style="margin:0;background:transparent">${s.replace('<svg ', '<svg width="1200" ')}</body></html>`);

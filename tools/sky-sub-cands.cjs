@@ -14,7 +14,7 @@ const combos = (list || 'NOW,E1,E2,E3,E4,A1,B4,C3,F4').split(',');
       const p = await ctx.newPage();
       const errs = [];
       p.on('pageerror', (e) => errs.push(e.message));
-      await p.goto(url + '?skytest' + (c === 'NOW' ? '' : `&logo=${c[0]}&sub=${c[1]}`));
+      await p.goto(url + '?skytest' + (c === 'NOW' ? '' : `&logo=${c[0]}&sub=${c.slice(1)}`));
       await p.waitForSelector('.ttl-start', { timeout: 60000 });
       await p.waitForTimeout(2600);
       await p.evaluate(() => { const n = document.querySelector('.cand-pick'); if (n) n.style.display = 'none'; });
