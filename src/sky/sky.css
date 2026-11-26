@@ -940,3 +940,40 @@ body.sky-hub-on .hub-back { display: none; }
 }
 .lb2-mode img.lb2-polar { height: 70px; padding: 3px 3px 9px; background: #fff8e8; border: 2px solid #0a0618; transform: rotate(-6deg); filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, 0.55)); margin-bottom: 6px; }
 .lb2-main, .lb2-hud { align-self: stretch; width: 100%; box-sizing: border-box; } .lb2-pair, .lb2-story { width: 100%; box-sizing: border-box; }
+
+/* ═══ 배지: 확정 픽셀아트 훈장 32종 (src/sky/badges.ts) ═══ */
+.bd-img { object-fit: contain; image-rendering: auto; -webkit-user-drag: none; }
+.alb-badge .bd-img { width: 100%; height: 100%; }
+.alb-badge.locked { filter: grayscale(1) brightness(0.32) contrast(1.15); }
+.alb-badge.locked::after { content: '🔒'; position: absolute; top: 2px; right: 2px; font-size: 10px; filter: none; }
+.polaroid span.polaroid-stamp { width: 60px; }
+/* 업적 = 배지 격자 */
+.bd-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 6px; padding: 4px 2px 8px; }
+.bd-cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px 5px; min-height: 104px; background: rgba(20, 12, 48, 0.9); border: 2px solid #3a2a6a; color: #8a80b0; font-family: 'Galmuri11', monospace; cursor: pointer; }
+.bd-cell .bd-img { width: 60px; height: 60px; filter: grayscale(1) brightness(0.3) contrast(1.2); }
+.bd-cell b { font-size: 9px; line-height: 1.3; text-align: center; word-break: keep-all; }
+.bd-cell small { font-size: 8px; color: #6a6090; }
+.bd-cell.on { border-color: #e8b53c; color: #fff4d6; background: linear-gradient(#2a1a5a, #160c34); }
+.bd-cell.on .bd-img { filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.6)); animation: bd-gleam 4.5s ease-in-out infinite; }
+.bd-cell.on small { color: #ffe34a; }
+@keyframes bd-gleam { 0%, 86%, 100% { filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.6)); } 92% { filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.6)) brightness(1.25); } }
+.bd-cell:active { transform: translateY(2px); }
+/* 확대 화면 */
+.bd-view .bd-zoom { width: min(84vw, 320px); padding: 16px 14px 14px; text-align: center; background: #160c34; border: 3px solid #6a5ab8; outline: 3px solid #0a0618; font-family: 'Galmuri11', monospace; color: #fff4d6; }
+.bd-view .bd-zoom.on { border-color: #ffd76a; box-shadow: inset 0 0 0 2px #8a4c0c; }
+.bd-zoom .bd-img { width: 152px; height: 152px; filter: grayscale(1) brightness(0.3) contrast(1.2); }
+.bd-zoom.on .bd-img { filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.6)); animation: bd-award 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.bd-zoom h3 { margin: 6px 0 4px; font-size: 17px; color: #ffe34a; text-shadow: 0 2px 0 #3a0c18; }
+.bd-zoom .bd-cond { margin: 0; font-size: 11px; line-height: 1.5; color: #e8dcc0; word-break: keep-all; }
+.bd-zoom .bd-state { margin: 6px 0 0; font-size: 11px; color: #9cd8ff; }
+/* 결과 화면: 훈장 수여 (위에서 내려와 꽂힘 · 한 번 빛남 · 화면 흔들림 없음) */
+.res-unlocks li.u-badge { display: flex; align-items: center; gap: 8px; }
+.res-unlocks li.u-badge span { display: flex; flex-direction: column; text-align: left; } .res-unlocks li.u-badge em { font-style: normal; font-size: 9px; color: #9cd8ff; letter-spacing: 1px; }
+.bd-award { width: 46px; height: 46px; flex: none; animation: bd-award 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.25) both; }
+@keyframes bd-award { 0% { opacity: 0; transform: translateY(-26px) scale(1.5); } 60% { opacity: 1; transform: translateY(2px) scale(0.96); filter: brightness(1.5); } 100% { transform: none; filter: brightness(1); } }
+.bd-mini { width: 20px; height: 20px; vertical-align: middle; margin-right: 2px; }
+.lb2-new .bd-mini { width: 24px; height: 24px; margin: -4px 2px 0 -4px; }
+.bd-view .bd-zoom img.bd-img { border: none; background: none; padding: 0; box-shadow: none; max-width: none; outline: none; }
+.res-unlocks li.u-badge em { color: #7a2408; font-weight: 700; }
+.res-unlocks li.u-badge span { color: #2a1206; font-weight: 700; }
+.bd-view .bd-zoom img.bd-img { display: block; margin: 0 auto; }
