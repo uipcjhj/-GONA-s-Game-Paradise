@@ -14,10 +14,22 @@ import type { Difficulty } from './stages';
 import type { FamilyId } from './engine';
 import type { Rank } from './rank';
 
-const URL_ = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/$/, '') ?? '';
-const KEY_ = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? '';
+/** 설정 위치 (먼저 있는 것): ① 배포 폴더의 online-config.js (다시 빌드 없이 켜기) ② 빌드 환경변수 VITE_SUPABASE_URL · VITE_SUPABASE_ANON_KEY */
+const RT = (typeof window !== 'undefined' ? (window as unknown as { SKY_ONLINE?: { url?: string; anonKey?: string } }).SKY_ONLINE : undefined) ?? {};
+const URL_ = (RT.url || (import.meta.env.VITE_SUPABASE_URL as string | undefined) || '').trim().replace(/\/$/, '');
+const RAW_KEY = (RT.anonKey || (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) || '').trim();
+/** 비밀 키(service_role · sb_secret_)가 실수로 들어오면 온라인을 켜지 않음 — 공개 화면에는 공개 키(anon · sb_publishable_)만 */
+export function isSecretKey(k: string): boolean {
+  if (k.startsWith('sb_secret_')) return true;
+  const part = k.split('.')[1];
+  if (!part) return false;
+  try { return /"role"\s*:\s*"service_role"/.test(atob(part.replace(/-/g, '+').replace(/_/g, '/'))); } catch { return false; }
+}
+const KEY_ = isSecretKey(RAW_KEY) ? '' : RAW_KEY;
+if (RAW_KEY && !KEY_) console.warn('[sky-online] 비밀 키가 설정되어 온라인 기능을 껐어요. 공개(anon/publishable) 키만 넣어 주세요.');
+const URL_OK = /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(URL_) || /^https:\/\/[\w.-]+$/.test(URL_);
 /** 서버 설정이 들어간 빌드인지 */
-export const ONLINE = !!(URL_ && KEY_) && !PREVIEW; // 컷신 미리보기 탭은 온라인 제출·동기화 없음
+export const ONLINE = !!(URL_ && URL_OK && KEY_) && !PREVIEW; // 컷신 미리보기 탭은 온라인 제출·동기화 없음
 const SESSION_KEY = `${NS}.online`;
 
 interface Session { access: string; refresh: string; exp: number; userId: string; email: string; profileId: string; rev: number }

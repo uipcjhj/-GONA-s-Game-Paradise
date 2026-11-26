@@ -79,12 +79,15 @@ create or replace function public.sky_save_put(p_bundle jsonb, p_rev int)
 returns int language plpgsql security invoker as $$
 declare new_rev int;
 begin
+  if auth.uid() is null then raise exception 'login required' using errcode = '28000'; end if;
   insert into public.sky_saves (user_id, bundle, rev) values (auth.uid(), p_bundle, 1)
   on conflict (user_id) do update set bundle = excluded.bundle, rev = public.sky_saves.rev + 1, updated_at = now()
     where public.sky_saves.rev = p_rev
   returning rev into new_rev;
   return coalesce(new_rev, -1);
 end $$;
+revoke all on function public.sky_save_put(jsonb, int) from public, anon;
+grant execute on function public.sky_save_put(jsonb, int) to authenticated;
 
 -- 랭킹 뷰: 보드별 사용자 최고 기록 1개 · TOP 100
 create or replace view public.sky_leaderboard with (security_invoker = true) as
@@ -98,3 +101,7 @@ from public.sky_scores where verified and created_at >= date_trunc('week', now()
 order by board, user_id, score desc, created_at asc;
 
 grant select on public.sky_leaderboard, public.sky_leaderboard_weekly to anon, authenticated;
+
+-- 클라이언트 키(anon/authenticated)는 점수·세션 표에 직접 쓰기 권한 자체가 없음 (RLS 정책 + 권한 이중 차단)
+revoke insert, update, delete on public.sky_scores, public.sky_play_sessions from anon, authenticated;
+revoke all on public.sky_players, public.sky_saves from anon;

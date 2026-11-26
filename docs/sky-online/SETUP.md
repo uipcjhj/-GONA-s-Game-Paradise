@@ -1,32 +1,56 @@
 # GONA's Sky Adventure — 온라인(계정 · 클라우드 저장 · 공유 랭킹) 연결 방법
 
-현재 상태: **코드 · DB 구조 · 보안 정책 · 서버 함수는 저장소에 준비됨. 실제 Supabase 프로젝트는 아직 없음.**
-→ 라이브 게임은 `ONLINE=false` 로 동작 (게스트 · 기기 저장 · 백업 코드). 아래 설정을 마치고 다시 빌드하면 켜짐.
+## 현재 상태 (2026-11-26 · 솔직하게)
+| 항목 | 상태 |
+|---|---|
+| 게임 쪽 코드 (가입·로그인·동기화·병합·세션·제출·랭킹) | ✅ 준비됨 · 가짜 서버로 흐름 검사 통과 (`tools/sky-online-mock-check.cjs`) |
+| DB 구조 · RLS · 권한 (`supabase/migrations/…sql`) | ✅ 실제 Postgres 16 에 적용해 14개 항목 검사 통과 (`tools/sky-online/sql-test.sh`) — Supabase 와 같은 역할(anon/authenticated/service_role)을 흉내 낸 환경 |
+| 서버 함수 3개 (start-play · submit-score · delete-account) | ✅ Deno 타입 검사 통과 · 점수 규칙 = 게임 계산 18,833건 일치 · ⚠ **실제 Supabase 에서 실행해 본 적은 없음** |
+| CORS 사전 요청 | ✅ `supabase/config.toml` 에서 함수별 `verify_jwt = false` (토큰 확인은 함수 안에서 직접) |
+| 실제 Supabase 프로젝트 | ❌ **없음** → 라이브 게임은 온라인 꺼짐 (게스트·기기 저장·백업 코드로 정상 동작) |
 
-## 사용자가 직접 해야 하는 일 (약 15분 · 무료 플랜으로 가능)
+→ **서버가 만들어지기 전까지 온라인 기능은 '완료'가 아닙니다.**
 
-1. https://supabase.com 에서 무료 프로젝트 만들기 (지역: Northeast Asia (Seoul) 권장)
-2. **Authentication → Providers → Email** 켜기
-   - 바로 로그인되게 하려면 "Confirm email" 끄기 (켜 두면 가입 후 메일 확인 링크를 눌러야 로그인됨)
-   - **URL Configuration → Site URL**: `https://uipcjhj.github.io/GoNa/sky-adventure/`
-3. **SQL Editor** 에 `supabase/migrations/20261126000000_sky_online.sql` 내용을 붙여 넣고 실행
-4. 서버 함수 배포 (컴퓨터에 Supabase CLI 필요: `npm i -g supabase`)
+## 사용자가 해야 하는 일 (최소 순서 · 무료 플랜)
+
+1. **프로젝트 만들기** — https://supabase.com → New project (지역: Northeast Asia (Seoul)) · DB 비밀번호는 본인만 보관
+2. **이메일 로그인 켜기** — Authentication → Sign In / Providers → Email 켜기
+   - 바로 로그인되게 하려면 "Confirm email" 끄기 (켜 두면 메일 확인 후 로그인)
+   - Authentication → URL Configuration → Site URL: `https://uipcjhj.github.io/GoNa/sky-adventure/`
+3. **DB 만들기** — SQL Editor → `supabase/migrations/20261126000000_sky_online.sql` 전체 붙여 넣고 Run (1번만)
+4. **서버 함수 올리기** — 본인 컴퓨터 터미널에서 (Supabase CLI: `npm i -g supabase`)
    ```bash
-   supabase login
+   cd -GONA-s-Game-Paradise          # 이 저장소
+   supabase login                    # 브라우저로 로그인 (토큰을 채팅에 붙이지 마세요)
    supabase link --project-ref <프로젝트 ref>
    supabase functions deploy start-play
    supabase functions deploy submit-score
    supabase functions deploy delete-account
    supabase secrets set SKY_ALLOWED_ORIGIN=https://uipcjhj.github.io
    ```
-5. **Project Settings → API** 의 `Project URL` 과 `anon public` 키를 알려 주기
-   (anon 키는 공개돼도 되는 키 · **service_role 키는 절대 공유하지 말 것** — 서버 함수에만 자동으로 들어감)
+   - 함수가 쓰는 `SUPABASE_SERVICE_ROLE_KEY` 는 Supabase 가 함수 안에 **자동으로** 넣어 줌 → 사용자가 어디에도 입력할 필요 없음
+5. **공개 값 2개 전달** — Project Settings → API (또는 API Keys) 에서
+   - `Project URL` (예: `https://abcd1234.supabase.co`)
+   - **공개 키**: `anon public` 또는 `sb_publishable_…` 로 시작하는 키
+   - 이 두 값은 원래 브라우저에 공개되는 값이라 채팅으로 알려 줘도 됨
+   - ⛔ `service_role` · `sb_secret_…` · DB 비밀번호 · 액세스 토큰은 **절대 채팅·파일·GitHub 에 넣지 말 것**
+     (게임은 비밀 키가 들어오면 감지해서 온라인을 아예 끔)
 
-그 다음은 개발 쪽에서: 빌드할 때 아래 두 값을 넣어 다시 빌드 · 배포
+## 개발 쪽이 하는 일 (값을 받은 뒤)
+- 다시 빌드하지 않고 켜는 방법: 배포 폴더 `sky-adventure/online-config.js` 한 파일에 공개 값만 기록
+  ```js
+  window.SKY_ONLINE = { url: "https://<ref>.supabase.co", anonKey: "<anon 또는 sb_publishable 키>" };
+  ```
+  (빌드 때 `SKY_ONLINE_URL` · `SKY_ONLINE_ANON_KEY` 환경변수를 주면 이 파일이 그 값으로 만들어짐 · 다시 배포할 때도 기존 값 유지)
+- GitHub Pages 는 이미 만들어진 정적 파일만 올리므로 **GitHub Secrets/Actions 설정은 필요 없음** (공개 값만 쓰기 때문)
+- 연결 후 실서버 검사: 가입 → 동기화 → 다른 기기 병합 → 출격/제출 → 랭킹 → 계정 삭제 순서로 실제 확인 후에만 '완료' 보고
 
-```bash
-VITE_SUPABASE_URL=https://<ref>.supabase.co VITE_SUPABASE_ANON_KEY=<anon key> ./tools/sky-adventure-build.sh
-```
+## 비밀 키를 쓰는 곳 (안전한 경로만)
+| 키 | 어디에 | 누가 넣나 |
+|---|---|---|
+| anon / publishable | 게임 화면 (`online-config.js`) | 공개 값 — 개발 쪽 |
+| service_role / secret | Edge Function 실행 환경 | Supabase 가 자동 주입 (사람이 안 넣음) |
+| DB 비밀번호 · CLI 로그인 | 사용자 컴퓨터 | 사용자 본인만 |
 
 ## 구조
 

@@ -83,6 +83,10 @@ self.addEventListener('message', (e) => {{
 self.addEventListener('fetch', (e) => {{
   const u = new URL(e.request.url);
   if (e.request.method !== 'GET' || u.origin !== location.origin) return;            // 온라인 서버(Supabase) 요청은 건드리지 않음
+  if (u.pathname.endsWith('/online-config.js')) {{                                          // 온라인 설정: 항상 최신(인터넷 먼저)
+    e.respondWith(fetch(e.request).then((res) => {{ const cp = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, cp)); return res; }}).catch(() => caches.match(e.request)));
+    return;
+  }}
   if (e.request.mode === 'navigate') {{                                                  // 페이지: 인터넷 먼저 · 안 되면 캐시
     e.respondWith(fetch(e.request).catch(() => caches.match('index.html')));
     return;
@@ -99,6 +103,14 @@ open(f'{D}/sw.js', 'w').write(sw)
 h = open(f'{D}/index.html').read()
 h = re.sub(r'<meta name="theme-color"[^>]*>', '<meta name="theme-color" content="#120a26" />', h)
 h = h.replace('<link rel="apple-touch-icon" href="./apple-touch-icon.png" />', '<link rel="apple-touch-icon" href="./pwa/apple-touch-icon.png" />')
+if 'online-config.js' not in h:   # 온라인 설정(공개 URL·공개 키)을 다시 빌드 없이 넣는 파일 · 모듈보다 먼저 실행
+    h = h.replace('<script type="module"', '<script src="./online-config.js"></script>\n    <script type="module"', 1)
+cfg = f'{D}/online-config.js'
+url_, key_ = os.environ.get('SKY_ONLINE_URL', ''), os.environ.get('SKY_ONLINE_ANON_KEY', '')
+open(cfg, 'w').write(
+    "/* GONA's Sky Adventure 온라인 설정 — 공개해도 되는 값만 (Project URL · anon/publishable 키)\n"
+    " * service_role · sb_secret_ 키는 절대 넣지 마세요 (게임이 감지하면 온라인을 끕니다). 비우면 게스트·기기 저장만. */\n"
+    f"window.SKY_ONLINE = {{ url: {json.dumps(url_)}, anonKey: {json.dumps(key_)} }};\n")
 if 'manifest.webmanifest' not in h:
     h = h.replace('</head>', '    <link rel="manifest" href="./manifest.webmanifest" />\n    <meta name="apple-mobile-web-app-capable" content="yes" />\n    <meta name="mobile-web-app-capable" content="yes" />\n    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />\n    <meta name="apple-mobile-web-app-title" content="고나 스카이" />\n  </head>')
 open(f'{D}/index.html', 'w').write(h)
