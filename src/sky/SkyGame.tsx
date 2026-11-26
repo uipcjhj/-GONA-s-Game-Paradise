@@ -786,8 +786,9 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
           <div className="ttl-sparks" aria-hidden>
             {Array.from({ length: 10 }, (_, i) => <i key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.37) % 2.6}s`, animationDuration: `${2.2 + (i % 4) * 0.5}s` }} />)}
           </div>
-          <header className={`ttl2-logo${LOGO_CAND ? ` cand cand-${LOGO_CAND}` : ''}`}>
-            <img src={LOGO_CAND ? `${BASE}v3-poop/title/cand/${LOGO_CAND}.png` : `${BASE}${packPath('title/logo-v9.png')}`} alt="GONA's SKY ADVENTURE" />
+          <header className={`ttl2-logo${LOGO_CAND ? ` cand cand-${LOGO_CAND}` : ' v10'}`}>
+            <img src={LOGO_CAND ? `${BASE}v3-poop/title/cand/${LOGO_CAND}.png` : `${BASE}${packPath('title/logo-v10.png')}`} alt="GONA's SKY ADVENTURE" />
+            {!LOGO_CAND && <img className="ttl2-subimg" src={`${BASE}${packPath('title/sub-v10.png')}`} alt="응가 대탈출 대작전" />}
             {LOGO_CAND && SUB_CAND && <img className={`cand-subimg k${SUB_CAND}`} src={`${BASE}v3-poop/title/sub/${/^\d$/.test(SUB_CAND) ? `K${SUB_CAND}` : SUB_CAND}.png`} alt="응가 대탈출 대작전" />}
             {LOGO_CAND && !SUB_CAND && LOGO_CAND !== 'D' && <p className="cand-sub"><span>응가 대탈출 대작전</span></p>}
           </header>
@@ -938,7 +939,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
             <p>GONA&apos;s Sky Adventure — The Great Poo Escape</p>
           </div>
         ) : (
-          <img className="ttl-logo" style={{ width: logoW }} src={`${BASE}${packPath('title/logo-v9.png')}`} alt="GONA's Sky Adventure" />
+          <img className="ttl-logo" style={{ width: logoW }} src={`${BASE}${packPath('title/logo-v10.png')}`} alt="GONA's Sky Adventure" />
         )}
         <div className="ttl-menu" style={{ height: menuH }}>
           <div className="ttl-row">

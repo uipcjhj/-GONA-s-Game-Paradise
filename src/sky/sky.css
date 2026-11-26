@@ -818,3 +818,7 @@ body.sky-hub-on .hub-back { display: none; }
 .ttl2-logo.cand img.cand-subimg.kP1 { width: min(82vw, 326px); margin-top: -4px; image-rendering: pixelated; filter: none; }
 /* F + C1 확정안: 크게 · 금색 테 바깥에 어두운 그림자 2겹(또렷한 아래 그림자 + 번짐)으로 배경과 분리 */
 .ttl2-logo.cand img.cand-subimg.kC1 { width: min(88vw, 370px); margin-top: -14px; filter: drop-shadow(0 3px 0 #1a0400) drop-shadow(0 0 5px rgba(20, 4, 0, 0.95)) drop-shadow(0 0 10px rgba(20, 4, 0, 0.7)); }
+/* 정식 타이틀 로고 v10 (2026-11-26 승인): 영문 F + 한글 부제 C1 붓글씨 */
+.ttl2-logo.v10 img { width: min(86vw, 400px); }
+.ttl2-logo.v10 img.ttl2-subimg { width: min(88vw, 370px); margin-top: -14px; animation: ttl2-fade 0.8s ease-out 0.9s both; filter: drop-shadow(0 3px 0 #1a0400) drop-shadow(0 0 5px rgba(20, 4, 0, 0.95)) drop-shadow(0 0 10px rgba(20, 4, 0, 0.7)); }
+.oc-title .oc-sublogo { display: block; width: min(86vw, 380px); height: auto; margin: -10px auto 0; filter: drop-shadow(0 3px 0 #1a0400) drop-shadow(0 0 6px rgba(20, 4, 0, 0.95)); animation: ttl2-fade 0.7s ease-out 0.45s both; }

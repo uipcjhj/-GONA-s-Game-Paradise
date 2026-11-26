@@ -1898,7 +1898,8 @@ export function OpeningCinematic({ onDone, startAt = 0 }: { onDone: () => void; 
       )}
       {titleOn && (
         <div className="oc-title">
-          <img className="oc-logo" src={`${BASE}${packPath('title/logo-v9.png')}`} alt="GONA's SKY ADVENTURE" />
+          <img className="oc-logo" src={`${BASE}${packPath('title/logo-v10.png')}`} alt="GONA's SKY ADVENTURE" />
+          <img className="oc-sublogo" src={`${BASE}${packPath('title/sub-v10.png')}`} alt="응가 대탈출 대작전" />
           <p className="oc-copy">“막힌 운명을 뚫어라!”</p>
           {t >= OPENING_END && <p className="oc-press">▶ 터치하여 시작</p>}
         </div>
