@@ -9,38 +9,26 @@ D = sys.argv[1] if len(sys.argv) > 1 else 'dist-adventure'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.makedirs(f'{D}/pwa', exist_ok=True)
 
-# ── 아이콘: 승인된 고나 일러스트(opening2/gona-hero) · 남색 바탕 + 금테 (새 그림 생성 없음)
-src = Image.open(f'{ROOT}/public/assets/sky/v3-poop/opening2/gona-hero.png').convert('RGBA')
-bb = src.split()[3].point(lambda v: 255 if v > 20 else 0).getbbox()
-src = src.crop(bb)
-def icon(size, pad, rounded=False, maskable=False):
-    im = Image.new('RGBA', (size, size), (18, 10, 38, 255))
-    d = ImageDraw.Draw(im)
-    for i in range(size // 2):  # 은은한 노을빛 원형 그라데이션
-        k = i / (size / 2)
-        d.ellipse((size / 2 - i, size / 2 - i, size / 2 + i, size / 2 + i), outline=(int(60 + 120 * (1 - k)), int(30 + 60 * (1 - k)), int(90 + 40 * (1 - k)), 255))
-    inner = int(size * (1 - 2 * pad))
-    g = src.copy(); g.thumbnail((inner, inner), Image.LANCZOS)
-    im.alpha_composite(g, ((size - g.width) // 2, (size - g.height) // 2 + int(size * 0.02)))
-    if not maskable:
-        w = max(2, size // 40)
-        d.rectangle((w // 2, w // 2, size - 1 - w // 2, size - 1 - w // 2), outline=(232, 181, 60, 255), width=w)
-    return im.convert('RGB')
-icon(512, 0.08).save(f'{D}/pwa/icon-512.png', optimize=True)
-icon(192, 0.08).save(f'{D}/pwa/icon-192.png', optimize=True)
-icon(512, 0.18, maskable=True).save(f'{D}/pwa/icon-maskable-512.png', optimize=True)
-icon(180, 0.1).save(f'{D}/pwa/apple-touch-icon.png', optimize=True)
+# ── 아이콘: 사용자 확정 픽셀아트 고나 아이콘 (2026-11-26) — 원본은 다시 그리지 않고 흰 여백만 정리한 정사각 판(tools/sky-icon.py)
+#    iOS 가 모서리를 둥글게 깎으므로 둥근 테두리 없이 꽉 찬 불투명 정사각 · 파일명에 v2 를 붙여 예전 아이콘 캐시를 피함
+IV = 'v2'
+src = Image.open(f'{ROOT}/art-src/sky-poop/app-icon/gona-pixel-icon-square.png').convert('RGB')
+def icon(size):
+    return src.resize((size, size), Image.LANCZOS)   # 축소: 픽셀 덩어리를 고르게 평균 (최근접은 계단이 뭉개져 더 거칠게 보임)
+for n, sz in [(f'icon-512-{IV}.png', 512), (f'icon-192-{IV}.png', 192), (f'apple-touch-icon-{IV}.png', 180), (f'icon-maskable-512-{IV}.png', 512), (f'favicon-32-{IV}.png', 32)]:
+    icon(sz).save(f'{D}/pwa/{n}', optimize=True)
+icon(64).save(f'{D}/pwa/favicon-{IV}.ico', sizes=[(16, 16), (32, 32), (48, 48), (64, 64)])
 
 # ── manifest (start_url · scope = 이 폴더)
 manifest = {
-    'name': "GONA's SKY ADVENTURE · 응가 대탈출 대작전", 'short_name': '고나 스카이',
+    'name': "GONA's Sky Adventure", 'short_name': "GONA's Sky",
     'description': '아기 공룡 고나와 가족의 하늘 슈팅 대모험',
     'start_url': './?pwa=1', 'scope': './', 'id': './', 'display': 'standalone', 'orientation': 'portrait',
     'background_color': '#120a26', 'theme_color': '#120a26', 'lang': 'ko',
     'icons': [
-        {'src': 'pwa/icon-192.png', 'sizes': '192x192', 'type': 'image/png'},
-        {'src': 'pwa/icon-512.png', 'sizes': '512x512', 'type': 'image/png'},
-        {'src': 'pwa/icon-maskable-512.png', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'maskable'},
+        {'src': f'pwa/icon-192-{IV}.png', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'any'},
+        {'src': f'pwa/icon-512-{IV}.png', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'any'},
+        {'src': f'pwa/icon-maskable-512-{IV}.png', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'maskable'},
     ],
 }
 json.dump(manifest, open(f'{D}/manifest.webmanifest', 'w'), ensure_ascii=False, indent=1)
@@ -51,7 +39,7 @@ files = []
 for dp, _, fs in os.walk(D):
     for f in fs: files.append(rel(os.path.join(dp, f)))
 shell = ['./', 'index.html', 'manifest.webmanifest'] + sorted(f for f in files if re.match(r'assets/[^/]+\.(js|css|woff2)$', f)) + \
-        sorted(f for f in files if f.startswith('assets/sky/v3-poop/title/') and 'cand/' not in f) + ['assets/sky/v3-poop/manifest.json', 'pwa/icon-192.png']
+        sorted(f for f in files if f.startswith('assets/sky/v3-poop/title/') and 'cand/' not in f) + ['assets/sky/v3-poop/manifest.json', f'pwa/icon-192-{IV}.png', f'pwa/apple-touch-icon-{IV}.png', f'pwa/favicon-32-{IV}.png']
 core = sorted(f for f in files if f.startswith('assets/') and not f.startswith('assets/sky/v3-poop/album/p/') and 'title/cand/' not in f and not f.endswith('.webmanifest'))
 _h = hashlib.sha1(open(f'{D}/index.html', 'rb').read())
 for f in sorted(set(core) | {x for x in shell if x not in ('./', 'manifest.webmanifest')}):   # 파일 내용까지 → 같은 이름 그림만 바뀌어도 새 버전
@@ -105,7 +93,8 @@ open(f'{D}/sw.js', 'w').write(sw)
 # ── index.html: manifest · 홈 화면 meta · 아이콘 (이 판에만)
 h = open(f'{D}/index.html').read()
 h = re.sub(r'<meta name="theme-color"[^>]*>', '<meta name="theme-color" content="#120a26" />', h)
-h = h.replace('<link rel="apple-touch-icon" href="./apple-touch-icon.png" />', '<link rel="apple-touch-icon" href="./pwa/apple-touch-icon.png" />')
+h = re.sub(r'<link rel="apple-touch-icon"[^>]*>', f'<link rel="apple-touch-icon" sizes="180x180" href="./pwa/apple-touch-icon-{IV}.png" />', h)
+h = re.sub(r'<link rel="icon" [^>]*>', f'<link rel="icon" type="image/png" sizes="32x32" href="./pwa/favicon-32-{IV}.png" />\n    <link rel="icon" href="./pwa/favicon-{IV}.ico" sizes="any" />', h, count=1)
 if 'online-config.js' not in h:   # 온라인 설정(공개 URL·공개 키)을 다시 빌드 없이 넣는 파일 · 모듈보다 먼저 실행
     h = h.replace('<script type="module"', '<script src="./online-config.js"></script>\n    <script type="module"', 1)
 cfg = f'{D}/online-config.js'
@@ -115,7 +104,7 @@ open(cfg, 'w').write(
     " * service_role · sb_secret_ 키는 절대 넣지 마세요 (게임이 감지하면 온라인을 끕니다). 비우면 게스트·기기 저장만. */\n"
     f"window.SKY_ONLINE = {{ url: {json.dumps(url_)}, anonKey: {json.dumps(key_)} }};\n")
 if 'manifest.webmanifest' not in h:
-    h = h.replace('</head>', '    <link rel="manifest" href="./manifest.webmanifest" />\n    <meta name="apple-mobile-web-app-capable" content="yes" />\n    <meta name="mobile-web-app-capable" content="yes" />\n    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />\n    <meta name="apple-mobile-web-app-title" content="고나 스카이" />\n  </head>')
+    h = h.replace('</head>', '    <link rel="manifest" href="./manifest.webmanifest" />\n    <meta name="apple-mobile-web-app-capable" content="yes" />\n    <meta name="mobile-web-app-capable" content="yes" />\n    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />\n    <meta name="apple-mobile-web-app-title" content="GONA\'s Sky" />\n  </head>')
 open(f'{D}/index.html', 'w').write(h)
 mb = sum(os.path.getsize(os.path.join(D, f)) for f in core) / 1e6
 print(f'PWA: 버전 {ver} · 설치 즉시 {len(shell)}개 · 오프라인 전체 받기 {len(core)}개 ({mb:.1f} MB)')

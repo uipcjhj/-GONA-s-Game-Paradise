@@ -27,10 +27,10 @@ const [url, out, dist] = process.argv.slice(2);
     if (w !== 393) { await ctx.close(); continue; }
     const man = await p.evaluate(async () => { const l = document.querySelector('link[rel=manifest]'); const r = await fetch(l.href); return r.ok ? r.json() : null; });
     ok('manifest: standalone · 세로 · 시작/범위 = 이 폴더', man && man.display === 'standalone' && man.orientation === 'portrait' && man.scope === './' && man.start_url.startsWith('./'), man ? `${man.short_name} · icons ${man.icons.length}` : '없음');
-    const icons = await p.evaluate(async () => Promise.all(['pwa/icon-192.png', 'pwa/icon-512.png', 'pwa/apple-touch-icon.png'].map((u) => fetch(u).then((r) => r.status))));
-    ok('아이콘 192 · 512 · apple-touch 180', icons.every((s) => s === 200), icons.join(','));
+    const icons = await p.evaluate(async () => Promise.all(['pwa/icon-192-v2.png', 'pwa/icon-512-v2.png', 'pwa/apple-touch-icon-v2.png', 'pwa/favicon-32-v2.png'].map((u) => fetch(u).then((r) => r.status))));
+    ok('아이콘 192 · 512 · apple-touch 180 · favicon 32 (v2)', icons.every((s) => s === 200), icons.join(','));
     const meta = await p.evaluate(() => ({ apple: !!document.querySelector('meta[name=apple-mobile-web-app-capable]'), touch: document.querySelector('link[rel=apple-touch-icon]')?.getAttribute('href') }));
-    ok('iPhone 홈 화면 meta · 아이콘', meta.apple && meta.touch === './pwa/apple-touch-icon.png');
+    ok('iPhone 홈 화면 meta · 아이콘', meta.apple && meta.touch === './pwa/apple-touch-icon-v2.png');
     await p.waitForFunction(() => navigator.serviceWorker.ready.then(() => true), null, { timeout: 20000 });
     await p.reload();
     await p.waitForSelector('.gate');
