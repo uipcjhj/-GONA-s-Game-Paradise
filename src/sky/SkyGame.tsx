@@ -869,7 +869,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
                 </div>
                 <p className="prof-sub">온라인 계정 (여러 기기 동기화 · 공유 랭킹)</p>
                 {!ONLINE ? (
-                  <p className="prof-note">이 판에는 아직 서버가 연결되지 않았어요. 게스트로 계속 즐길 수 있고, 기록은 이 기기와 백업 코드로 지켜져요.</p>
+                  <p className="prof-note"><b>온라인 기능 · 서버 설정 필요</b><br />지금은 게스트로 플레이해요. 기록은 이 기기와 백업 코드로 지켜지고, 서버가 연결되면 계정으로 옮길 수 있어요.</p>
                 ) : acct ? (
                   <>
                     <p className="prof-note">{acct.email} · ‘{prof.nick}’ 모험가와 연결됨</p>
