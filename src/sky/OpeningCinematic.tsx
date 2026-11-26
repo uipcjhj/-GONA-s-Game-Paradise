@@ -28,6 +28,17 @@ const T = {
   s5: 20.6, dolly: 22.0, kingdom: 23.2, golem: 25.0, trainStop: 26.2, s6: 28.2, laugh: 29.9, gate: 31.5,
   s7: 32.0, cutins: 33.0, s8: 37.0, wake: 38.0, rise: 38.4, toward: 40.2,
 };
+/** 장면 층의 의성어(→ sfxLine 으로 일원화) · 땀/눈물 덧그림 끔 */
+const SFX_RE = /^(냠냠|꾸르|끄응|…뿌웅|훌쩍)/;
+const DROPS_OFF = true;
+/** 효과 문구: 꼭 필요한 순간 한 줄만 · 같은 자리 · 깜빡임·흔들림·회전 없이 천천히 나타났다 사라짐 */
+const SFX_LINES: { t: number; end: number; text: string; col: string }[] = [
+  { t: 7.0, end: 8.8, text: '냠냠', col: '#fff2c8' },
+  { t: 10.1, end: 11.6, text: '꾸르륵…', col: '#e2c8ff' },
+  { t: 14.3, end: 17.5, text: '끄으응…!', col: '#ffc8a8' },
+  { t: 18.0, end: 18.9, text: '…뿌웅?', col: '#f2e6c8' },
+  { t: 19.0, end: 20.6, text: '훌쩍…', col: '#c8dcff' },
+];
 /** 힘주기 (끄응!) 순간 */
 const PUSHES = [14.2, 15.2, 16.1, 16.9];
 const TITLE_AT = 41.4;
@@ -36,21 +47,22 @@ export const OPENING_END = 44.4; // 이 시각에 '터치하여 시작' 표시, 
 // ───────── 나레이션 자막 ([[ ]] = 금색 강조) ─────────
 interface Cue { t: number; end: number; text: string; cls: string }
 const CUES: Cue[] = [
-  { t: 0.6, end: 3.7, text: '[[서기 2026년 11월…]]', cls: 'chron' },
-  { t: 1.8, end: 3.7, text: '고나가 생후 7개월을 맞이한 해.', cls: 'chron sub' },
+  { t: 0.6, end: 4.1, text: '[[서기 2026년 11월…]]', cls: 'chron' },
+  { t: 1.6, end: 4.1, text: '고나가 생후 7개월을 맞이한 해.', cls: 'chron sub' },
   { t: 4.5, end: 9.3, text: '떡뻥과 이유식을 즐기던 작은 영웅, 고나.', cls: '' },
   { t: 6.4, end: 9.3, text: '그 평화로운 나날은 영원할 것만 같았다.', cls: '' },
-  { t: 10.4, end: 13.3, text: '그러나…', cls: '' },
-  { t: 11.4, end: 13.3, text: '작은 배 속 깊은 곳에서, 불길한 기운이 깨어나고 있었다.', cls: '' },
+  { t: 10.3, end: 13.9, text: '그러나…', cls: '' },
+  { t: 10.7, end: 14.3, text: '작은 배 속 깊은 곳에서, 불길한 기운이 깨어나고 있었다.', cls: '' },
   { t: 14.0, end: 20.2, text: '그것은 생후 일곱 달 인생에서 마주한…', cls: '' },
   { t: 16.2, end: 20.2, text: '[[가장 혹독한 시련]]이었다.', cls: '' },
   { t: 23.6, end: 27.9, text: '막힘은 번지고, 가스는 차오르며…', cls: '' },
-  { t: 25.4, end: 27.9, text: '꿈속의 소화왕국은 깊은 혼란에 빠졌다.', cls: '' },
+  { t: 24.9, end: 27.9, text: '꿈속의 소화왕국은 깊은 혼란에 빠졌다.', cls: '' },
   { t: 28.6, end: 31.7, text: '모든 것의 배후에는…', cls: '' },
-  { t: 29.9, end: 31.7, text: '[[변비마왕 꽉막혀]]가 있었다.', cls: '' },
+  { t: 29.6, end: 31.9, text: '[[변비마왕 꽉막혀]]가 있었다.', cls: '' },
   { t: 32.3, end: 36.7, text: '그러나 작은 영웅은 혼자가 아니었다.', cls: '' },
+  { t: 33.2, end: 37.2, text: '고나를 걱정하던 가족들이 꿈속 수호자가 되어 곁에 모였다.', cls: '' },
   { t: 37.3, end: 41.0, text: '지금, 세상에서 가장 작은 영웅의…', cls: '' },
-  { t: 38.9, end: 41.0, text: '[[가장 위대한 탈출 작전]]이 시작된다!', cls: '' },
+  { t: 38.6, end: 41.3, text: '[[가장 위대한 탈출 작전]]이 시작된다!', cls: '' },
 ];
 /** 자막 글자 (폰트 부분 집합 만들 때 씀: tools/sky-opening-font.py) */
 export const OPENING_TEXT = CUES.map((c) => c.text.replace(/\[\[|\]\]/g, '')).join('');
@@ -78,7 +90,7 @@ const TAU = Math.PI * 2;
 
 
 /** 화면 흔들림 (초, 세기) — 작게 · 꼭 필요한 순간만 */
-const SHAKES: [number, number][] = [[T.startle, 0.25], [11.6, 0.3], [14.2, 0.18], [15.2, 0.2], [16.1, 0.22], [16.9, 0.28], [T.golem, 0.45], [T.gate, 0.5], [TITLE_AT, 0.6]];
+const SHAKES: [number, number][] = [[T.startle, 0.25], [11.6, 0.3], [14.2, 0.08], [15.2, 0.09], [16.1, 0.1], [16.9, 0.12], [T.golem, 0.45], [T.gate, 0.5], [TITLE_AT, 0.6]];
 
 function bolt(seed: number, x0: number, y0: number, x1: number, y1: number): [number, number][] {
   const pts: [number, number][] = [[x0, y0]];
@@ -496,6 +508,9 @@ class Painter {
   }
   /** 픽셀 글꼴 의성어 (게임 안 효과 글자) */
   ptext(s: string, x: number, y: number, size: number, col: string, a: number, rot = 0): void {
+    // 냠냠·꾸르륵·끄응·뿌웅·훌쩍은 장면 층마다 따로 그리면 크로스페이드 때 두 벌이 겹치고 좌우로 번갈아 번쩍였음
+    // → 장면 위 고정 자리에 한 번에 한 줄만 (sfxLine). 여기서는 그리지 않음
+    if (SFX_RE.test(s)) return;
     if (a <= 0) return;
     const g = this.g;
     g.save();
@@ -515,7 +530,8 @@ class Painter {
   }
   /** 물방울 (땀·눈물) */
   drop(x: number, y: number, r: number, a: number, col = '#9fe0ff'): void {
-    if (a <= 0) return;
+    // 얼굴 위에 따로 붙어 움직이던 땀·눈물 방울은 쓰지 않음 (울먹임은 그림 자체의 표정·떨림·조명으로)
+    if (DROPS_OFF || a <= 0) return;
     const g = this.g;
     g.save();
     g.globalAlpha *= clamp(a);
@@ -620,6 +636,32 @@ class Painter {
     else if (sc === 7) this.s7(t);
     else if (t < TITLE_AT) { if (this.a.r3['b-fly']) this.s8r(t); else this.s8(t); this.sortie(t); }
     else this.title(t);
+    // 효과 문구 한 줄 (흔들림 없는 화면 좌표 · 장면 크로스페이드와 무관하게 한 번만)
+    g.setTransform(s, 0, 0, s, 0, 0);
+    this.sfxLine(t);
+  }
+  private sfxLine(t: number): void {
+    const c = SFX_LINES.find((q) => t >= q.t && t < q.end);
+    if (!c) return;
+    const a = Math.min(clamp((t - c.t) / 0.35), clamp((c.end - t) / 0.45));
+    const g = this.g;
+    g.save();
+    g.globalAlpha = a;
+    g.font = '700 15px Galmuri11, monospace';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    const x = this.W * 0.72;
+    const y = this.H * 0.2;
+    const w = g.measureText(c.text).width + 20;
+    g.fillStyle = 'rgba(12,6,24,0.62)';
+    g.fillRect(x - w / 2, y - 13, w, 26);
+    g.lineJoin = 'round';
+    g.lineWidth = 4;
+    g.strokeStyle = '#1a0c1e';
+    g.strokeText(c.text, x, y + 1);
+    g.fillStyle = c.col;
+    g.fillText(c.text, x, y + 1);
+    g.restore();
   }
 
   /** 출격 클라이맥스 일러스트: 노을 하늘로 솟구치는 고나 + 뒤따르는 가족 — 카메라가 다가가다 금빛으로 번지며 타이틀 */
@@ -683,7 +725,7 @@ class Painter {
       let push = 0;
       for (const p of PUSHES) { const d = t - p; if (d >= 0 && d < 0.6) push = Math.max(push, Math.exp(-d * 5)); }
       const heat = lin(t, T.s4, T.peak);
-      show(st, a, 1.04 + 0.09 * lin(t, T.s4, T.cry) + 0.035 * push, 8 - 14 * lin(t, T.s4, T.cry), (0.3 + 1.3 * heat) * (t < T.puff ? 1 : 0.15));
+      show(st, a, 1.04 + 0.09 * lin(t, T.s4, T.cry) + 0.035 * push, 8 - 14 * lin(t, T.s4, T.cry), (0.15 + 0.55 * heat) * (t < T.puff ? 1 : 0.1));
       if (heat > 0) this.glow(W / 2, H * 0.45, 140 + 40 * push, 'rgba(255,80,40,0.45)', (0.1 + 0.3 * heat) * a);
       PUSHES.forEach((p, i) => {
         const d = t - p;

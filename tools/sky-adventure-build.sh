@@ -7,3 +7,4 @@ npm run build:adventure
 rm -rf dist-adventure/assets/sky/v3-poop/thumbs
 sed -i 's#<title>[^<]*</title>#<title>GONA'"'"'s SKY ADVENTURE · 응가 대탈출 대작전</title>#' dist-adventure/index.html
 grep -o '<title>[^<]*</title>' dist-adventure/index.html
+python3 tools/sky-pwa.py dist-adventure

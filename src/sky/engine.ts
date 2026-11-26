@@ -178,6 +178,9 @@ const MAX_HP = 5;
 /** 가족 차지 공격: 완전 충전까지 걸리는 시간(초) — 아빠·할아버지는 빨리, 삼촌은 오래 */
 const CHARGE_FULL: Record<FamilyId, number> = { mom: 1.0, dad: 0.8, imo: 1.0, halmeoni: 1.0, halabeoji: 0.8, samchon: 1.2 };
 /** 근접 공격: 돌진 시간 · 돌진 속도 · 가족별 피해 · 쿨다운(초). 붙어야 맞고, 맞는 동안 잠깐 무적 */
+/** 동료 비행 그림 표시 배율: 대기 프레임의 실제 실루엣 면적을 엄마(2860px²)·아빠·삼촌 기준으로 맞춤
+ *  (측정: 할머니 3841 · 할아버지 3634 → √(2860/면적) ≈ 0.86 · 0.89 / 이모 2428 은 원래 날씬한 체형이라 그대로) */
+const FLY_K: Record<FamilyId, number> = { mom: 1, dad: 1, imo: 1, samchon: 1, halmeoni: 0.87, halabeoji: 0.89 };
 const MELEE_T = 0.32;
 /** 터치 차지: 이만큼 누르고 있어야 충전 시작 (짧은 터치 · 잠깐 움직임은 차지가 아님) */
 const HOLD_START = 0.3;
@@ -451,6 +454,7 @@ export class SkyEngine {
     canvas.addEventListener('pointermove', this.onMove);
     canvas.addEventListener('pointerup', this.onUp);
     canvas.addEventListener('pointercancel', this.onCancel);
+    canvas.addEventListener('contextmenu', this.noMenu); // 길게 누르기 → 메뉴·이미지 저장 창이 뜨지 않게
     canvas.addEventListener('pointercancel', this.onUp);
     window.addEventListener('keydown', this.onKey);
     window.addEventListener('keyup', this.onKeyUp);
@@ -474,6 +478,7 @@ export class SkyEngine {
     this.canvas.removeEventListener('pointermove', this.onMove);
     this.canvas.removeEventListener('pointerup', this.onUp);
     this.canvas.removeEventListener('pointercancel', this.onCancel);
+    this.canvas.removeEventListener('contextmenu', this.noMenu);
     this.canvas.removeEventListener('pointercancel', this.onUp);
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('keyup', this.onKeyUp);
@@ -730,6 +735,7 @@ export class SkyEngine {
       this.hasTarget = false;
     }
   };
+  private noMenu = (e: Event): void => e.preventDefault();
   /** 시스템이 터치를 뺏음(알림·제스처 등): 발사하지 않고 충전만 취소 */
   private onCancel = (e: PointerEvent): void => {
     if (e.pointerId === this.dragId) {
@@ -3844,7 +3850,11 @@ export class SkyEngine {
     const attacking = this.cKick > 0.15 || (this.fam === 'halabeoji' && this.shield > 0) || (this.sp !== null && this.sp.id !== 'gona');
     const f = (attacking ? 2 : 0) + (Math.floor(this.t * (attacking ? 10 : 6)) % 2);
     const bob = Math.sin(this.t * 4 + 1) * 1.5;
-    g.drawImage(fly, f * 88, 0, 88, 112, this.cx - 22, this.cy - 38 + bob - this.cKick * 2, 44, 56);
+    // 화면상 크기 통일: 스프라이트 칸은 같아도 실제 그림(불투명 면적)이 큰 할머니·할아버지는 줄여서 그림 (발끝 기준)
+    const sk = FLY_K[this.fam];
+    const dw = 44 * sk;
+    const dh = 56 * sk;
+    g.drawImage(fly, f * 88, 0, 88, 112, this.cx - dw / 2, this.cy + 18 - dh + bob - this.cKick * 2, dw, dh);
     if (this.fam !== 'imo' && this.fam !== 'samchon' && this.cCd > 0 && this.cCd < 20 && !this.sp) {
       const full = this.fam === 'mom' ? 0.9 : this.fam === 'dad' ? 0.9 : this.fam === 'halmeoni' ? 1.1 : 7;
       const k = 1 - clamp(this.cCd / full, 0, 1);

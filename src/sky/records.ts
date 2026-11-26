@@ -74,6 +74,8 @@ export function setScoreBackend(b: ScoreBackend): void {
 export const today = (d = new Date()): string => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 export const stageBoard = (stage: number, diff: Difficulty): string => `stage:${stage}:${diff}`;
 export const runBoard = (diff: Difficulty): string => `run:${diff}`;
+/** MEMORY HUNT 단독 스테이지 점수 (스토리 모드 기록과 따로) */
+export const huntBoard = (stage: number, diff: Difficulty): string => `hunt:${stage}:${diff}`;
 export const dailyBoard = (date: string): string => `daily:${date}`;
 
 export interface Best { score: number; rank: Rank | ''; time: number | null; plays: number }
