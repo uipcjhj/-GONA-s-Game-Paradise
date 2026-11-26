@@ -62,7 +62,10 @@ const HUNT_POWER = [1, 2, 3, 3, 4, 4];
 /** 타이틀 로고 시안 미리보기 (?logo=A~F) — 사용자 선택 전까지 라이브 기본 로고는 그대로 */
 /** 개발자용 엔딩 미리보기 (?preview=ending): 터치 → 엔딩 → 에필로그 → 크레딧 · 기록·앨범·랭킹에 아무것도 쓰지 않음 */
 const PREVIEW_ENDING = /[?&]preview=ending\b/.test(location.search);
-const LOGO_CAND = ((): string | null => { const v = (new URLSearchParams(location.search).get('logo') ?? '').toUpperCase(); return 'ABCDEF'.includes(v) && v.length === 1 ? v : null; })();
+const SUB_CAND = ((): string | null => { const v = new URLSearchParams(location.search).get('sub') ?? ''; return /^[1-4]$/.test(v) ? v : null; })();
+/** 로고 시안 미리보기(?logo=A..F · 한글 부제 레터링 ?sub=1..4) — 라이브 기본 로고는 바뀌지 않음 · 부제만 고르면 영문 로고는 E */
+const LOGO_CAND = ((): string | null => { const v = (new URLSearchParams(location.search).get('logo') ?? '').toUpperCase(); return 'ABCDEF'.includes(v) && v.length === 1 ? v : SUB_CAND ? 'E' : null; })();
+const candHref = (logo: string, sub: string | null): string => `?logo=${logo}${sub ? `&sub=${sub}` : ''}`;
 /** 첫 플레이 조작 안내 (아이콘 · 한 줄) */
 const GUIDE: [string, string][] = [
   ['☝', '손가락으로 끌어서 움직여요'],
@@ -757,12 +760,15 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
           </div>
           <header className={`ttl2-logo${LOGO_CAND ? ` cand cand-${LOGO_CAND}` : ''}`}>
             <img src={LOGO_CAND ? `${BASE}v3-poop/title/cand/${LOGO_CAND}.png` : `${BASE}${packPath('title/logo-v9.png')}`} alt="GONA's SKY ADVENTURE" />
-            {LOGO_CAND && LOGO_CAND !== 'D' && <p className="cand-sub"><span>응가 대탈출 대작전</span></p>}
+            {LOGO_CAND && SUB_CAND && <img className={`cand-subimg k${SUB_CAND}`} src={`${BASE}v3-poop/title/sub/K${SUB_CAND}.png`} alt="응가 대탈출 대작전" />}
+            {LOGO_CAND && !SUB_CAND && LOGO_CAND !== 'D' && <p className="cand-sub"><span>응가 대탈출 대작전</span></p>}
           </header>
           {LOGO_CAND && (
             <nav className="cand-pick" onPointerDown={(e) => e.stopPropagation()}>
               <b>로고 시안 미리보기</b>
-              {(['A', 'B', 'C', 'D', 'E', 'F'] as const).map((c) => <a key={c} className={c === LOGO_CAND ? 'on' : ''} href={`?logo=${c}`}>{c}</a>)}
+              {(['A', 'B', 'C', 'D', 'E', 'F'] as const).map((c) => <a key={c} className={c === LOGO_CAND ? 'on' : ''} href={candHref(c, SUB_CAND)}>{c}</a>)}
+              <i />
+              {([null, '1', '2', '3', '4'] as const).map((k) => <a key={k ?? '0'} className={k === SUB_CAND ? 'on' : ''} href={candHref(LOGO_CAND, k)}>{k ? `K${k}` : '기존'}</a>)}
             </nav>
           )}
           <div className="ttl2-menu">

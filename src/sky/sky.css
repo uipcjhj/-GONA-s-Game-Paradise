@@ -800,3 +800,9 @@ body.sky-hub-on .hub-back { display: none; }
 .pwa-install { color: #fff4d6; background: rgba(28, 20, 70, 0.85); border-color: #6a5ab8; }
 .pwa-steps { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.7; color: #fff4d6; text-align: left; } .pwa-steps b { color: #ffd84a; }
 .gate-preview { position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 0; right: 0; margin: 0; text-align: center; font: 700 11px 'Galmuri11', monospace; color: #1a0a2e; background: #ffe34a; padding: 3px 0; z-index: 2; }
+
+/* 한글 부제 레터링 시안(?sub=) */
+.ttl2-logo.cand img.cand-subimg { width: min(80vw, 340px); margin-top: -6px; animation: ttl2-fade 0.8s ease-out 0.9s both; filter: drop-shadow(0 3px 0 rgba(20, 8, 40, 0.7)); }
+.ttl2-logo.cand img.cand-subimg.k2 { width: min(76vw, 320px); }
+.cand-pick i { display: inline-block; width: 6px; }
+.cand-pick { flex-wrap: wrap; justify-content: center; max-width: 96vw; width: max-content; }
