@@ -799,3 +799,4 @@ body.sky-hub-on .hub-back { display: none; }
 .pwa-update { color: #1a0a2e; background: #ffe34a; animation: spready 0.6s steps(2) infinite; }
 .pwa-install { color: #fff4d6; background: rgba(28, 20, 70, 0.85); border-color: #6a5ab8; }
 .pwa-steps { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.7; color: #fff4d6; text-align: left; } .pwa-steps b { color: #ffd84a; }
+.gate-preview { position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 0; right: 0; margin: 0; text-align: center; font: 700 11px 'Galmuri11', monospace; color: #1a0a2e; background: #ffe34a; padding: 3px 0; z-index: 2; }
