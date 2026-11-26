@@ -315,17 +315,18 @@ canvas.talk-face { width: 72px; height: 72px; }
 @font-face { font-family: 'Gowun Batang'; font-weight: 400; font-display: swap; src: url('./fonts/gowun-batang-400.woff2') format('woff2'); }
 @font-face { font-family: 'Gowun Batang'; font-weight: 700; font-display: swap; src: url('./fonts/gowun-batang-700.woff2') format('woff2'); }
 .oc-subs {
-  position: absolute; left: 0; right: 0; bottom: 0; padding: 18% 5% max(9%, calc(env(safe-area-inset-bottom) + 24px)); display: flex; flex-direction: column; align-items: center; gap: 0.3em;
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 30% 5% max(9%, calc(env(safe-area-inset-bottom) + 24px)); display: flex; flex-direction: column; align-items: center; gap: 0.3em;
   pointer-events: none; text-align: center;
-  /* 화면을 가리지 않는 얇은 아래쪽 그늘 (밝은 장면에서도 글자가 읽히게) */
-  background: linear-gradient(to top, rgba(4, 2, 10, 0.72) 0%, rgba(4, 2, 10, 0.4) 50%, rgba(4, 2, 10, 0) 100%);
+  /* 상자처럼 보이지 않게: 아주 옅고 길게 사라지는 아래쪽 그늘만 · 가독성은 글자 외곽선·그림자로 */
+  background: linear-gradient(to top, rgba(4, 2, 10, 0.42) 0%, rgba(4, 2, 10, 0.2) 40%, rgba(4, 2, 10, 0) 100%);
   font-family: 'Gowun Batang', 'AppleMyungjo', 'Nanum Myeongjo', 'NanumMyeongjo', 'Noto Serif KR', 'Batang', serif;
 }
 .oc-subs.center { top: 0; bottom: 0; justify-content: center; gap: 0.55em; padding: 0 8% 6%; background: none; }
 .oc-line {
-  margin: 0; font-size: clamp(14px, 4.1vw, 19px); line-height: 1.55; font-weight: 400; letter-spacing: 0; word-break: keep-all; overflow-wrap: break-word;
-  color: #f1e8d4; /* 아이보리 */
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.6);
+  margin: 0; font-size: clamp(15px, 4.4vw, 20px); line-height: 1.55; font-weight: 700; letter-spacing: 0; word-break: keep-all; overflow-wrap: break-word;
+  color: #f6eedc; /* 아이보리 */
+  /* 얇은 외곽선(사방 1px) + 부드러운 그림자 — 배경 상자 없이 밝은 장면에서도 읽힘 */
+  text-shadow: 1px 0 0 #120818, -1px 0 0 #120818, 0 1px 0 #120818, 0 -1px 0 #120818, 0 2px 4px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 0, 0, 0.7);
   animation: oc-in 0.7s ease-out both;
 }
 .oc-line em { font-style: normal; font-weight: 700; color: #e6c27a; } /* 절제된 금색 강조 */

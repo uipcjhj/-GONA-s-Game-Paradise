@@ -31,13 +31,12 @@ const T = {
 /** 장면 층의 의성어(→ sfxLine 으로 일원화) · 땀/눈물 덧그림 끔 */
 const SFX_RE = /^(냠냠|꾸르|끄응|…뿌웅|훌쩍)/;
 const DROPS_OFF = true;
+/** 장면 위 의성어 글자 끔 (이야기 집중 · 2026-11-26) */
+const PTEXT_OFF = true;
 /** 효과 문구: 꼭 필요한 순간 한 줄만 · 같은 자리 · 깜빡임·흔들림·회전 없이 천천히 나타났다 사라짐 */
 const SFX_LINES: { t: number; end: number; text: string; col: string }[] = [
-  { t: 7.0, end: 8.8, text: '냠냠', col: '#fff2c8' },
-  { t: 10.1, end: 11.6, text: '꾸르륵…', col: '#e2c8ff' },
-  { t: 14.3, end: 17.5, text: '끄으응…!', col: '#ffc8a8' },
-  { t: 18.0, end: 18.9, text: '…뿌웅?', col: '#f2e6c8' },
-  { t: 19.0, end: 20.6, text: '훌쩍…', col: '#c8dcff' },
+  { t: 10.2, end: 12.2, text: '꾸르륵…', col: '#e2c8ff' },
+  { t: 15.6, end: 17.8, text: '끄으응…!', col: '#ffc8a8' },
 ];
 /** 힘주기 (끄응!) 순간 */
 const PUSHES = [14.2, 15.2, 16.1, 16.9];
@@ -53,12 +52,12 @@ const CUES: Cue[] = [
   { t: 6.4, end: 9.3, text: '그 평화로운 나날은 영원할 것만 같았다.', cls: '' },
   { t: 10.3, end: 13.9, text: '그러나…', cls: '' },
   { t: 10.7, end: 14.3, text: '작은 배 속 깊은 곳에서, 불길한 기운이 깨어나고 있었다.', cls: '' },
-  { t: 14.0, end: 20.2, text: '그것은 생후 일곱 달 인생에서 마주한…', cls: '' },
-  { t: 16.2, end: 20.2, text: '[[가장 혹독한 시련]]이었다.', cls: '' },
+  { t: 14.0, end: 20.2, text: '아무리 힘을 줘도 나오지 않는 응가…', cls: '' },
+  { t: 16.2, end: 20.2, text: '생후 일곱 달 인생의 [[가장 혹독한 시련]]이었다.', cls: '' },
   { t: 23.6, end: 27.9, text: '막힘은 번지고, 가스는 차오르며…', cls: '' },
   { t: 24.9, end: 27.9, text: '꿈속의 소화왕국은 깊은 혼란에 빠졌다.', cls: '' },
   { t: 28.6, end: 31.7, text: '모든 것의 배후에는…', cls: '' },
-  { t: 29.6, end: 31.9, text: '[[변비마왕 꽉막혀]]가 있었다.', cls: '' },
+  { t: 29.6, end: 32.2, text: '[[변비마왕 꽉막혀]]가 있었다.', cls: '' },
   { t: 32.3, end: 36.7, text: '그러나 작은 영웅은 혼자가 아니었다.', cls: '' },
   { t: 33.2, end: 37.2, text: '고나를 걱정하던 가족들이 꿈속 수호자가 되어 곁에 모였다.', cls: '' },
   { t: 37.3, end: 41.0, text: '지금, 세상에서 가장 작은 영웅의…', cls: '' },
@@ -90,7 +89,7 @@ const TAU = Math.PI * 2;
 
 
 /** 화면 흔들림 (초, 세기) — 작게 · 꼭 필요한 순간만 */
-const SHAKES: [number, number][] = [[T.startle, 0.25], [11.6, 0.3], [14.2, 0.08], [15.2, 0.09], [16.1, 0.1], [16.9, 0.12], [T.golem, 0.45], [T.gate, 0.5], [TITLE_AT, 0.6]];
+const SHAKES: [number, number][] = [[T.startle, 0.16], [16.9, 0.12], [T.gate, 0.22]];
 
 function bolt(seed: number, x0: number, y0: number, x1: number, y1: number): [number, number][] {
   const pts: [number, number][] = [[x0, y0]];
@@ -510,7 +509,7 @@ class Painter {
   ptext(s: string, x: number, y: number, size: number, col: string, a: number, rot = 0): void {
     // 냠냠·꾸르륵·끄응·뿌웅·훌쩍은 장면 층마다 따로 그리면 크로스페이드 때 두 벌이 겹치고 좌우로 번갈아 번쩍였음
     // → 장면 위 고정 자리에 한 번에 한 줄만 (sfxLine). 여기서는 그리지 않음
-    if (SFX_RE.test(s)) return;
+    if (PTEXT_OFF || SFX_RE.test(s)) return;
     if (a <= 0) return;
     const g = this.g;
     g.save();
@@ -647,16 +646,15 @@ class Painter {
     const g = this.g;
     g.save();
     g.globalAlpha = a;
-    g.font = '700 15px Galmuri11, monospace';
+    g.font = '700 14px Galmuri11, monospace';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     const x = this.W * 0.72;
     const y = this.H * 0.2;
-    const w = g.measureText(c.text).width + 20;
-    g.fillStyle = 'rgba(12,6,24,0.62)';
-    g.fillRect(x - w / 2, y - 13, w, 26);
+    g.shadowColor = 'rgba(0,0,0,0.75)';
+    g.shadowBlur = 6;
     g.lineJoin = 'round';
-    g.lineWidth = 4;
+    g.lineWidth = 3;
     g.strokeStyle = '#1a0c1e';
     g.strokeText(c.text, x, y + 1);
     g.fillStyle = c.col;
@@ -671,7 +669,7 @@ class Painter {
     const { W, H } = this;
     const g = this.g;
     const a = eIO(lin(t, T.rise - 0.4, T.rise + 0.4));
-    const z = 1.04 + 0.32 * eIn(lin(t, T.rise, TITLE_AT));
+    const z = 1.04 + 0.12 * eIO(lin(t, T.rise, TITLE_AT));
     const k = Math.max(W / im.width, H / im.height) * z;
     const w = im.width * k;
     const h = im.height * k;
@@ -682,7 +680,7 @@ class Painter {
     g.restore();
     this.speed(t, 2, 0.25 + 0.4 * lin(t, T.toward, TITLE_AT), '255,240,200', 40, 1.4);
     this.vignette(0.45);
-    this.fill('#fff2d8', eIn(lin(t, TITLE_AT - 0.5, TITLE_AT)) * 0.85);
+    this.fill('#fff2d8', eIn(lin(t, TITLE_AT - 0.7, TITLE_AT)) * 0.55);
   }
 
   /** 장면 일러스트 (배경과 고나가 한 장으로 그려진 컷): 힘주기 · 달밤의 울먹임 — 있으면 방 위에 덮어 크로스페이드 */
@@ -725,8 +723,8 @@ class Painter {
       let push = 0;
       for (const p of PUSHES) { const d = t - p; if (d >= 0 && d < 0.6) push = Math.max(push, Math.exp(-d * 5)); }
       const heat = lin(t, T.s4, T.peak);
-      show(st, a, 1.04 + 0.09 * lin(t, T.s4, T.cry) + 0.035 * push, 8 - 14 * lin(t, T.s4, T.cry), (0.15 + 0.55 * heat) * (t < T.puff ? 1 : 0.1));
-      if (heat > 0) this.glow(W / 2, H * 0.45, 140 + 40 * push, 'rgba(255,80,40,0.45)', (0.1 + 0.3 * heat) * a);
+      show(st, a, 1.04 + 0.06 * lin(t, T.s4, T.cry) + 0.006 * push, 8 - 14 * lin(t, T.s4, T.cry), (0.05 + 0.2 * heat) * (t < T.puff ? 1 : 0.1));
+      if (heat > 0) this.glow(W / 2, H * 0.45, 150, 'rgba(255,80,40,0.45)', (0.06 + 0.2 * heat) * a);
       PUSHES.forEach((p, i) => {
         const d = t - p;
         if (d < 0 || d > 0.9) return;
@@ -843,7 +841,7 @@ class Painter {
     for (const [i, p] of PUSHES.entries()) { const d = t - p; if (d >= 0 && d < 0.6 && Math.exp(-d * 5) > push) { push = Math.exp(-d * 5); pi = i; } }
     const heat = lin(t, T.s4, T.peak) * (t < T.cry ? 1 : 0);
     let [cx, cy, z] = this.roomCam(t);
-    if (pi >= 0) { cx += [-6, 7, -4, 0][pi] * push; z *= 1 + (0.02 + 0.012 * pi) * push; }
+    if (pi >= 0) { z *= 1 + 0.004 * push; } // (이전: 밀 때마다 카메라 좌우로 쏠림 · 줌) → 거의 고정
     // 조명 (저녁 → 힘주기 붉은 열기 → 울먹임 푸른 그늘 → 달밤)
     const nightK = eIO(lin(t, T.cry + 0.2, 20.2));
     const tint: [string, number] = t < T.s4 ? ['#ffb070', 0.1] : t < T.cry ? ['#ff5a30', 0.06 + 0.16 * heat] : t < T.s5 ? ['#4a64c8', 0.08 + 0.22 * nightK] : ['#2f44a8', 0.34];
@@ -857,7 +855,7 @@ class Painter {
     sy = 1 + 0.008 * br;
     if (t >= 4.0 && t < 5.4) { const c = Math.max(0, Math.sin(((t - 4.0) / 0.42) * TAU)); sy -= 0.02 * c; sx += 0.012 * c; }
     if (t >= 6.9 && t < 9.4) { const h = Math.exp(-(((t - 6.9) % 0.5) / 0.5) * 6); sx += 0.02 * h; sy -= 0.02 * h; }
-    if (t >= T.s4 && t < T.cry) { const tr = (0.4 + 1.6 * heat) * (t < T.puff ? 1 : 0.2); dx = Math.sin(t * 73) * tr; dy = Math.cos(t * 61) * tr * 0.4; sx += 0.035 * push; sy -= 0.05 * push; }
+    if (t >= T.s4 && t < T.cry) { const tr = (0.15 + 0.45 * heat) * (t < T.puff ? 1 : 0.2); dx = Math.sin(t * 73) * tr; dy = Math.cos(t * 61) * tr * 0.4; sx += 0.035 * push; sy -= 0.05 * push; }
     if (t >= T.cry && t < 19.9) { const u = t - T.cry; dy = -Math.max(0, Math.sin(u * 2.6 * TAU)) * 1.2 * lin(t, T.cry + 0.5, T.cry + 0.9); sy *= 1 - 0.05 * Math.exp(-u * 3) * Math.cos(u * 9); }
     if (t >= T.s5) { const b = Math.sin((t - T.s5) * 1.9); sy = 1 + 0.018 * b; sx = 1 - 0.008 * b; }
     let face: [number, number] = [Painter.GX, 300];
@@ -938,7 +936,7 @@ class Painter {
     this.vignette(t < T.s4 ? 0.45 : t < T.cry ? 0.55 + 0.3 * heat : 0.7, t < T.s4 ? '40,16,0' : t < T.cry ? '50,0,0' : '0,4,24');
     this.fill('#000', 1 - eOut(lin(t, 0, 1.1)));
     this.fill('#1a0a04', 0.42 * (1 - eIO(lin(t, 2.6, 4.0))));
-    this.fill('#fff0d0', eIn(lin(t, T.kingdom - 0.35, T.kingdom)) * 0.9);
+    this.fill('#fff0d0', eIn(lin(t, T.kingdom - 0.6, T.kingdom)) * 0.5);
   }
 
   /** 1 · 서기 2026년: 어둠 속 금빛 점 → 새벽빛 하늘로 천천히 내려옴 → 따뜻한 빛으로 번지며 다음 장면 */
@@ -1233,7 +1231,7 @@ class Painter {
         }
         this.vortex(bx, by, 20 + 90 * dz, t, 0.2 + 0.8 * dz, '255,200,120', 6);
       });
-      this.fill('#fff0d0', eIn(lin(t, T.kingdom - 0.35, T.kingdom)) * 0.9);
+      this.fill('#fff0d0', eIn(lin(t, T.kingdom - 0.6, T.kingdom)) * 0.5);
       return;
     }
     // 꿈속 소화왕국
@@ -1664,7 +1662,7 @@ class Painter {
     this.glow(cx, H * 0.42, 140 + 260 * k, 'rgba(255,220,150,0.7)', 0.4 + 0.5 * k);
     if (heroIm) this.img(heroIm, cx, H * 0.42 + eIn(k) * 80, heroW * (1 + eIn(k) * 3), { rot: Math.sin(t * 6) * 0.03, smooth: !hero });
     this.vignette(0.5);
-    this.fill('#fff2d8', eIn(lin(t, TITLE_AT - 0.5, TITLE_AT)) * 0.85);
+    this.fill('#fff2d8', eIn(lin(t, TITLE_AT - 0.7, TITLE_AT)) * 0.55);
   }
 
   /** 8 · 운명의 출격 (리마스터): 꿈의 빛 속 잠든 고나 → 눈을 뜸 → 날개를 펴고 솟구침 → 화면 쪽으로 */
@@ -1732,7 +1730,7 @@ class Painter {
     this.glow(cx, H * 0.42, 140 + 260 * k, 'rgba(255,220,150,0.7)', 0.4 + 0.5 * k);
     spr('b-fly', cx, H * 0.46 + eIn(k) * 60, 240 * (1 + eIn(k) * 3.2), 1, Math.sin(t * 6) * 0.03);
     this.vignette(0.5);
-    this.fill('#fff2d8', eIn(lin(t, TITLE_AT - 0.5, TITLE_AT)) * 0.85);
+    this.fill('#fff2d8', eIn(lin(t, TITLE_AT - 0.7, TITLE_AT)) * 0.55);
   }
 
   /** 타이틀: 따뜻한 빛이 걷히며 (금빛 파편 · 작은 흔들림) — 글자는 DOM */
