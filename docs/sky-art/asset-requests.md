@@ -154,3 +154,16 @@ Canva AI 무료 사용량으로 고나 4장(떡뻥 먹기 · 배 두드리기 ·
 
 ### 받은 뒤 Claude 가 하는 일
 `art-src/sky/opening2/` 에 원본 보관 → 배경 제거·축소(약 200px)·팔레트 정리·1px 외곽선 → `public/assets/sky/v3-poop/opening2/<파일명>` + manifest 등록 → 컷신 해당 장면 재캡처·녹화로 검수
+
+---
+
+## 할아버지 앨범 재제작 5장 (2026-11-26 · 불합격 컷만)
+| 항목 | 내용 |
+|---|---|
+| 에셋명 · 목적 | 할아버지 추억사진 EASY ST3 · EASY ST5 · NORMAL ST1 · NORMAL ST4 · HARD ST5 (보스 격파 보상 앨범) |
+| 일관성 기준 | `public/assets/sky/v3-poop/chars/halabeoji/illust.png` + `cutin.png` 첨부. **수염 없음**, 짧은 회흑색 머리(옆머리 회색), 갸름한 턱·날렵한 어깨, 깃털 달린 남색/흰 모자, 파랑 벌집 방패 + 금테 + 초록 십자, 흰/남색 망토. 통통·우락부락 금지 |
+| 프롬프트 | "Warm watercolor-cel anime commemorative photo, portrait 3:4. A fit, lean grandfather guardian (clean-shaven, NO beard, NO mustache, short grey-black hair with grey sides, slim jaw, same face as attached reference) in a navy-and-white feathered cap and cape holding a blue honeycomb shield with gold rim and green cross, celebrating with a toddler in a green dinosaur hoodie with orange wings and red scarf. Defeated boss: <보스명> in the background. Joyful, family-friendly, no text, no watermark." |
+| 보스명 | ST1 rice-cake golem · ST3 brass steam mixer robot · ST4 jelly kraken · ST5 brown armored knight |
+| 규격 | 1152×1536 이상 JPG/PNG · 배경 있음 |
+| 게임 표시 크기 | 앨범 썸네일 + 크게 보기(세로 화면 가득) |
+| 파일명 · 경로 | 전달받으면 Claude 가 `public/assets/sky/v3-poop/album/p/halabeoji-<diff>-<n>.jpg` 와 `album/t/` 썸네일로 정리 (적용 전 사용자 승인) |
