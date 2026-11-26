@@ -870,7 +870,8 @@ export class SkyEngine {
       sfx('menuOk', 0.7);
     }
     else if ('banner' in q) {
-      this.banner = { text: q.banner, sub: q.sub, t: 2.8, col: '#ffe9a8' };
+      // 응가 팩: 스테이지 시작은 화면 위 인트로 카드(STAGE n · 왕국 이름 · 위험)가 보여 주므로 캔버스 배너는 생략 (같은 정보 이중 표시 방지)
+      if (!(THEME_ID === 'poop' && /^(STAGE \d|FINAL STAGE)$/.test(q.banner))) this.banner = { text: q.banner, sub: q.sub, t: 2.8, col: '#ffe9a8' };
       if (this.st.temp) this.floatText(W / 2, 168, '※ 임시 그래픽', '#cfc4ff');
     } else if ('item' in q) this.items.push({ x: q.x, y: -10, kind: q.item, age: 0, alive: true });
     else if ('midboss' in q) {
