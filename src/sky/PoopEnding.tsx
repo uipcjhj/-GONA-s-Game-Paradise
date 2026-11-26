@@ -54,12 +54,13 @@ const SCENES: { id: SceneId; lines: TalkLine[] }[] = [
 
 if (location.search.includes('skytest')) Object.assign(window, { __skyEndingExpected: SCENES.flatMap((s) => s.lines.map((l) => l.text)) });
 
-export function PoopEnding({ onDone, startScene = 0 }: { onDone: () => void; startScene?: number }) {
+/** stopAfter: 이 장면까지만 보고 끝 (미리보기 '엔딩' = 포옹까지 · 에필로그 제외) */
+export function PoopEnding({ onDone, startScene = 0, stopAfter }: { onDone: () => void; startScene?: number; stopAfter?: SceneId }) {
   const [sc, setSc] = useState(startScene);
   const [who, setWho] = useState<string>('');
   const scene = SCENES[sc];
   const nextScene = () => {
-    if (sc + 1 >= SCENES.length) onDone();
+    if (sc + 1 >= SCENES.length || scene.id === stopAfter) onDone();
     else {
       const n = SCENES[sc + 1].id;
       // 장면 효과음 (기존 합성 효과음 재사용)

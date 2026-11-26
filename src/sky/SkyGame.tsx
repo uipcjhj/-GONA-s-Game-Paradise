@@ -8,7 +8,7 @@ import { parTime } from './rank';
 import { STAGES, DIFF, type Difficulty } from './stages';
 import { CHARACTERS } from './data/characters';
 import { settings, saveSettings, canVibrate, iosHaptic, buzz } from './settings';
-import { NS, BETA, PROD } from './ns';
+import { NS, BETA, PROD, PREVIEW, type PreviewMode } from './ns';
 import { migrateLocal } from './sync';
 import { pwa, onPwa, registerPwa, applyUpdate, promptInstall, precacheAll } from './pwa';
 import { ONLINE, account, signIn, signUp, signOut, deleteAccount, sync as cloudSync, setNickname as cloudNick, startPlay, reportStage, submitPlay, voidPlay, hasPlay, topBoard, myUserId, type BoardRow } from './online';
@@ -61,7 +61,6 @@ function safeBottom(): number {
 const HUNT_POWER = [1, 2, 3, 3, 4, 4];
 /** 타이틀 로고 시안 미리보기 (?logo=A~F) — 사용자 선택 전까지 라이브 기본 로고는 그대로 */
 /** 개발자용 엔딩 미리보기 (?preview=ending): 터치 → 엔딩 → 에필로그 → 크레딧 · 기록·앨범·랭킹에 아무것도 쓰지 않음 */
-const PREVIEW_ENDING = /[?&]preview=ending\b/.test(location.search);
 const SUB_CAND = ((): string | null => { const v = new URLSearchParams(location.search).get('sub') ?? ''; return /^[1-4]$/.test(v) ? v : null; })();
 /** 로고 시안 미리보기(?logo=A..F · 한글 부제 레터링 ?sub=1..4) — 라이브 기본 로고는 바뀌지 않음 · 부제만 고르면 영문 로고는 E */
 const LOGO_CAND = ((): string | null => { const v = (new URLSearchParams(location.search).get('logo') ?? '').toUpperCase(); return 'ABCDEF'.includes(v) && v.length === 1 ? v : SUB_CAND ? 'E' : null; })();
@@ -140,6 +139,16 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   const [hubOpen, setHubOpen] = useState(0); // 오프닝 시작 시각 (테스트 허브)
   const [hubEnd, setHubEnd] = useState(0); // 엔딩 시작 장면 (테스트 허브)
   const [endKey, setEndKey] = useState(0); // 엔딩 다시 보기 (미리보기)
+  /** 개발자 컷신 미리보기: 지금 보는 항목 (null = 메뉴) */
+  const [pv, setPv] = useState<Exclude<PreviewMode, 'menu'> | null>(null);
+  const runPreview = (m: Exclude<PreviewMode, 'menu'>): void => {
+    unlockAudio(); setSoundOn(true); sfx('menuOk');
+    setPv(m); setSlide(0); setEndKey((n) => n + 1);
+    if (m === 'opening') { setHubOpen(0); setPhase('opening'); return; }
+    if (m === 'credits') { playBgm('ending', 0.6); setPhase('credits'); return; }
+    setHubEnd(m === 'epilogue' ? 6 : 0); playBgm('ending', 1.2); setPhase('ending');
+  };
+  const previewMenu = (): void => { stopBgm(0.4); setPv(null); setPhase('gate'); };
   const hubJump = useRef<'' | 'midboss' | 'boss'>('');
   const [assets, setAssets] = useState<Assets | null>(null);
   const [fam, setFam] = useState<FamilyId>(() => {
@@ -265,8 +274,8 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   const engine = useRef<SkyEngine | null>(null);
 
   useEffect(() => {
-    if (PROD && !location.search.includes('skytest') && !PREVIEW_ENDING) registerPwa();
-    migrateLocal(); // 저장 구조 버전 표시 + 바뀌기 전 기록 전체 백업 (기존 기록은 그대로 읽힘)
+    if (PROD && !location.search.includes('skytest') && !PREVIEW) registerPwa();
+    if (!PREVIEW) migrateLocal(); // 저장 구조 버전 표시 + 바뀌기 전 기록 전체 백업 (기존 기록은 그대로 읽힘)
     initAudio();
     if (location.search.includes('skytest')) Object.assign(window, { __skyAudio: audioState, __skyAudioTap: audioTap, __skyAudioDiag: audioDiag, __skyForceHtml: forceHtmlAudio });
     void preloadAudio('menu');
@@ -280,7 +289,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
         try { seen = localStorage.getItem(OPENED_KEY) === '1'; } catch { /* 무시 */ }
         // 접속할 때마다 '터치하여 시작' 관문 (소리 켜기) → 처음이면 오프닝, 재방문이면 타이틀
         firstVisit.current = !seen;
-        if (PREVIEW_ENDING) { setPhase('gate'); void preloadAudio('game'); return; }
+        if (PREVIEW) { setPhase('gate'); void preloadAudio('game'); return; }
         setPhase(HUB && THEME.id === 'poop' ? 'hub' : THEME.id === 'poop' && HAS_OPENING && (!location.search.includes('skytest') || location.search.includes('firstrun') || (location.search.includes('gate') && !seen)) ? 'gate' : 'title');
         void preloadAudio('game');
       })
@@ -647,22 +656,41 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
       if (gateGone.current) return; // 연타해도 한 번만
       gateGone.current = true;
       unlockAudio(); setSoundOn(true);
-      if (PREVIEW_ENDING) { setHubEnd(0); setSlide(0); playBgm('ending', 1.2); setPhase('ending'); return; }
       if (firstVisit.current) { openingFrom.current = 'first'; setSlide(0); setPhase('opening'); } else { playBgm('title', 0.6); setPhase('title'); }
     };
+    if (PREVIEW) {
+      const items: [Exclude<PreviewMode, 'menu'>, string, string][] = [
+        ['opening', '오프닝 처음부터', '관문 없이 오프닝 컷신 → 끝나면 이 메뉴'],
+        ['ending', '엔딩 처음부터', '열차 출발 → 현실 → 힘줌 → 성공 → 포옹'],
+        ['epilogue', '에필로그만', '엔딩 마지막 장면'],
+        ['credits', '크레딧만', 'ALL CLEAR 크레딧 화면'],
+        ['full', '엔딩 → 에필로그 → 크레딧 연속', '실제 클리어 때와 같은 순서'],
+      ];
+      return (
+        <div className="sky gate pv-menu">
+          <img className="gate-bg" src={`${BASE}${packPath('opening3/room-eve-blur.jpg', '')}`} alt="" />
+          <p className="gate-preview">DEV PREVIEW · 기록·사진·배지·랭킹 저장 없음</p>
+          <div className="pv-box">
+            <h2>컷신 미리보기</h2>
+            {items.map(([m, t, d]) => <button type="button" key={m} className={`sky-btn${m === 'full' ? ' sky-btn-go' : ''} pv-${m}`} onClick={() => runPreview(m)}>{t}<small>{d}</small></button>)}
+            <p className="pv-note">이 탭에서는 점수·추억사진·배지·미션·업적·클리어 기록·온라인 랭킹이 바뀌지 않아요. 기존 저장도 그대로예요.</p>
+            <a className="sky-btn pv-exit" href={location.pathname}>게임으로 (미리보기 끝)</a>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="sky gate" onPointerDown={go} role="button" tabIndex={0} aria-label="터치하여 오프닝 시작">
         <img className="gate-bg" src={`${BASE}${packPath('opening3/room-eve-blur.jpg', '')}`} alt="" />
         <div className="gate-dust" aria-hidden>{Array.from({ length: 14 }, (_, i) => <i key={i} style={{ left: `${(i * 41) % 100}%`, animationDelay: `${(i * 0.53) % 4}s`, animationDuration: `${4 + (i % 5)}s` }} />)}</div>
-        {PREVIEW_ENDING && <p className="gate-preview">DEV PREVIEW · 엔딩 → 에필로그 → 크레딧 (기록 저장 없음)</p>}
-        <p className="gate-chron">{PREVIEW_ENDING ? '엔딩 미리보기' : firstVisit.current ? '서기 2026년 11월, 어느 저녁…' : '다시 꿈나라로…'}</p>
+        <p className="gate-chron">{firstVisit.current ? '서기 2026년 11월, 어느 저녁…' : '다시 꿈나라로…'}</p>
         <p className="gate-line">{firstVisit.current ? '고나의 모험이 시작됩니다' : '고나가 기다리고 있어요'}</p>
         <p className="gate-tap">{firstVisit.current ? '— TOUCH TO BEGIN —' : '— TOUCH TO START —'}</p>
         <p className="gate-note">♪ 소리를 켜고 감상하세요</p>
       </div>
     );
   }
-  if (phase === 'opening' && THEME.id === 'poop') return <OpeningCinematic key={hubOpen} startAt={hubOpen} onDone={() => { setHubOpen(0); if (HUB) { stopBgm(0.4); setPhase('hub'); } else finishOpening(); }} />;
+  if (phase === 'opening' && THEME.id === 'poop') return <OpeningCinematic key={hubOpen} startAt={hubOpen} onDone={() => { setHubOpen(0); if (PREVIEW) previewMenu(); else if (HUB) { stopBgm(0.4); setPhase('hub'); } else finishOpening(); }} />;
   if (phase === 'opening') {
     const sl = THEME.opening[Math.min(slide, THEME.opening.length - 1)];
     const next = () => (slide < THEME.opening.length - 1 ? setSlide(slide + 1) : finishOpening());
@@ -683,7 +711,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
 
   if (phase === 'ending' || phase === 'credits') {
     const sl = ENDING[Math.min(slide, ENDING.length - 1)];
-    if (phase === 'ending' && THEME.id === 'poop') return <PoopEnding key={`${hubEnd}-${endKey}`} startScene={hubEnd} onDone={() => { setHubEnd(0); setPhase('credits'); }} />;
+    if (phase === 'ending' && THEME.id === 'poop') return <PoopEnding key={`${hubEnd}-${endKey}`} startScene={hubEnd} stopAfter={pv === 'ending' ? 'hug' : undefined} onDone={() => { setHubEnd(0); if (PREVIEW && pv !== 'full') previewMenu(); else setPhase('credits'); }} />;
     if (phase === 'ending') {
       return (
         <div className="sky end" onClick={() => (slide < ENDING.length - 1 ? setSlide(slide + 1) : setPhase('credits'))}>
@@ -718,10 +746,10 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
           ))}
         </div>
         <div className="sel-btns cred-btns">
-          {PREVIEW_ENDING ? (
+          {PREVIEW ? (
             <>
-              <button type="button" className="sky-btn sky-btn-go" onClick={() => { sfx('menuOk'); setEndKey((n) => n + 1); setSlide(0); playBgm('ending', 1.2); setPhase('ending'); }}>엔딩 처음부터 다시</button>
-              <button type="button" className="sky-btn" onClick={() => { location.href = location.pathname; }}>게임으로 (미리보기 끝)</button>
+              <button type="button" className="sky-btn sky-btn-go" onClick={() => runPreview(pv ?? 'credits')}>처음부터 다시</button>
+              <button type="button" className="sky-btn pv-back" onClick={previewMenu}>미리보기 메뉴</button>
             </>
           ) : (
             <>

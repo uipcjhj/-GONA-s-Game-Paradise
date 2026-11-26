@@ -7,7 +7,7 @@
  *  - 점수는 서버(Edge Function)가 세션·시간·보너스를 다시 계산해 통과한 것만 공식 랭킹
  *  - 설정 방법: docs/sky-online/SETUP.md
  */
-import { NS } from './ns';
+import { NS, PREVIEW } from './ns';
 import { activeProfile, profileKey } from './profile';
 import { backupBeforeLogin, mergeBundle, type SaveBundle } from './sync';
 import type { Difficulty } from './stages';
@@ -17,7 +17,7 @@ import type { Rank } from './rank';
 const URL_ = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/$/, '') ?? '';
 const KEY_ = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? '';
 /** 서버 설정이 들어간 빌드인지 */
-export const ONLINE = !!(URL_ && KEY_);
+export const ONLINE = !!(URL_ && KEY_) && !PREVIEW; // 컷신 미리보기 탭은 온라인 제출·동기화 없음
 const SESSION_KEY = `${NS}.online`;
 
 interface Session { access: string; refresh: string; exp: number; userId: string; email: string; profileId: string; rev: number }
