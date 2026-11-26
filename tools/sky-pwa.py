@@ -53,7 +53,10 @@ for dp, _, fs in os.walk(D):
 shell = ['./', 'index.html', 'manifest.webmanifest'] + sorted(f for f in files if re.match(r'assets/[^/]+\.(js|css|woff2)$', f)) + \
         sorted(f for f in files if f.startswith('assets/sky/v3-poop/title/') and 'cand/' not in f) + ['assets/sky/v3-poop/manifest.json', 'pwa/icon-192.png']
 core = sorted(f for f in files if f.startswith('assets/') and not f.startswith('assets/sky/v3-poop/album/p/') and 'title/cand/' not in f and not f.endswith('.webmanifest'))
-ver = hashlib.sha1(open(f'{D}/index.html', 'rb').read() + ''.join(core).encode()).hexdigest()[:10]
+_h = hashlib.sha1(open(f'{D}/index.html', 'rb').read())
+for f in sorted(set(core) | {x for x in shell if x not in ('./', 'manifest.webmanifest')}):   # 파일 내용까지 → 같은 이름 그림만 바뀌어도 새 버전
+    if os.path.isfile(f'{D}/{f}'): _h.update(f.encode()); _h.update(open(f'{D}/{f}', 'rb').read())
+ver = _h.hexdigest()[:10]
 json.dump({'version': ver, 'core': core}, open(f'{D}/pwa/core.json', 'w'))
 
 sw = f"""/* GONA's Sky Adventure Service Worker — 자동 생성 (tools/sky-pwa.py) · 버전 {ver} */

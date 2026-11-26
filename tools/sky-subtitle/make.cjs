@@ -63,7 +63,8 @@ const DESIGNS = {
   // 2 하늘 구름: 통통한 글꼴 · 하늘색 그라데이션 · 흰 안쪽 테두리 · 남색 입체 (영문 SKY ADVENTURE 구름 글자와 짝)
   K2: ['bagel-fat-one', { size: 112, track: 2, arc: 8, fill: ['#ffffff', '#c8f0ff', '#62c0ff', '#2a6ee0'], inner: 5, innerCol: '#ffffff', outer: 12, outerCol: '#14185a', depth: 9, ext: '#0a0c38', gloss: true, halo: '#0a0820' }],
   // 3 말랑 레트로: 둥근 글꼴 · 크림→주황 · 진갈색 외곽 · 글자마다 통통 튀는 리듬 (귀여운 쪽)
-  K3: ['jua', { size: 118, track: 3, bounce: 4, fill: ['#fffbe8', '#ffe08a', '#ff9a3c'], inner: 3, innerCol: '#ffffff', outer: 10, outerCol: '#4a1a08', depth: 8, ext: '#8a2a10', gloss: true, plate: ['#5a1a10', '#ffd870', '#8a3a20'] }],
+  // 3 말랑 레트로 (F 로고 색 맞춤): 크림 → 노랑 → 금 → 호박 → 적갈 · 크림 테 · 진한 적갈 외곽·입체 · 적갈 명판 + 금테
+  K3: ['jua', { size: 118, track: 3, bounce: 4, fill: ['#fffbe0', '#fce93f', '#f7b82e', '#df8227', '#a8400a'], inner: 3, innerCol: '#fbf2d2', outer: 10, outerCol: '#2f0601', depth: 8, ext: '#8a2106', gloss: true, plate: ['#5a0e04', '#f7b82e', '#8a2106'] }],
   // 4 판타지 명판체: 명조 계열 · 금빛 · 짙은 적갈색 외곽 · 양쪽 마름모 장식 (B/F 날개·왕관 문장과 짝)
   K4: ['song-myung', { size: 118, track: 6, arc: 0, fill: ['#fff8d8', '#ffd870', '#d08a28'], inner: 4, innerCol: '#3a0c10', outer: 10, outerCol: '#fff0b8', depth: 7, ext: '#2a0610', gloss: true, orn: '#ffd870', plate: ['#a01828', '#ffd870', '#d04050'] }],
   K5: ['do-hyeon', { size: 120, track: 4, arc: 8, fill: ['#ffffff', '#ffd6e6', '#ff6fa0'], inner: 4, innerCol: '#ffffff', outer: 11, outerCol: '#3a0a30', depth: 8, ext: '#1a0418', gloss: true }],
