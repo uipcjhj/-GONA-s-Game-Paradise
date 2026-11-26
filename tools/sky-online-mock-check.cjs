@@ -71,7 +71,7 @@ const [url, out] = process.argv.slice(2);
   chk('스토리 도달 기록: 더 좋은 쪽 (HARD reach 2)', recs && recs.hard.reach === 2, JSON.stringify(recs?.hard));
   await p.tap('.prof-box .sky-btn-go:has-text("닫기")');
   // 플레이 → 세션 → 보스 격파 (MEMORY HUNT STAGE 1) → 제출
-  await p.tap('.ttl-start'); await p.waitForSelector('.lob-story', { timeout: 15000 }); await p.tap('.lob-hunt');
+  await p.tap('.lob-hunt');
   await p.waitForSelector('.hunt-grid');
   await p.tap('.hunt-card:nth-child(1)');
   await p.waitForSelector('.sel-main');

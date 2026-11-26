@@ -67,9 +67,10 @@ const [url, out, dist] = process.argv.slice(2);
       await p.waitForSelector('.gate');
       await p.evaluate(async () => (await navigator.serviceWorker.getRegistration()).update());
       await p.tap('.gate');
+      await p.waitForSelector('.ttl-start'); await p.tap('.ttl-start'); await p.waitForSelector('.lob-story', { timeout: 15000 });
       const up = await p.waitForSelector('.pwa-update', { timeout: 20000 }).then(() => true).catch(() => false);
       await p.screenshot({ path: `${out}/update.png` });
-      ok('새 버전 감지 → 업데이트 버튼', up);
+      ok('새 버전 감지 → 로비에 업데이트 버튼', up);
       if (up) {
         await p.tap('.pwa-update');
         await p.waitForTimeout(2500);

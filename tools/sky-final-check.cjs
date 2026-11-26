@@ -51,8 +51,7 @@ const [url, out, fam = 'imo', diff = 'normal'] = process.argv.slice(2);
   await p.tap('.recs-tabs button:nth-child(2)'); await p.waitForTimeout(400);
   const open = await p.$('.alb-card:not(.locked)');
   if (open) { await open.tap(); await p.waitForSelector('.polaroid'); await p.waitForTimeout(600); await shot('j-photo-view'); log.push('사진 확대: PNG 버튼 ' + !!(await p.$('.alb-save .sky-btn'))); await p.tap('.alb-view p'); }
-  await p.tap('.album .sel-btns .sky-btn'); await p.waitForSelector('.ttl-start');
-  await p.tap('.ttl-start'); await p.waitForSelector('.lob-story', { timeout: 15000 }); await p.tap('.lob-prof'); await p.waitForSelector('.prof-box'); await p.tap('text=내보내기'); await p.waitForTimeout(500); await shot('k-profile');
+  await p.tap('.lob-nav button:nth-child(1)'); await p.waitForSelector('.lob-story', { timeout: 15000 }); await p.tap('.lob-prof'); await p.waitForSelector('.prof-box'); await p.tap('text=내보내기'); await p.waitForTimeout(500); await shot('k-profile');
   log.push('백업 코드 길이 ' + (await p.$eval('.prof-box textarea', (e) => e.value.length)));
   console.log(log.join('\n') + `\n오류 ${errs.length} ${errs.slice(0, 2).join(' | ')} · 실패 요청 ${bad.length} ${bad.slice(0, 2).join(' | ')}`);
   await b.close();
