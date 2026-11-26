@@ -814,5 +814,7 @@ body.sky-hub-on .hub-back { display: none; }
 .pv-box .sky-btn small { font-size: 10px; font-weight: 400; opacity: 0.85; }
 .pv-note { margin: 2px 0; font: 400 11px/1.45 'Galmuri11', monospace; color: #cfc6f0; text-align: center; }
 /* 부제 붓글씨(C*) · 픽셀(P1) 시안 */
-.ttl2-logo.cand img.cand-subimg.kC1, .ttl2-logo.cand img.cand-subimg.kC3, .ttl2-logo.cand img.cand-subimg.kC4 { width: min(82vw, 350px); margin-top: -12px; filter: drop-shadow(0 2px 0 rgba(20, 4, 0, 0.8)); }
+.ttl2-logo.cand img.cand-subimg.kC3, .ttl2-logo.cand img.cand-subimg.kC4 { width: min(82vw, 350px); margin-top: -12px; filter: drop-shadow(0 2px 0 rgba(20, 4, 0, 0.8)); }
 .ttl2-logo.cand img.cand-subimg.kP1 { width: min(82vw, 326px); margin-top: -4px; image-rendering: pixelated; filter: none; }
+/* F + C1 확정안: 크게 · 금색 테 바깥에 어두운 그림자 2겹(또렷한 아래 그림자 + 번짐)으로 배경과 분리 */
+.ttl2-logo.cand img.cand-subimg.kC1 { width: min(88vw, 370px); margin-top: -14px; filter: drop-shadow(0 3px 0 #1a0400) drop-shadow(0 0 5px rgba(20, 4, 0, 0.95)) drop-shadow(0 0 10px rgba(20, 4, 0, 0.7)); }

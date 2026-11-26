@@ -44,7 +44,7 @@ function svg(name, font, o) {
     <path d="M${px + 8} ${py + 9} L${px + pw - 8} ${py + 9}" stroke="${o.plate[2]}" stroke-width="3"/>
     <path d="M${px + 8} ${py + ph - 9} L${px + pw - 8} ${py + ph - 9}" stroke="${o.plate[2]}" stroke-width="3" opacity="0.6"/></g>` : '';
   const hw = o.ring ? o.outer + 9 : o.outer + 7;
-  const ringSvg = o.ring ? [0, o.depth].map((dy) => `<g transform="translate(0 ${dy})">${glyphs(`fill="${o.ring}" stroke="${o.ring}" stroke-width="${(hw + 4) * 2}" stroke-linejoin="round"`)}</g>`).join('') : '';
+  const ringSvg = o.ring ? [0, o.depth].map((dy) => `<g transform="translate(0 ${dy})">${glyphs(`fill="${o.ring}" stroke="${o.ring}" stroke-width="${(hw + (o.ringW ?? 4)) * 2}" stroke-linejoin="round"`)}</g>`).join('') : '';
   const halo = o.halo ? [0, o.ring ? o.depth : 0].map((dy) => `<g transform="translate(0 ${dy})">${glyphs(`fill="${o.halo}" stroke="${o.halo}" stroke-width="${hw * 2}" stroke-linejoin="round"${o.ring ? '' : ' opacity="0.85"'}`)}</g>`).join('') : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-pad - (o.orn || o.plate ? 72 : 0)} ${-pad - Math.abs(o.arc ?? 0)} ${W + pad * 2 + (o.orn || o.plate ? 144 : 0)} ${H + pad * 2 + Math.abs(o.arc ?? 0) * 2 + (o.depth ?? 0)}" data-name="${name}">
   <defs><linearGradient id="f-${name}" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">${grad}</linearGradient>
@@ -55,8 +55,8 @@ function svg(name, font, o) {
   ${halo}
   ${ext.join('')}
   ${glyphs(`fill="${o.outerCol}" stroke="${o.outerCol}" stroke-width="${o.outer * 2}" stroke-linejoin="round"`)}
-  ${o.inner ? glyphs(`fill="${o.innerCol}" stroke="${o.innerCol}" stroke-width="${o.inner * 2}" stroke-linejoin="round"`) : ''}
-  ${L.map((g) => `<path transform="${g.t}" d="${g.d}" fill="url(#f-${name})"/>`).join('')}
+  ${o.inner ? glyphs(`fill="${o.innerCol}" stroke="${o.innerCol}" stroke-width="${(o.inner + (o.bold ?? 0)) * 2}" stroke-linejoin="round"`) : ''}
+  ${L.map((g) => `<path transform="${g.t}" d="${g.d}" fill="url(#f-${name})"${o.bold ? ` stroke="url(#f-${name})" stroke-width="${o.bold * 2}" stroke-linejoin="round"` : ''}/>`).join('')}
   ${o.gloss ? L.map((g) => `<path transform="${g.t}" d="${g.d}" fill="url(#h-${name})"/>`).join('') : ''}
 </svg>`;
 }
@@ -71,7 +71,8 @@ const DESIGNS = {
   // 4 판타지 명판체: 명조 계열 · 금빛 · 짙은 적갈색 외곽 · 양쪽 마름모 장식 (B/F 날개·왕관 문장과 짝)
   K4: ['song-myung', { size: 118, track: 6, arc: 0, fill: ['#fff8d8', '#ffd870', '#d08a28'], inner: 4, innerCol: '#3a0c10', outer: 10, outerCol: '#fff0b8', depth: 7, ext: '#2a0610', gloss: true, orn: '#ffd870', plate: ['#a01828', '#ffd870', '#d04050'] }],
   // 캘리그라피 시안 (명판 없음 · F 로고 색): 붓글씨 폰트 + 글자별 기울기 흔들림 · 두꺼운 적갈 외곽 · 입체
-  C1: ['east-sea-dokdo', { size: 150, track: -2, tilt: 3, bounce: 3, fill: ['#fffbe0', '#fce93f', '#f7b82e', '#df8227', '#a8400a'], inner: 3, innerCol: '#fbf2d2', outerCol: '#2f0601', ext: '#8a2106', gloss: true, outer: 11, depth: 8, halo: '#2f0601', ring: '#e8a830' }],
+  // C1 붓글씨 (F + C1 확정 후 가독성 보강): 획 굵게(bold) · 밝은 노랑 위주 · 두꺼운 적갈 외곽 · 큰 입체 그림자 · 금색 테
+  C1: ['east-sea-dokdo', { size: 150, track: 4, tilt: 3, bounce: 3, bold: 3, fill: ['#fffef2', '#fff27a', '#ffd23a', '#f7a62a', '#d8741a'], inner: 3, innerCol: '#fff6d0', outerCol: '#2f0601', ext: '#5a0e04', gloss: true, outer: 15, depth: 12, halo: '#2f0601', ring: '#f0b43a', ringW: 8 }],
   C2: ['dokdo', { size: 140, track: 0, tilt: 2.5, bounce: 3, fill: ['#fffbe0', '#fce93f', '#f7b82e', '#df8227', '#a8400a'], inner: 3, innerCol: '#fbf2d2', outerCol: '#2f0601', ext: '#8a2106', gloss: true, outer: 11, depth: 8, halo: '#2f0601', ring: '#e8a830' }],
   C3: ['nanum-brush-script', { size: 150, track: -4, tilt: 3, bounce: 4, fill: ['#fffbe0', '#fce93f', '#f7b82e', '#df8227', '#a8400a'], inner: 3, innerCol: '#fbf2d2', outerCol: '#2f0601', ext: '#8a2106', gloss: true, outer: 11, depth: 8, halo: '#2f0601', ring: '#e8a830' }],
   C4: ['yeon-sung', { size: 130, track: 2, tilt: 2, bounce: 3, fill: ['#fffbe0', '#fce93f', '#f7b82e', '#df8227', '#a8400a'], inner: 3, innerCol: '#fbf2d2', outerCol: '#2f0601', ext: '#8a2106', gloss: true, outer: 11, depth: 8, halo: '#2f0601', ring: '#e8a830' }],
