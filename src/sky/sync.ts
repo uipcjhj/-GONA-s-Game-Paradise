@@ -21,7 +21,10 @@ export interface SaveStore {
 }
 export type RunRecords = Record<'easy' | 'normal' | 'hard', { score: number; reach: number; clear: boolean }>;
 /** 서버·백업 코드로 오가는 한 모험가의 기록 묶음 */
-export interface SaveBundle { schema: 3; rec2: SaveStore | null; records: RunRecords | null }
+import { mergeStory, type StoryStore } from './story-merge';
+export { mergeStory, type StoryStore };
+export interface SaveBundle { schema: 3; rec2: SaveStore | null; records: RunRecords | null; story?: StoryStore | null }
+
 
 const better = (a?: Rank, b?: Rank): Rank | undefined => (rankValue(b) > rankValue(a) ? b : a);
 const minDate = (a?: string, b?: string): string | undefined => (!a ? b : !b ? a : a < b ? a : b);
@@ -79,7 +82,7 @@ export function mergeRecords(a: RunRecords | null, b: RunRecords | null): RunRec
   return out;
 }
 export function mergeBundle(a: SaveBundle | null, b: SaveBundle | null): SaveBundle {
-  return { schema: 3, rec2: mergeStore(a?.rec2 ?? null, b?.rec2 ?? null), records: mergeRecords(a?.records ?? null, b?.records ?? null) };
+  return { schema: 3, rec2: mergeStore(a?.rec2 ?? null, b?.rec2 ?? null), records: mergeRecords(a?.records ?? null, b?.records ?? null), story: mergeStory(a?.story, b?.story) };
 }
 
 // ───────── 저장 구조 버전 · 백업 ─────────

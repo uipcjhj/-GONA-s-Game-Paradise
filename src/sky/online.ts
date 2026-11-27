@@ -108,14 +108,22 @@ export async function setNickname(nick: string): Promise<void> {
 }
 
 // ───────── 클라우드 저장 ─────────
-const DATA = { rec2: `${NS}.rec2`, records: `${NS}.records` };
+const DATA = { rec2: `${NS}.rec2`, records: `${NS}.records`, story: `${NS}.story` };
 function localBundle(): SaveBundle {
   const rd = (k: string) => { try { return JSON.parse(localStorage.getItem(profileKey(k)) ?? 'null'); } catch { return null; } };
-  return { schema: 3, rec2: rd(DATA.rec2), records: rd(DATA.records) };
+  return { schema: 3, rec2: rd(DATA.rec2), records: rd(DATA.records), story: rd(DATA.story) };
 }
 function writeLocal(b: SaveBundle): void {
   if (b.rec2) localStorage.setItem(profileKey(DATA.rec2), JSON.stringify(b.rec2));
   if (b.records) localStorage.setItem(profileKey(DATA.records), JSON.stringify(b.records));
+  if (b.story) { const j = JSON.stringify(b.story); localStorage.setItem(profileKey(`${DATA.story}.bak`), j); localStorage.setItem(profileKey(DATA.story), j); }
+}
+let syncT = 0;
+/** 체크포인트 저장 · 로비 진입 때 조용히 동기화 (로그인했을 때만 · 3초 모아서 한 번 · 실패해도 기기 기록 그대로) */
+export function syncSoon(): void {
+  if (!ONLINE || !account()) return;
+  window.clearTimeout(syncT);
+  syncT = window.setTimeout(() => { void sync().catch(() => {}); }, 3000);
 }
 /** 받기 → 병합 → 기기에 저장 → 올리기 (충돌이면 최대 3번 다시) · 실패해도 기기 기록은 그대로 */
 export async function sync(): Promise<string> {

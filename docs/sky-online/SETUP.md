@@ -11,6 +11,23 @@
 
 → **서버가 만들어지기 전까지 온라인 기능은 '완료'가 아닙니다.**
 
+## 0. 먼저 확인: 지금 쓰는 Supabase 프로젝트가 레이더(Global Opportunity Radar) 것인가? (2026-11-27)
+- GitHub 조사 결과: 접근 가능한 저장소 5개(GoNa · -GONA-s-Game-Paradise · portfolio · movex-marketing-dashboard · gpt) 어디에도 Supabase 주소·키·설정이 없음.
+  레이더는 `portfolio` 의 소개 글만 있고 **레이더 코드 저장소는 이 계정에서 찾을 수 없음** → GitHub 만으로는 같은 프로젝트인지 판별 불가.
+- 고나 게임에는 아직 어떤 Supabase 프로젝트도 연결돼 있지 않음 (`online-config.js` 비어 있음 · 배포 워크플로에 Supabase 값 없음).
+- 대시보드에서 직접 확인 (보기만 · 아무것도 바꾸지 않음):
+  1. 왼쪽 위 프로젝트 이름 옆 ▾ → 프로젝트 목록에서 지금 연 프로젝트 이름 확인
+  2. **Table Editor** → 스키마 `public` 에 레이더용 표(기사·뉴스·보고서 등 `sky_` 로 시작하지 않는 표)가 있으면 레이더 프로젝트
+  3. **Authentication → Users** 에 이미 사용자가 있으면 기존 프로젝트
+- ⚠ 레이더 프로젝트였다면: 방금 바꾼 **Site URL · Redirect URL 을 원래 레이더 값으로 되돌려야** 레이더 로그인 메일 링크가 계속 레이더로 감 (원래 값을 기록해 두지 않았다면 레이더 배포 주소).
+- 권장: 레이더와 섞지 말고 **고나 전용 프로젝트를 새로 만들기** (무료 플랜 2개까지 · 인증 설정·사용자·Edge Function 이름이 프로젝트 단위로 분리됨)
+
+### 고나 전용 프로젝트 만들기
+1. 대시보드 왼쪽 위 ▾ 또는 https://supabase.com/dashboard/projects → **New project**
+2. Organization: 지금 쓰는 조직 · **Name: `gona-sky`** · Database Password: **Generate a password** → 본인만 보관(채팅 금지)
+3. Region: **Northeast Asia (Seoul)** · Plan: **Free** → **Create new project** (1~2분)
+4. 새 프로젝트에서 아래 1~10단계 진행 (Site URL · Redirect URL 은 **새 프로젝트**에 설정)
+
 ## 사용자가 직접 해야 하는 일 — 10단계 (무료 플랜 · 약 20분)
 
 > ⚠ 이 문서를 쓰는 환경에서는 supabase.com 공식 문서에 접속할 수 없어(네트워크 차단) **메뉴 이름은 2026년 기준 기억에 의존**합니다. 화면 이름이 조금 달라도 같은 뜻의 메뉴를 찾으면 됩니다.
@@ -32,6 +49,12 @@
 ### 사용자가 하지 않아도 되는 것 (자동 · 개발 쪽)
 - GitHub Secrets · Actions 설정: 필요 없음 (공개 값만 쓰는 정적 페이지)
 - DB 권한 · RLS · 함수 코드: 저장소에 준비됨 (로컬 Postgres 검사 14/14 · Deno 타입 검사 통과)
+
+## 스토리 체크포인트 클라우드 동기화 (2026-11-27 추가)
+- 저장 묶음(`sky_saves.bundle`)에 `story` 추가 → SQL 변경 없음 (jsonb)
+- 병합: 칸마다 더 최근 저장 · 완주 기록은 모드별 높은 점수 · 다른 기기에서 완주해 비운 칸은 지움 (`src/sky/story-merge.ts` · 검사 `node --experimental-strip-types tools/sky-online/story-merge-test.mts`)
+- 언제: 로그인 · '지금 동기화' · 체크포인트 저장 3초 뒤 · 로비 들어올 때 (로그인했을 때만)
+- 온라인 공식 스토리 랭킹(`story:<diff>`) = ARCADE 연속 완주만 제출됨 (이어하기 판은 제출 안 함)
 
 ## 구조
 

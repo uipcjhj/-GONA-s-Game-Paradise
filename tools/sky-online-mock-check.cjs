@@ -15,6 +15,7 @@ const [url, out] = process.argv.slice(2);
   const srv = { save: null, rev: 0, sessions: {}, scores: [], calls: [] };
   // 다른 기기에 이미 있던 클라우드 기록: 할아버지 HARD 보스1 사진 1장
   srv.save = { schema: 3, rec2: { v: 2, boards: {}, daily: {}, col: { clears: {}, flags: { nomiss: true }, seen: {}, stages: { 'halabeoji:hard:1': { rank: 'A', hits: 0, bombs: 0, allParts: true, at: '2026-11-20', score: 90000 } }, counts: {} } }, records: { easy: { score: 0, reach: 1, clear: false }, normal: { score: 0, reach: 2, clear: false }, hard: { score: 50000, reach: 2, clear: false } } };
+  srv.save.story = { v: 1, last: 'halabeoji:hard', slots: { 'halabeoji:hard': { v: 1, fam: 'halabeoji', diff: 'hard', stage: 4, score: 400000, hp: 4, bombs: 2, power: 3, arcade: false, at: '2026-11-25T10:00:00Z' } }, arcade: {}, cont: {} };
   srv.rev = 4;
   await ctx.route('https://mock.supabase.test/**', async (route) => {
     const r = route.request();
@@ -50,6 +51,7 @@ const [url, out] = process.argv.slice(2);
   await p.fill('.nick-box input', '검수');
   await p.tap('.nick-box .sky-btn-go');
   await p.waitForTimeout(500);
+  await p.evaluate(() => localStorage.setItem('gona.skyadv.story', JSON.stringify({ v: 1, last: 'mom:easy', slots: { 'mom:easy': { v: 1, fam: 'mom', diff: 'easy', stage: 3, score: 150000, hp: 5, bombs: 4, power: 2, arcade: true, at: '2026-11-26T09:00:00Z' } }, arcade: {}, cont: {} })));
   await p.evaluate(() => localStorage.setItem('gona.skyadv.rec2', JSON.stringify({ v: 2, boards: {}, daily: {}, col: { clears: {}, flags: {}, seen: {}, stages: { 'mom:easy:1': { rank: 'B', hits: 2, bombs: 1, allParts: false, at: '2026-11-26', score: 40000 } }, counts: {} } })));
   await p.goto(url + '?skytest');
   await p.waitForSelector('.ttl-start');
@@ -66,6 +68,8 @@ const [url, out] = process.argv.slice(2);
   const loc = await p.evaluate(() => JSON.parse(localStorage.getItem('gona.skyadv.rec2')).col.stages);
   chk('병합: 기기 사진 + 클라우드 사진 합집합', !!loc['mom:easy:1'] && !!loc['halabeoji:hard:1'], Object.keys(loc).join(','));
   chk('업로드: rev 4 → 5 · 서버 저장에도 두 사진', srv.rev === 5 && !!srv.save.rec2.col.stages['mom:easy:1'] && !!srv.save.rec2.col.stages['halabeoji:hard:1']);
+  const st = await p.evaluate(() => JSON.parse(localStorage.getItem('gona.skyadv.story')));
+  chk('스토리 체크포인트 동기화: 기기(엄마 EASY S3) + 클라우드(할아버지 HARD S4) 합쳐짐 · 서버에도', st.slots['mom:easy']?.stage === 3 && st.slots['halabeoji:hard']?.stage === 4 && !!srv.save.story?.slots?.['mom:easy'] && !!srv.save.story?.slots?.['halabeoji:hard'], Object.keys(st.slots).join(','));
   chk('처음 로그인 전 기기 기록 백업 보관', await p.evaluate(() => !!localStorage.getItem('gona.skyadv.backup.prelogin')));
   const recs = await p.evaluate(() => JSON.parse(localStorage.getItem('gona.skyadv.records') || 'null'));
   chk('스토리 도달 기록: 더 좋은 쪽 (HARD reach 2)', recs && recs.hard.reach === 2, JSON.stringify(recs?.hard));

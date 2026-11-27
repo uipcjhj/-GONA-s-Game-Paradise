@@ -14,7 +14,7 @@ import { newRewards, ackRewards } from './lobby';
 import { getSlot, lastSlot, putSlot, markContinue, finishStory, type Slot } from './story-save';
 import { achBadge, achDate, badgeSrc, MASTER_BADGE, DIFF_BADGE, FAM_BADGE } from './badges';
 import { pwa, onPwa, registerPwa, applyUpdate, promptInstall, precacheAll } from './pwa';
-import { ONLINE, account, signIn, signUp, signOut, deleteAccount, sync as cloudSync, setNickname as cloudNick, startPlay, reportStage, submitPlay, voidPlay, hasPlay, topBoard, myUserId, type BoardRow } from './online';
+import { ONLINE, account, signIn, signUp, signOut, deleteAccount, sync as cloudSync, setNickname as cloudNick, startPlay, reportStage, submitPlay, voidPlay, hasPlay, topBoard, myUserId, syncSoon, type BoardRow } from './online';
 import { THEME, familyText } from './theme';
 import { packPath } from './artpack';
 import { talkLines, talkMode, type TalkKey } from './story';
@@ -343,6 +343,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   // 화면별 BGM (첫 터치 전에는 예약만 → 잠금이 풀리는 순간 재생)
   useEffect(() => {
     if (phase === 'title' || phase === 'lobby') playBgm('title', 0.5);
+    if (phase === 'lobby') syncSoon();
     if (phase === 'select') playBgm('select', 0.4);
   }, [phase]);
   useEffect(() => {
@@ -427,9 +428,11 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
             if (!r.final) {
               putSlot({ fam: opts.fam, diff: opts.diff, stage: r.stage + 1, score: r.score, hp: Math.max(r.hp, 3), bombs: Math.max(r.bombs, DIFF[opts.diff].bombs), power: r.power, arcade: runModeRef.current === 'arcade' });
               setCkMsg(`✔ CHECKPOINT · STAGE ${r.stage + 1} 저장`);
+              syncSoon();
             } else {
               finishStory(opts.fam, opts.diff, runModeRef.current, r.score);
               setCkMsg(runModeRef.current === 'arcade' ? '★ ARCADE CLEAR · 연속 완주!' : '✔ CONTINUE CLEAR · 이어하기 완주');
+              syncSoon();
             }
           }
           // FINAL 도 결과(랭크)를 먼저 보여 주고 → '엔딩으로'
@@ -1507,7 +1510,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
           {recTab === 'online' && (
             <div className="ol">
               <div className="ol-kinds">
-                {(['story', 'weekly', 'daily', 'hunt'] as const).map((k) => <button key={k} type="button" className={olKind === k ? 'on' : ''} onClick={() => { sfx('menuMove'); setOlKind(k); }}>{k === 'story' ? '스토리 전체' : k === 'weekly' ? '주간' : k === 'daily' ? '오늘의 도전' : '스테이지별'}</button>)}
+                {(['story', 'weekly', 'daily', 'hunt'] as const).map((k) => <button key={k} type="button" className={olKind === k ? 'on' : ''} onClick={() => { sfx('menuMove'); setOlKind(k); }}>{k === 'story' ? 'ARCADE 연속 완주' : k === 'weekly' ? '주간' : k === 'daily' ? '오늘의 도전' : '스테이지별'}</button>)}
               </div>
               {olKind === 'hunt' && <div className="ol-kinds">{STAGES.map((st) => <button key={st.id} type="button" className={olStage === st.id ? 'on' : ''} onClick={() => setOlStage(st.id)}>{st.id === 6 ? 'F' : st.id}</button>)}</div>}
               <div className="ol-fams">
