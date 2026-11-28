@@ -21,6 +21,7 @@ import { talkLines, talkMode, type TalkKey } from './story';
 import { TalkBox, BarkBox, resolveLines, type TalkLine } from './TalkBox';
 import { PoopEnding } from './PoopEnding';
 import { OpeningCinematic } from './OpeningCinematic';
+import { OpeningStory } from './OpeningStory';
 import { HUB, HubBack, TestHub, type HubGo } from './TestHub';
 import './sky.css';
 
@@ -66,6 +67,8 @@ function safeBottom(): number {
 const HUNT_POWER = [1, 2, 3, 3, 4, 4];
 /** 타이틀 로고 시안 미리보기 (?logo=A~F) — 사용자 선택 전까지 라이브 기본 로고는 그대로 */
 /** 개발자용 엔딩 미리보기 (?preview=ending): 터치 → 엔딩 → 에필로그 → 크레딧 · 기록·앨범·랭킹에 아무것도 쓰지 않음 */
+/** 오프닝 v2 (스토리북 · 터치 진행) 미리보기: ?opening=2 — 승인 전에는 기존 오프닝 */
+const OPENING_V2 = /[?&]opening=2\b/.test(location.search);
 const SUB_CAND = ((): string | null => { const v = new URLSearchParams(location.search).get('sub') ?? ''; return /^([1-4]|C[134]|P1)$/.test(v) ? v : null; })();
 /** 로고 시안 미리보기(?logo=A..F · 한글 부제 레터링 ?sub=1..4) — 라이브 기본 로고는 바뀌지 않음 · 부제만 고르면 영문 로고는 E */
 const LOGO_CAND = ((): string | null => { const v = (new URLSearchParams(location.search).get('logo') ?? '').toUpperCase(); return 'ABCDEF'.includes(v) && v.length === 1 ? v : SUB_CAND ? 'E' : null; })();
@@ -764,6 +767,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
       </div>
     );
   }
+  if (phase === 'opening' && THEME.id === 'poop' && OPENING_V2) return <OpeningStory key={hubOpen} onDone={() => { setHubOpen(0); if (PREVIEW) previewMenu(); else if (HUB) { stopBgm(0.4); setPhase('hub'); } else finishOpening(); }} />;
   if (phase === 'opening' && THEME.id === 'poop') return <OpeningCinematic key={hubOpen} startAt={hubOpen} onDone={() => { setHubOpen(0); if (PREVIEW) previewMenu(); else if (HUB) { stopBgm(0.4); setPhase('hub'); } else finishOpening(); }} />;
   if (phase === 'opening') {
     const sl = THEME.opening[Math.min(slide, THEME.opening.length - 1)];

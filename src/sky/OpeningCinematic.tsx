@@ -44,8 +44,8 @@ const TITLE_AT = 41.4;
 export const OPENING_END = 44.4; // 이 시각에 '터치하여 시작' 표시, END+1.4 초에 자동으로 게임으로
 
 // ───────── 나레이션 자막 ([[ ]] = 금색 강조) ─────────
-interface Cue { t: number; end: number; text: string; cls: string }
-const CUES: Cue[] = [
+export interface Cue { t: number; end: number; text: string; cls: string }
+export const CUES: Cue[] = [
   { t: 0.6, end: 4.1, text: '[[서기 2026년 11월…]]', cls: 'chron' },
   { t: 1.6, end: 4.1, text: '고나가 생후 7개월을 맞이한 해.', cls: 'chron sub' },
   { t: 4.5, end: 9.3, text: '떡뻥과 이유식을 즐기던 작은 영웅, 고나.', cls: '' },

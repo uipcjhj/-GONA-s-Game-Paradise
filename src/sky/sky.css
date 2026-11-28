@@ -1025,3 +1025,44 @@ body.sky-hub-on .hub-back { display: none; }
 .sel-btns.has-ck .sel-resume { flex: 1 1 100%; min-height: 50px; }
 .sel-btns.has-ck .sel-fresh { flex: 1 1 60%; }
 .sel-btns.has-ck > .sky-btn:last-child { flex: 0 1 30%; }
+
+/* ═══ 오프닝 v2 스토리북 (OpeningStory) — 정지 이벤트 CG · 디졸브 · 하단 그늘 자막 ═══ */
+.sky.os { position: fixed; inset: 0; overflow: hidden; background: #08050f; touch-action: manipulation; user-select: none; -webkit-user-select: none; font-family: 'Gowun Batang', 'AppleMyungjo', 'Nanum Myeongjo', serif; }
+.os-stage { position: absolute; inset: 0; }
+.os-layer { position: absolute; inset: 0; opacity: 0; transition: opacity 0.9s ease-in-out; will-change: opacity; background: #08050f; }
+.os-layer.on { opacity: 1; }
+.os-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; }
+.os-spr { position: absolute; transform: translate(-50%, -50%); height: auto; filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35)); }
+.os-spr.float { animation: os-float 3.6s ease-in-out infinite; }
+@keyframes os-float { 50% { transform: translate(-50%, calc(-50% - 6px)); } }
+.os-layer.m-pan-up .os-bg { animation: os-pan 9s ease-out both; }
+@keyframes os-pan { from { transform: translateY(1.5%) scale(1.03); } to { transform: none; } }
+.os-layer.m-push .os-bg { animation: os-push 14s ease-out both; }
+@keyframes os-push { from { transform: scale(1); } to { transform: scale(1.05); } }
+.os-title { display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 40%, #3a1a58 0%, #120a26 70%); }
+.os-logo { width: min(88vw, 420px); height: auto; filter: drop-shadow(0 4px 0 rgba(20, 8, 40, 0.85)); }
+.os-sublogo { width: min(86vw, 380px); margin-top: -10px; filter: drop-shadow(0 3px 0 #1a0400) drop-shadow(0 0 6px rgba(20, 4, 0, 0.95)); }
+.os-copy { margin: 14px 0 0; font-size: clamp(15px, 4.4vw, 19px); font-weight: 700; color: #f1e8d4; text-shadow: 0 1px 2px #000; }
+.os-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #8a7a5a; font: 12px 'Galmuri11', monospace; letter-spacing: 4px; }
+/* 자막: 상자 없이 아래쪽 옅은 그늘 + 글자 외곽선·그림자 */
+.os-subs { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; padding: 26% 6% max(11%, calc(env(safe-area-inset-bottom) + 40px)); display: flex; flex-direction: column; align-items: center; gap: 0.35em; text-align: center; pointer-events: none;
+  background: linear-gradient(to top, rgba(4, 2, 10, 0.62) 0%, rgba(4, 2, 10, 0.34) 45%, rgba(4, 2, 10, 0) 100%);
+  opacity: 0; transition: opacity 0.25s ease-in; }
+.os-subs.in { opacity: 1; }
+.os-subs.entering { transition: opacity 0.3s ease-out; }
+.os-line { margin: 0; font-size: clamp(16px, 4.6vw, 21px); line-height: 1.6; font-weight: 700; color: #f6eedc; word-break: keep-all;
+  text-shadow: 1px 0 0 #120818, -1px 0 0 #120818, 0 1px 0 #120818, 0 -1px 0 #120818, 0 2px 4px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 0, 0, 0.7); }
+.os-line em { font-style: normal; color: #ffd98a; }
+.os-line.chron { font-size: clamp(21px, 6vw, 26px); }
+.os-hint { position: absolute; z-index: 4; right: 14px; bottom: calc(env(safe-area-inset-bottom) + 14px); font: 700 11px 'Galmuri11', monospace; color: rgba(255, 244, 214, 0.82); text-shadow: 0 1px 0 #000; animation: os-blink 1.4s ease-in-out infinite; pointer-events: none; }
+@keyframes os-blink { 50% { opacity: 0.35; } }
+.os-press { position: absolute; z-index: 4; left: 0; right: 0; bottom: 12%; margin: 0; text-align: center; font: 700 14px 'Galmuri11', monospace; color: #fff4d6; text-shadow: 0 2px 0 #000; animation: os-blink 1.2s ease-in-out infinite; }
+/* 조작: 위 오른쪽 작은 버튼 줄 */
+.os-ctl { position: absolute; z-index: 5; top: calc(env(safe-area-inset-top) + 8px); right: 8px; display: flex; gap: 6px; }
+.os-ctl button { min-width: 38px; height: 32px; padding: 0 8px; font: 700 11px 'Galmuri11', monospace; color: #fff4d6; background: rgba(10, 6, 24, 0.62); border: 1px solid rgba(255, 228, 150, 0.55); }
+.os-ctl button:disabled { opacity: 0.35; }
+.os-ctl .os-auto.on { color: #1a0a2e; background: #ffd76a; border-color: #ffd76a; }
+.os-ctl .os-skip { position: static; }
+.os-paused { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: rgba(6, 3, 14, 0.45); color: #fff4d6; font-family: 'Galmuri11', monospace; }
+.os-paused b { font-size: 18px; } .os-paused small { font-size: 11px; opacity: 0.8; }
+.sky.os.paused .os-layer .os-bg, .sky.os.paused .os-spr { animation-play-state: paused; }
