@@ -74,6 +74,9 @@ const OPENING_V2 = /[?&]opening=2\b/.test(location.search);
 const CUT2 = !!PREVIEW || /[?&]cut=2\b/.test(location.search);
 /** 전투 리마스터 시범 (STAGE 5 파괴 지형) — ?preview=stage5 · ?combat=2 에서만 · 정식 게임은 그대로 */
 const COMBAT2 = PREVIEW === 'stage5' || /[?&]combat=2\b/.test(location.search);
+/** 새 오프닝(하단 대사창 · 음악 동기화 출격 시퀀스) — 2026-11-28 사용자 승인 · 정식 적용 (?opening=old 로 예전 영상식 오프닝 확인 가능)
+ *  엔딩·에필로그·크레딧의 새 플레이어는 아직 미리보기(CUT2)에서만 */
+const OPEN_NEW = !/[?&]opening=old\b/.test(location.search);
 /** 크레딧 문구 교체 (새 컷신과 함께 미리보기) */
 const CREDITS2: [string, string][] = THEME.credits.map(([a, b]): [string, string] => (a === '스페셜 땡스' ? ['SPECIAL THANKS TO', 'My Family, My Forever Fans'] : b === 'THANK YOU FOR PLAYING!' ? ['', '현이가 마주할 모든 역경에 언제나 곁에 있길 바라며...'] : [a, b]));
 /** 공통 UI v2 (글자·버튼 정렬 · 랭킹·설정 재구성) 미리보기: ?ui=2 — 승인 전에는 기존 화면 */
@@ -782,7 +785,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
       </div>
     );
   }
-  if (phase === 'opening' && THEME.id === 'poop' && CUT2) return <CutOpening key={`c${hubOpen}-${endKey}`} onDone={() => { setHubOpen(0); if (PREVIEW) previewMenu(); else if (HUB) { stopBgm(0.4); setPhase('hub'); } else finishOpening(); }} />;
+  if (phase === 'opening' && THEME.id === 'poop' && OPEN_NEW) return <CutOpening key={`c${hubOpen}-${endKey}`} onDone={() => { setHubOpen(0); if (PREVIEW) previewMenu(); else if (HUB) { stopBgm(0.4); setPhase('hub'); } else finishOpening(); }} />;
   if (phase === 'opening' && THEME.id === 'poop' && OPENING_V2) return <OpeningStory key={hubOpen} onDone={() => { setHubOpen(0); if (PREVIEW) previewMenu(); else if (HUB) { stopBgm(0.4); setPhase('hub'); } else finishOpening(); }} />;
   if (phase === 'opening' && THEME.id === 'poop') return <OpeningCinematic key={hubOpen} startAt={hubOpen} onDone={() => { setHubOpen(0); if (PREVIEW) previewMenu(); else if (HUB) { stopBgm(0.4); setPhase('hub'); } else finishOpening(); }} />;
   if (phase === 'opening') {
