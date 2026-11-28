@@ -10,7 +10,7 @@ import { PAGES } from './OpeningStory';
 import { CUES } from './OpeningCinematic';
 import { SCENES, type SceneId } from './PoopEnding';
 import { packPath, hasPack } from './artpack';
-import { audioTap, bgmInfo, playBgm, releaseBgm, sfx } from './audio';
+import { audioTap, bgmInfo, playBgm, sfx, songHold, songJump, songPos, songStart, songStop } from './audio';
 
 const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
 const src = (rel: string): string => `${BASE}${packPath(rel)}`;
@@ -21,40 +21,100 @@ const RATIO: Record<string, number> = {
 const ratioOf = (rel: string): number => RATIO[rel] ?? 810 / 1432;
 const FACE = (f: string): string => src(`chars/${f}/face.png`);
 
-const CUT_BEAT = 0.6;
-const CUT_START = 0.6;
 
 // ───────── 오프닝 ─────────
+/**
+ * 기존 오프닝(OpeningCinematic · tools/sky-audio/opening.py)의 음악 동기화 시각표 — 새로 정하지 않고 그대로 가져옴 (곡 위치 · 초)
+ *  28.2 마왕 등장 합창 · 29.9 웃음 · 31.5 성문 '쿵' → 암전
+ *  32.0 여섯 수호자 시작 · 32.1 + 0.12×i 여섯 빛 (종소리)
+ *  33.0 + 0.6×i 가족 컷인 (팀파니 한 번에 한 명) — 순서 엄마 · 아빠 · 이모 · 삼촌 · 할머니 · 할아버지
+ *  36.6 빛이 고나에게 모임 · 37.0 출격 장 · 38.0 고나 눈뜸(차임) · 38.4 비상(심벌 · 드럼) · 41.4 타이틀 '쿵'
+ *  자막: 32.3 '그러나 작은 영웅은…' · 33.2 '고나를 걱정하던…' · 37.3 '지금, 세상에서…' · 38.6 '가장 위대한 탈출 작전…'
+ */
+export const OT = { march: [23.3, 28.3] as [number, number], maou: 28.2, maouHold: [28.2, 30.95] as [number, number], bIn: 31.3, gate: 31.5, s7: 32.0, chime: 32.1, cutins: 33.0, beat: 0.6, gather: 36.6, s8: 37.0, wake: 38.0, rise: 38.4, title: 41.4, songEnd: 46.5 };
+const OP_FAMILY = ['mom', 'dad', 'imo', 'samchon', 'halmeoni', 'halabeoji'];
+const OP_COL: Record<string, string> = { mom: '#5ec8ff', dad: '#ff8a3c', imo: '#b45cff', samchon: '#7ff0d0', halmeoni: '#ff8ac8', halabeoji: '#7ab8ff' };
+const famOf = (img: string): string => (/fam-(\w+)\./.exec(img)?.[1] ?? '');
+
 function openingSteps(): CutStep[] {
   const out: CutStep[] = [];
-  PAGES.forEach((p, pi) => {
+  const plainCg = (pi: number): CutCg => {
+    const p = PAGES[pi];
     const sprites = p.sprites ?? [];
-    const cg: CutCg = {
-      key: `o${pi}`,
-      ratio: ratioOf(p.bg),
-      img: src(p.bg),
-      preload: [p.bg, ...sprites.map((s) => s.img)].map(src),
-      layers: sprites.length ? (
-        <>
-          {sprites.map((s, k) => {
-            if (!p.cut) return <img key={s.img} className={`cp-spr${s.float ? ' float' : ''}`} src={src(s.img)} alt="" style={{ left: `${s.x}%`, top: `${s.y}%`, width: `${s.w}%` }} />;
-            // 여섯 수호자: 기존 오프닝처럼 한 박(0.6초)에 한 명씩 '삭' 등장
-            const v = { '--d': `${CUT_START + k * CUT_BEAT}s`, '--c': p.cut[k], '--dx': `${k % 2 ? 60 : -60}%` } as CSSProperties;
-            return (
-              <span key={s.img}>
-                <i className={`os-streak${k % 2 ? ' r' : ''}`} style={{ ...v, top: `${s.y}%` }} />
-                <img className="cp-spr cut" src={src(s.img)} alt="" style={{ ...v, left: `${s.x}%`, top: `${s.y}%`, width: `${s.w}%` }} />
-              </span>
-            );
-          })}
-        </>
-      ) : undefined,
+    return {
+      key: `o${pi}`, ratio: ratioOf(p.bg), img: src(p.bg), preload: [p.bg, ...sprites.map((q) => q.img)].map(src),
+      layers: sprites.length ? <>{sprites.map((q) => <img key={q.img} className={`cp-spr${q.float ? ' float' : ''}`} src={src(q.img)} alt="" style={{ left: `${q.x}%`, top: `${q.y}%`, width: `${q.w}%` }} />)}</> : undefined,
     };
+  };
+  // A. 스토리 구간 (수동): 장면 0~7 (마왕 대사까지)
+  for (let pi = 0; pi <= 7; pi++) {
+    const cg = plainCg(pi);
+    const p = PAGES[pi];
     if (!p.lines.length) out.push({ cg, line: { kind: 'none', text: '' } });
     for (const k of p.lines) out.push({ cg, line: { kind: 'narr', text: CUES[k].text } });
-  });
-  // 마지막: 타이틀
+  }
+  // B. 음악 동기화 구간 (자동 · 곡 위치 기준)
+  const dream = PAGES[8], guard = PAGES[9], sortie = PAGES[10];
+  const sleep = dream.sprites?.[0];
+  const ring = (i: number): [number, number] => { const a = (i / 6) * Math.PI * 2 - Math.PI / 2; return [50 + Math.cos(a) * 30, 50 + Math.sin(a) * 19]; };
+  const lights = (conv: boolean): ReactElement => (
+    <>{OP_FAMILY.map((f, i) => {
+      const [x, y] = ring(i);
+      const st = { left: `${x}%`, top: `${y}%`, '--c': OP_COL[f], '--dx': `${(50 - x) * 4.5}%`, '--dy': `${(52 - y) * 4.5}%` } as CSSProperties;
+      return <i key={f} className={`cp-light${conv ? ' cv' : ''}`} data-at={conv ? OT.s8 : +(OT.chime + i * 0.12).toFixed(2)} data-k={`${conv ? '모임' : '빛'}:${f}`} style={st} />;
+    })}</>
+  );
+  const sleepImg = sleep ? <img className="cp-spr float" src={src(sleep.img)} alt="" style={{ left: `${sleep.x}%`, top: `${sleep.y}%`, width: `${sleep.w}%` }} /> : null;
   out.push({
+    sync: true, dis: 450,
+    cg: { key: 'o8', ratio: ratioOf(dream.bg), img: src(dream.bg), preload: [dream.bg, ...(sleep ? [sleep.img] : [])].map(src), layers: <>{sleepImg}{lights(false)}</> },
+    line: { kind: 'narr', text: CUES[12].text },
+  });
+  const gs = guard.sprites ?? [];
+  out.push({
+    sync: true, at: 32.75, dis: 250,
+    cg: {
+      key: 'o9', ratio: ratioOf(guard.bg), img: src(guard.bg), preload: [guard.bg, ...gs.map((q) => q.img)].map(src),
+      layers: (
+        <>{gs.map((q) => {
+          const f = famOf(q.img);
+          const k = OP_FAMILY.indexOf(f);
+          const at = +(OT.cutins + k * OT.beat).toFixed(2);
+          const v = { '--c': OP_COL[f], '--dx': `${k % 2 ? 60 : -60}%` } as CSSProperties;
+          return (
+            <span key={q.img}>
+              <i className={`os-streak${k % 2 ? ' r' : ''}`} data-at={at} style={{ ...v, top: `${q.y}%` }} />
+              <img className="cp-spr cut" data-at={at} data-k={`등장:${f}`} src={src(q.img)} alt="" style={{ ...v, left: `${q.x}%`, top: `${q.y}%`, width: `${q.w}%` }} />
+            </span>
+          );
+        })}<i className="cp-gather" data-at={OT.gather} data-k="빛 모임" /></>
+      ),
+    },
+    line: { kind: 'narr', text: CUES[13].text },
+  });
+  out.push({
+    sync: true, at: OT.s8, dis: 400,
+    cg: {
+      key: 'o8w', ratio: ratioOf(dream.bg), img: src(dream.bg), preload: [dream.bg, 'opening3/b-sleep.png', 'opening3/b-wake.png'].map(src),
+      layers: (
+        <>
+          {lights(true)}
+          {sleep && <img className="cp-spr cp-swapout" data-at={OT.wake} src={src(sleep.img)} alt="" style={{ left: `${sleep.x}%`, top: `${sleep.y}%`, width: `${sleep.w}%` }} />}
+          {sleep && <img className="cp-spr cp-swapin" data-at={OT.wake} data-k="고나 눈뜸" src={src('opening3/b-wake.png')} alt="" style={{ left: `${sleep.x}%`, top: `${sleep.y}%`, width: `${sleep.w}%` }} />}
+          <i className="cp-glow" data-at={OT.wake} />
+        </>
+      ),
+    },
+    line: { kind: 'narr', text: CUES[14].text },
+  });
+  out.push({
+    sync: true, at: OT.rise, dis: 450,
+    cg: { key: 'o10', ratio: ratioOf(sortie.bg), img: src(sortie.bg), preload: [src(sortie.bg)], layers: <i className="cp-spark-in" /> },
+    line: { kind: 'narr', text: CUES[15].text },
+  });
+  // 타이틀 (41.4 '쿵'에 맞춰 자동 도착 → 여기서부터 다시 수동)
+  out.push({
+    at: OT.title, dis: 350,
     cg: {
       key: 'title', ratio: 9 / 16, cls: 'cp-title', preload: ['title/logo-v10.png', 'title/sub-v10.png'].map(src),
       layers: (
@@ -71,35 +131,56 @@ function openingSteps(): CutStep[] {
 }
 
 /**
- * 오프닝 음악 흐름 (한 곡이 끝까지 이어지게)
- *  - 첫 장면에서 오프닝 곡을 처음부터 1회 시작 ('openingHold') — 그림 전환 · ◀ 이전 · 빠른 연타에도 다시 시작하지 않음
- *  - 타이틀 화면에 닿기 전에 곡이 '여섯 수호자' 악절(33.0~37.8초)까지 오면 그 악절을 이음매 없이 반복하며 기다림
- *    (출격 고조 · 타이틀 '쿵'은 타이틀 곡이 맡음 → 타이틀 음악이 타이틀보다 먼저 나오지 않음)
- *  - 타이틀 화면에 닿는 순간에만 2초 교차 페이드로 타이틀 곡
+ * 오프닝 음악 흐름 (한 곡 · 재생 위치가 곧 연출 시계)
+ *  A 스토리 구간(수동): 곡을 0초부터. 읽는 속도가 느리면 곡이 앞서 가지 않도록
+ *     - 마왕 장면 전에는 '똥돌이 병사 행진'(23.3~28.3초 · 화음 D–B♭–G–A 가 다시 D 로) 을 이음매 없이 반복
+ *     - 마왕 장면(첫 진입)에서는 곡을 마왕 등장 지점(28.2초)으로 · 머무는 동안 28.2~30.95초 반복 (웃음·천둥)
+ *  B 음악 동기화 구간(자동): 마지막 마왕 대사에서 터치하면 곡을 31.3초(성문 '쿵' 직전)로 → 그 뒤 모든 등장·장면 전환이 곡 위치 기준
+ *     (가족 컷인 33.0 + 0.6×i · 고나 눈뜸 38.0 · 비상 38.4 · 타이틀 41.4)
+ *  타이틀: 오프닝 곡의 끝(타이틀 팡파르)이 거의 끝날 때 타이틀 곡으로 2초 교차 페이드
  */
 export function CutOpening({ onDone }: { onDone: () => void }): ReactElement {
   const steps = useMemo(openingSteps, []);
-  const title = steps.length - 1;
+  const bFirst = steps.findIndex((q) => q.sync);
+  const maouFirst = steps.findIndex((q) => q.cg.key === 'o7');
   const started = useRef(false);
   const titled = useRef(false);
+  const where = useRef<'a' | 'maou' | 'b'>('a');
   const log = (ev: string): void => {
     if (!location.search.includes('skytest') && !location.search.includes('preview')) return;
-    const b = bgmInfo();
-    ((window as unknown as { __bgmLog?: unknown[] }).__bgmLog ??= []).push([Math.round(performance.now()), ev, b.name, +b.pos.toFixed(2), +b.dur.toFixed(1)]);
+    ((window as unknown as { __bgmLog?: unknown[] }).__bgmLog ??= []).push([Math.round(performance.now()), ev, +songPos().toFixed(2)]);
   };
   useEffect(() => {
-    if (location.search.includes('skytest') || location.search.includes('preview')) Object.assign(window, { __bgmInfo: bgmInfo, __audioTap: audioTap });
-    // 오프닝이 끝나면(교차 페이드가 끝난 뒤) 오프닝 곡 메모리 반납
-    return () => { window.setTimeout(() => releaseBgm('openingHold'), 3000); };
-  }, []);
+    if (location.search.includes('skytest') || location.search.includes('preview')) Object.assign(window, { __bgmInfo: bgmInfo, __audioTap: audioTap, __songPos: songPos, __OT: OT });
+    // 타이틀 화면에 와 있고 곡(타이틀 팡파르)이 끝나 가면 → 타이틀 곡으로 2초 교차 페이드
+    const id = window.setInterval(() => {
+      if (titled.current || where.current !== 'b') return;
+      if (songPos() >= OT.songEnd - 2.2) { titled.current = true; songStop(2.2); playBgm('title', 0.1, 2.2); log('title:곡 끝(타이틀 화면)'); }
+    }, 100);
+    return () => { window.clearInterval(id); if (!titled.current) songStop(0.8); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <CutPlayer
       name="opening"
       steps={steps}
       onDone={onDone}
-      onStep={(i) => {
-        if (!started.current) { started.current = true; playBgm('openingHold', 0.8, 0.6); log('opening:start'); }
-        if (i === title && !titled.current) { titled.current = true; playBgm('title', 2.0, 2.0); log('title:타이틀 화면'); }
+      clock={songPos}
+      onEnter={(i) => {
+        if (!started.current) { started.current = true; void songStart('opening', 0, 0.6).then(() => songHold(...OT.march)); log('곡 시작 0초'); return; }
+        if (i >= bFirst) {
+          if (i === bFirst) { where.current = 'b'; titled.current = false; songJump(OT.bIn, 0.35); log(`동기화 구간 진입 → ${OT.bIn}초`); }
+          return;
+        }
+        if (i >= maouFirst) {
+          const p = songPos();
+          if (where.current !== 'maou' || p < 27.9 || p >= 31.2) { songJump(OT.maou, 0.8); log(`마왕 장면 → ${OT.maou}초`); }
+          where.current = 'maou';
+          songHold(...OT.maouHold);
+          return;
+        }
+        if (where.current !== 'a') { songJump(OT.march[0], 0.8); log(`이전 장면으로 → ${OT.march[0]}초`); }
+        where.current = 'a';
+        songHold(...OT.march);
       }}
     />
   );

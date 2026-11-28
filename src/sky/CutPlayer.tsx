@@ -27,7 +27,15 @@ export interface CutCg {
 }
 export type CutKind = 'narr' | 'char' | 'none' | 'press';
 export interface CutLine { kind: CutKind; text: string; name?: string; face?: string; faceCls?: string }
-export interface CutStep { cg: CutCg; line: CutLine; enter?: () => void }
+export interface CutStep {
+  cg: CutCg; line: CutLine; enter?: () => void;
+  /** 음악 동기화 구간: 이 단계로 넘어가는 곡 위치(초) — 앞 단계가 sync 면 곡이 이 위치에 닿는 순간 자동으로 넘어감 */
+  at?: number;
+  /** 음악 동기화 구간에 속함 (터치로 넘기지 않음 · ◀ 없음) */
+  sync?: boolean;
+  /** 이 단계로 들어올 때 디졸브 시간(ms) */
+  dis?: number;
+}
 
 const T_DISSOLVE = 800;
 const T_IN = 250;
@@ -62,9 +70,9 @@ function Rich({ text }: { text: string }): ReactElement {
 }
 const plain = (t: string): string => t.replace(/\[\[|\]\]/g, '');
 
-function Layer({ cg, on }: { cg: CutCg; on: boolean }): ReactElement {
+function Layer({ cg, on, dis }: { cg: CutCg; on: boolean; dis: number }): ReactElement {
   return (
-    <div className={`cp-layer${on ? ' on' : ''}`}>
+    <div className={`cp-layer${on ? ' on' : ''}`} style={{ transitionDuration: `${dis}ms` }}>
       <div className={`cp-cg${cg.cls ? ` ${cg.cls}` : ''}`} style={{ '--r': cg.ratio } as CSSProperties}>
         {cg.img && <img className="cp-bg" src={cg.img} alt="" draggable={false} />}
         {cg.layers}
@@ -75,8 +83,12 @@ function Layer({ cg, on }: { cg: CutCg; on: boolean }): ReactElement {
 
 type St = 'load' | 'dissolve' | 'in' | 'wait' | 'out' | 'done';
 
-export function CutPlayer({ steps, onDone, onStep, skipLabel = 'SKIP ▶▶', name }: {
+export function CutPlayer({ steps, onDone, onStep, onEnter, clock, skipLabel = 'SKIP ▶▶', name }: {
   steps: CutStep[];
+  /** 단계로 들어가기 시작할 때 (디졸브 전 · 음악 위치 맞추기) */
+  onEnter?: (i: number) => void;
+  /** 음악 동기화 시계: 지금 곡 위치(초) — 오디오 재생 시각 기준 */
+  clock?: () => number;
   onDone: () => void;
   /** 단계가 화면에 확정될 때 (음악 바꾸기 등) */
   onStep?: (i: number) => void;
@@ -89,7 +101,9 @@ export function CutPlayer({ steps, onDone, onStep, skipLabel = 'SKIP ▶▶', na
   const [next, setNext] = useState<string | null>(null); // 디졸브로 올라오는 CG
   const [st, setSt] = useState<St>('load');
   const [auto, setAuto] = useState(false);
-  const [keepFace, setKeepFace] = useState(false);  // 같은 사람이 이어서 말하면 초상화·이름표는 그대로
+  const [keepFace, setKeepFace] = useState(false);
+  const [dis, setDis] = useState(T_DISSOLVE);
+  const rootRef = useRef<HTMLDivElement>(null);  // 같은 사람이 이어서 말하면 초상화·이름표는 그대로
   const gen = useRef(0);
   const timers = useRef<number[]>([]);
   const done = useRef(false);
@@ -126,6 +140,7 @@ export function CutPlayer({ steps, onDone, onStep, skipLabel = 'SKIP ▶▶', na
 
   const armWait = (i: number): void => {
     set('wait');
+    if (steps[i].sync) return; // 음악 동기화 구간: 곡 위치가 다음 단계로 넘김 (AUTO·터치 타이머 없음)
     if (!autoRef.current) return;
     const l = steps[i].line;
     later(l.kind === 'press' ? 99999999 : l.text ? readMs(plain(l.text)) : 2400, () => advance());
@@ -140,6 +155,7 @@ export function CutPlayer({ steps, onDone, onStep, skipLabel = 'SKIP ▶▶', na
   /** 단계 i 로 (CG 가 같으면 글자만 · 다르면 준비 → 디졸브 → 글자) */
   const show = (i: number): void => {
     clear();
+    onEnter?.(i);
     const cg = steps[i].cg;
     if (cg.key === curRef.current) { enterText(i); return; }
     idxRef.current = i; setIdx(i);
@@ -147,11 +163,13 @@ export function CutPlayer({ steps, onDone, onStep, skipLabel = 'SKIP ▶▶', na
     const g = gen.current;
     void prepCg(cg).then(() => {
       if (g !== gen.current || done.current) return;
+      const d = steps[i].dis ?? (curRef.current ? T_DISSOLVE : 450);
+      setDis(d);
       setNext(cg.key);                                            // 투명으로 먼저 깔고
       requestAnimationFrame(() => requestAnimationFrame(() => {   // 두 프레임 뒤 불투명으로 → 실제 교차 디졸브
         if (g !== gen.current || done.current) return;
         set('dissolve');
-        later(curRef.current ? T_DISSOLVE : 450, () => {
+        later(steps[i].dis ?? (curRef.current ? T_DISSOLVE : 450), () => {
           curRef.current = cg.key; setCur(cg.key); setNext(null);
           enterText(i);
           // 다음 두 CG 미리 받기
@@ -171,6 +189,7 @@ export function CutPlayer({ steps, onDone, onStep, skipLabel = 'SKIP ▶▶', na
   const advance = (): void => {
     const s = stRef.current;
     const i = idxRef.current;
+    if (steps[i]?.sync) return;                        // 음악 동기화 구간: 터치로 넘기지 않음 (연타해도 중복 없음)
     if (s === 'in') { clear(); armWait(i); return; }   // 페이드 중 터치: 바로 다 보이기
     if (s !== 'wait') return;                          // 받는 중 · 디졸브 · 사라지는 중엔 무시
     if (i + 1 >= steps.length) { finish(); return; }
@@ -178,9 +197,40 @@ export function CutPlayer({ steps, onDone, onStep, skipLabel = 'SKIP ▶▶', na
   };
   const back = (): void => {
     const i = idxRef.current;
-    if (i <= 0 || (stRef.current !== 'wait' && stRef.current !== 'in')) return;
-    go(i - 1);
+    if (i <= 0 || steps[i]?.sync || (stRef.current !== 'wait' && stRef.current !== 'in')) return;
+    // 음악 동기화 구간 뒤에서 ◀: 동기화 구간을 건너뛰고 그 앞 대사로 (구간은 다시 들어오면 처음부터 · 음악과 함께)
+    let j = i - 1;
+    while (j > 0 && steps[j].sync) j--;
+    go(j);
   };
+  // 음악 동기화: 매 프레임 곡 위치를 읽어 ① 등장 효과(data-at) 켜기 ② 다음 동기화 단계로 넘기기 — 프레임이 늦어도 곡 위치 기준이라 어긋나지 않음
+  useEffect(() => {
+    if (!clock) return;
+    let id = 0;
+    const log = test ? ((window as unknown as { __syncLog?: unknown[] }).__syncLog ??= []) : null;
+    const tick = (): void => {
+      id = requestAnimationFrame(tick);
+      if (done.current) return;
+      const pos = clock();
+      if (pos < 0) return;
+      const root = rootRef.current;
+      if (root) root.querySelectorAll<HTMLElement>('[data-at]').forEach((el) => {
+        const on = pos >= +(el.dataset.at ?? 0);
+        if (on !== el.classList.contains('go')) {
+          el.classList.toggle('go', on);
+          if (on && log) log.push([Math.round(performance.now()), +pos.toFixed(3), +(el.dataset.at ?? 0), el.dataset.k ?? '']);
+        }
+      });
+      const i = idxRef.current;
+      const nx = steps[i + 1];
+      if (steps[i]?.sync && nx?.at != null && pos >= nx.at && (stRef.current === 'in' || stRef.current === 'wait')) {
+        if (log) log.push([Math.round(performance.now()), +pos.toFixed(3), nx.at, `step${i + 1}`]);
+        show(i + 1);
+      }
+    };
+    id = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(id);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const toggleAuto = (): void => {
     autoRef.current = !autoRef.current; setAuto(autoRef.current);
     if (stRef.current === 'wait') { clear(); armWait(idxRef.current); }
@@ -211,11 +261,11 @@ export function CutPlayer({ steps, onDone, onStep, skipLabel = 'SKIP ▶▶', na
   const ctl = (f: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); unlockAudio(); f(); };
   const shown = [cur, next].filter((k, j, a): k is string => !!k && a.indexOf(k) === j);
   return (
-    <div className={`sky cp cp-${name}`} onClick={() => { unlockAudio(); advance(); }}>
+    <div ref={rootRef} className={`sky cp cp-${name}${step?.sync ? ' syncing' : ''}`} onClick={() => { unlockAudio(); advance(); }}>
       <div className="cp-stage">
-        {shown.map((k) => <Layer key={k} cg={cgs.current.get(k)!} on={k === cur || st !== 'load'} />)}
+        {shown.map((k) => <Layer key={k} cg={cgs.current.get(k)!} on={k === cur || st !== 'load'} dis={dis} />)}
         <nav className="cp-ctl" onClick={(e) => e.stopPropagation()}>
-          <button type="button" className="cp-back" aria-label="이전 대사" onClick={ctl(back)} disabled={idx <= 0}>◀</button>
+          <button type="button" className="cp-back" aria-label="이전 대사" onClick={ctl(back)} disabled={idx <= 0 || !!step?.sync}>◀</button>
           <button type="button" className={`cp-auto${auto ? ' on' : ''}`} aria-pressed={auto} onClick={ctl(toggleAuto)}>AUTO</button>
           <button type="button" className="cp-skip" onClick={ctl(finish)}>{skipLabel}</button>
         </nav>

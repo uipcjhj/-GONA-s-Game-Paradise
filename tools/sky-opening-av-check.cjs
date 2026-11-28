@@ -58,12 +58,12 @@ const [url, out, mode = 'manual', w = '393', h = '636', VIDEO = '0'] = process.a
     // 사람처럼: 대사 길이만큼 읽고(최소 2초) 터치
     for (let k = 0; k < n + 2; k++) {
       const c = await waitSt((x) => x.st === 'wait', 30000);
-      if (!c || c.kind === 'press') break;
+      if (!c || c.kind === 'press' || c.i >= 13) break; // 13~ = 음악 동기화 구간(자동) → 터치하지 않음
       await p.waitForTimeout(c.kind === 'none' ? 2600 : Math.max(2000, 900 + c.text.length * 110));
       await tap();
     }
     await waitSt((c) => c.kind === 'press' && c.st === 'wait', 30000);
-    await p.waitForTimeout(5000);
+    await p.waitForTimeout(8000); // 타이틀 팡파르 → 타이틀 곡 교차까지
   }
   const av = await p.evaluate(() => window.__av);
   const bl = await p.evaluate(() => window.__bgmLog || []);
@@ -87,17 +87,16 @@ const [url, out, mode = 'manual', w = '393', h = '636', VIDEO = '0'] = process.a
   // ── 음악 판정
   const nm = av.map((r) => r.bgm);
   const switches = []; for (let k = 1; k < av.length; k++) if (nm[k] !== nm[k - 1]) switches.push({ t: av[k].t, from: nm[k - 1], to: nm[k], step: av[k].i });
-  const restarts = []; for (let k = 1; k < av.length; k++) if (nm[k] && nm[k] === nm[k - 1] && av[k].run && av[k - 1].run && av[k].pos < av[k - 1].pos - 0.5 && !(nm[k] === 'title' && av[k - 1].pos > 30)) restarts.push(av[k].t);
+  const restarts = []; for (let k = 1; k < av.length; k++) if (nm[k] && nm[k] === nm[k - 1] && av[k].run && av[k - 1].run && av[k - 1].pos > 5 && av[k].pos < 1) restarts.push(av[k].t); // 처음(0초)으로 되돌아감 = 재시작
   ok(`[${mode}] 같은 곡이 처음부터 다시 시작되지 않음`, restarts.length === 0, restarts.slice(0, 3).join(','));
   ok(`[${mode}] 곡 교체는 최대 1번 (오프닝 → 타이틀)`, switches.filter((s) => s.from).length <= 1, JSON.stringify(switches));
   const stepSw = switches.filter((s) => s.from === 'opening' && s.to === 'title');
   const titleLog = bl.filter((x) => String(x[1]).startsWith('title'));
   ok(`[${mode}] 타이틀 곡은 타이틀 화면에 도착한 뒤에만 (중간 장면·곡 끝에서 먼저 나오지 않음)`, titleLog.length === 1 && /타이틀 화면/.test(titleLog[0][1]) && !av.some((r) => r.bgm === 'title' && r.kind !== 'press'), titleLog.map((x) => x[1]).join(','));
-  // 반복 구간: 곡이 46.5초를 넘겨도(천천히 읽기) 오프닝 곡이 계속 · 이음매에서 음량 급변 없음
-  const hold = av.filter((r) => r.bgm === 'openingHold' && r.pos > 37.8);
-  if (mode === 'manual') ok(`[manual] 천천히 읽으면 수호자 악절(33.0~37.8초)이 이어서 반복됨`, hold.length > 20, `반복 중 표본 ${hold.length} · 최대 재생 위치 ${Math.max(0, ...av.filter((r) => r.bgm === 'openingHold').map((r) => r.pos)).toFixed(1)}초`);
-  let jump = 0; for (let k = 1; k < av.length; k++) { const a1 = av[k - 1], a2 = av[k]; if (a1.bgm === 'openingHold' && a2.bgm === 'openingHold' && a2.pos > 37.8 && a1.rms > 0.01 && a2.rms > 0.01 && (a2.rms / a1.rms > 2.2 || a1.rms / a2.rms > 2.2)) jump++; }
-  if (hold.length) ok(`[${mode}] 반복 이음매에서 음량 급변 없음`, jump === 0, `급변 ${jump}회`);
+  // 수동 구간에서 곡이 앞서 가지 않음: 동기화 구간 진입 전에는 곡 위치가 31.3초(성문 '쿵' 직전)를 넘지 않음
+  const firstB = av.findIndex((r) => r.i >= 13);
+  const ahead = av.slice(0, firstB > 0 ? firstB : av.length).filter((r) => r.bgm === 'opening' && r.pos > 31.25);
+  ok(`[${mode}] 스토리 구간에서 곡이 가족 등장 음악(32초~)으로 먼저 넘어가지 않음`, ahead.length === 0, `${ahead.length}회 · 스토리 구간 최대 곡 위치 ${Math.max(0, ...av.slice(0, firstB > 0 ? firstB : 0).map((r) => r.pos)).toFixed(1)}초`);
   // 무음: 곡 재생 중(시작 1초 이후) RMS 가 0.002 아래로 0.5초 이상
   const rmsOn = av.some((r) => r.rms > 0.003);
   let sil = 0, maxSil = 0; const start = av.findIndex((r) => r.rms > 0.003);

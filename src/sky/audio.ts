@@ -539,12 +539,192 @@ function htmlRamp(a: HTMLAudioElement, to: number, sec: number): Promise<void> {
     step();
   });
 }
+// ───────── 오프닝 곡 플레이어 (음악 재생 위치 = 연출 시계) ─────────
+/**
+ * 오프닝 스토리북 전용: 오프닝 곡 하나를 '재생 위치' 기준으로 다룸
+ *  - songPos(): 오디오 시계(AudioContext.currentTime)로 계산한 지금 곡 위치(초) → 화면 연출이 이 값을 보고 움직임 (따로 도는 타이머 없음)
+ *  - songHold(a, b): 곡이 b 에 닿으면 [a, b) 구간을 이음매 없이 반복 (구간 끝 0.25초를 a 직전 소리와 미리 섞은 사본으로 전환 → 딸깍 없음)
+ *  - songJump(p, fade): 곡의 p 초 지점으로 짧은 교차 페이드 (장면이 실제로 바뀌는 곳에서만)
+ *  - 소리는 하나의 곡에서만 나옴: 새 재생을 시작하면 이전 재생은 페이드 후 정지 (중복 재생 없음)
+ */
+interface SongVoice { src: AudioBufferSourceNode; gain: GainNode; t0: number; a: number; L: number }
+let song: { name: BgmName; raw: AudioBuffer; vol: number; v: SongVoice | null; pend: SongVoice | null; hold: [number, number] | null; olds: SongVoice[] } | null = null;
+const segCache = new Map<string, AudioBuffer>();
+const SEG_X = 0.25;
+function segOf(c: AudioContext, raw: AudioBuffer, a: number, b: number): AudioBuffer {
+  const key = `${a}-${b}`;
+  const hit = segCache.get(key);
+  if (hit) return hit;
+  const sr = raw.sampleRate;
+  const ia = Math.round(a * sr), ib = Math.round(b * sr), n = Math.round(SEG_X * sr);
+  const out = c.createBuffer(raw.numberOfChannels, ib - ia, sr);
+  for (let ch = 0; ch < raw.numberOfChannels; ch++) {
+    const s0 = raw.getChannelData(ch), d = out.getChannelData(ch);
+    d.set(s0.subarray(ia, ib));
+    for (let i = 0; i < n; i++) {
+      const k = i / n, j = d.length - n + i, pre = ia - n + i;
+      if (pre >= 0) d[j] = s0[ia + j] * Math.cos((k * Math.PI) / 2) + s0[pre] * Math.sin((k * Math.PI) / 2);
+    }
+  }
+  segCache.set(key, out);
+  return out;
+}
+function voiceAt(c: AudioContext, buf: AudioBuffer, when: number, off: number, a: number, L: number, loop: boolean, gain0: number): SongVoice {
+  const g = c.createGain();
+  g.gain.setValueAtTime(gain0, c.currentTime);
+  g.connect(musicBus!);
+  const s = c.createBufferSource();
+  s.buffer = buf;
+  if (loop) { s.loop = true; s.loopStart = 0; s.loopEnd = buf.duration; }
+  s.connect(g);
+  s.start(when, off);
+  return { src: s, gain: g, t0: when - off, a, L };
+}
+function retire(v: SongVoice | null, fade: number): void {
+  if (!v || !ctx) return;
+  const t = ctx.currentTime;
+  try {
+    v.gain.gain.cancelScheduledValues(t);
+    v.gain.gain.setValueAtTime(v.gain.gain.value, t);
+    v.gain.gain.linearRampToValueAtTime(0, t + Math.max(0.03, fade));
+    v.src.stop(t + Math.max(0.03, fade) + 0.05);
+  } catch { /* 이미 멈춤 */ }
+  window.setTimeout(() => { try { v.gain.disconnect(); } catch { /* 무시 */ } }, (fade + 0.4) * 1000);
+}
+let htmlSongHold: (() => void) | null = null;
+/** 오프닝 곡 시작 (p 초부터) — 다른 BGM 은 페이드아웃 */
+export function songStart(name: BgmName, p = 0, fade = 0.6): Promise<void> {
+  const info = BGM[name];
+  stopBgm(fade);
+  if (mode === 'html') {
+    curName = name; wanted = name;
+    return blobUrl(`bgm-${info.file ?? name}`).then((url) => {
+      if (!url) return;
+      htmlBgm ??= new Audio();
+      const a = htmlBgm;
+      a.src = url; a.loop = false; a.currentTime = p; a.volume = info.vol;
+      if (!muted) void a.play().catch(() => undefined);
+      song = { name, raw: null as unknown as AudioBuffer, vol: info.vol, v: null, pend: null, hold: null, olds: [] };
+    });
+  }
+  const c = makeCtx();
+  if (!c || !musicBus) return Promise.resolve();
+  return decode(`bgm-${info.file ?? name}`).then((raw) => {
+    if (!raw || !musicBus) return;
+    songStopNow();
+    const t = c.currentTime + 0.02;
+    const v = voiceAt(c, raw, t, p, 0, raw.duration, false, 0);
+    v.gain.gain.setValueAtTime(0, t);
+    v.gain.gain.linearRampToValueAtTime(info.vol, t + Math.max(0.03, fade));
+    song = { name, raw, vol: info.vol, v, pend: null, hold: null, olds: [] };
+    curName = name; wanted = name;
+  });
+}
+function songStopNow(): void {
+  if (!song) return;
+  retire(song.v, 0.05); retire(song.pend, 0.05);
+  song = null;
+}
+/** 곡을 p 초 지점으로 (교차 페이드 fade 초) · 예약된 반복은 취소 */
+export function songJump(p: number, fade = 0.6): void {
+  if (!song) return;
+  song.hold = null;
+  if (mode === 'html') { if (htmlBgm) { if (htmlSongHold) { htmlBgm.removeEventListener('timeupdate', htmlSongHold); htmlSongHold = null; } htmlBgm.currentTime = p; } return; }
+  const c = ctx!;
+  const t = c.currentTime + 0.02;
+  retire(song.v, fade); retire(song.pend, Math.min(fade, 0.1)); song.pend = null;
+  const v = voiceAt(c, song.raw, t, p, 0, song.raw.duration, false, 0);
+  v.gain.gain.setValueAtTime(0, t);
+  v.gain.gain.linearRampToValueAtTime(song.vol, t + Math.max(0.03, fade));
+  song.v = v;
+}
+/** 곡이 b 초에 닿으면 [a, b) 를 반복 (이미 지나갔으면 그 구간으로 바로 교차) */
+export function songHold(a: number, b: number): void {
+  if (!song) return;
+  if (song.hold && song.hold[0] === a && song.hold[1] === b) return;
+  song.hold = [a, b];
+  if (mode === 'html') {
+    const el = htmlBgm;
+    if (!el) return;
+    if (htmlSongHold) el.removeEventListener('timeupdate', htmlSongHold);
+    htmlSongHold = () => { if (el.currentTime >= b - 0.05) el.currentTime = a; };
+    el.addEventListener('timeupdate', htmlSongHold);
+    return;
+  }
+  const c = ctx!, v = song.v;
+  if (!v) return;
+  retire(song.pend, 0.03); song.pend = null;
+  const seg = segOf(c, song.raw, a, b);
+  const L = seg.duration;
+  const now = c.currentTime;
+  const pos = songPos();
+  if (v.L === L && v.a === a) return; // 이미 그 구간을 반복 중
+  const ts = v.t0 + (b - SEG_X); // 원곡이 (b - 0.25초)에 닿는 순간 = 반복 사본과 소리가 같은 지점 → 끊김 없이 바꿔 탐
+  if (v.L >= song.raw.duration - 0.01 && ts > now + 0.03 && pos < b - SEG_X) {
+    const nv = voiceAt(c, seg, ts, L - SEG_X, a, L, true, 0);
+    nv.t0 = ts - (L - SEG_X); // 반복 시계: (now - t0) mod L
+    nv.gain.gain.setValueAtTime(0, now);
+    nv.gain.gain.setValueAtTime(song.vol, ts);
+    v.gain.gain.setValueAtTime(song.vol, ts - 0.005);
+    v.gain.gain.setValueAtTime(0, ts);
+    song.pend = nv;
+    const cur = v;
+    window.setTimeout(() => { if (song && song.pend === nv) { try { cur.src.stop(); } catch { /* 무시 */ } song.v = nv; song.pend = null; } }, (ts - now) * 1000 + 60);
+  } else {
+    // 이미 b 근처를 지났거나 다른 구간 반복 중 → 0.5초 교차로 반복 구간에 합류
+    const off = pos >= a && pos < b ? pos - a : 0;
+    const nv = voiceAt(c, seg, now + 0.02, off, a, L, true, 0);
+    nv.gain.gain.setValueAtTime(0, now + 0.02);
+    nv.gain.gain.linearRampToValueAtTime(song.vol, now + 0.52);
+    retire(v, 0.5);
+    song.v = nv;
+  }
+}
+/** 반복 예약 취소 (아직 반복에 들어가지 않았을 때만 — 원곡 그대로 계속) */
+export function songUnhold(): void {
+  if (!song) return;
+  song.hold = null;
+  if (mode === 'html') { if (htmlBgm && htmlSongHold) { htmlBgm.removeEventListener('timeupdate', htmlSongHold); htmlSongHold = null; } return; }
+  if (song.pend && song.v && ctx) {
+    const t = ctx.currentTime;
+    song.v.gain.gain.cancelScheduledValues(t);
+    song.v.gain.gain.setValueAtTime(song.vol, t);
+    retire(song.pend, 0.02);
+    song.pend = null;
+  }
+}
+/** 지금 곡 위치(초) — 오디오 시계 기준 · 반복 중이면 반복 구간 안의 위치 */
+export function songPos(): number {
+  if (!song) return -1;
+  if (mode === 'html') return htmlBgm ? htmlBgm.currentTime : -1;
+  if (!ctx || !song.v) return -1;
+  // 실제로 스피커에서 들리는 위치 = 컨텍스트 시각 - 출력 지연 (화면이 소리보다 먼저 나오지 않게)
+  const c2 = ctx as AudioContext & { outputLatency?: number };
+  const now = ctx.currentTime - Math.min(0.2, (c2.outputLatency || 0) + (ctx.baseLatency || 0));
+  const v = song.pend && now >= song.pend.t0 + song.pend.L - SEG_X ? song.pend : song.v;
+  const e = now - v.t0;
+  if (v.L < song.raw.duration - 0.01) return v.a + (((e % v.L) + v.L) % v.L);
+  return e;
+}
+export function songRunning(): boolean {
+  if (mode === 'html') return !!htmlBgm && !htmlBgm.paused;
+  return !!song && !!ctx && ctx.state === 'running';
+}
+export function songStop(fade = 1.5): void {
+  if (!song) return;
+  retire(song.v, fade); retire(song.pend, fade);
+  if (mode === 'html') htmlBgm?.pause();
+  song = null;
+  if (curName === 'opening' || curName === 'openingHold') { curName = null; wanted = null; }
+}
+
 /** 지금 BGM 이름 · 재생 위치(초) · 곡 길이 — 반복 없는 곡이 끝나기 전에 다음 곡으로 자연스럽게 넘기려고 */
 export function bgmInfo(): { name: BgmName | null; pos: number; dur: number; running: boolean } {
   if (mode === 'html') {
     const a = htmlBgm;
     return { name: curName, pos: a ? a.currentTime : 0, dur: a && isFinite(a.duration) ? a.duration : 0, running: !!a && !a.paused };
   }
+  if (song && ctx) return { name: song.name, pos: songPos(), dur: song.raw.duration, running: ctx.state === 'running' };
   if (!cur || !ctx) return { name: curName, pos: 0, dur: 0, running: false };
   return { name: cur.name, pos: ctx.currentTime - cur.t0, dur: cur.dur, running: ctx.state === 'running' };
 }

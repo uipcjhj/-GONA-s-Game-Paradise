@@ -1220,3 +1220,27 @@ body.ui2 .sky { word-break: keep-all; overflow-wrap: break-word; }
 .cp-look { position: absolute; right: 16px; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 8px); font: 700 11px Galmuri11, sans-serif; color: rgba(255, 228, 150, 0.8); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
 .cp-look.on { opacity: 1; animation: os-blink 1.4s ease-in-out infinite; }
 .cp-text.on:not(.entering) { transition: none; }
+/* 오프닝 음악 동기화 구간: 곡 위치가 되면 엔진이 data-at 요소에 .go 를 붙임 (등장 애니메이션은 그 순간 시작) */
+.cp.syncing .cp-more, .cp.syncing .cp-look { display: none; }
+.cp-spr.cut { opacity: 0; animation: none; }
+.cp-spr.cut.go { animation: os-cut 0.55s cubic-bezier(0.18, 0.85, 0.3, 1) both; }
+.cp .os-streak { animation: none; opacity: 0; }
+.cp .os-streak.go { animation: os-streak 0.45s ease-out both; }
+.cp-light { position: absolute; width: 11%; aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%) scale(0); opacity: 0; pointer-events: none;
+  background: radial-gradient(circle, #ffffff 0 14%, var(--c) 34%, transparent 68%); mix-blend-mode: screen; }
+.cp-light.go { animation: cp-light-in 0.35s ease-out both; }
+@keyframes cp-light-in { from { transform: translate(-50%, -50%) scale(0); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 0.95; } }
+/* 37.0 출격 장: 여섯 빛이 링에서 시작 → 36.6 이후(go) 고나에게 모임 */
+.cp-light.cv { transform: translate(-50%, -50%) scale(1); opacity: 0.95; }
+.cp-light.cv.go { animation: cp-light-cv 0.9s ease-in both; }
+@keyframes cp-light-cv { to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.35); opacity: 0; } }
+.cp-gather { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at 50% 50%, rgba(255, 236, 190, 0.55), rgba(255, 236, 190, 0) 60%); }
+.cp-gather.go { animation: cp-gather 0.6s ease-in both; }
+@keyframes cp-gather { from { opacity: 0; } to { opacity: 1; } }
+.cp-swapin { opacity: 0; transition: opacity 0.22s ease-out; }
+.cp-swapin.go { opacity: 1; }
+.cp-swapout.go { opacity: 0; transition: opacity 0.22s ease-out; }
+.cp-glow { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 52%, rgba(255, 240, 200, 0.75), rgba(255, 220, 150, 0) 55%); }
+.cp-glow.go { animation: cp-glow 0.7s ease-out both; }
+@keyframes cp-glow { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0.25; } }
+.cp-spark-in { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 45%, rgba(255, 244, 214, 0.5), rgba(255, 244, 214, 0) 50%); animation: ttl2-fade 1.2s ease-out both; }
