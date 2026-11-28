@@ -1145,3 +1145,16 @@ body.ui2 .sky { word-break: keep-all; overflow-wrap: break-word; }
 /* 좁은 화면(≤340): 일시정지 설정 줄은 이름 위 · 버튼 아래 (버튼 혼자 다음 줄로 떨어지지 않게) */
 @media (max-width: 340px) { .ui2 .sky-opt > span { flex: 1 1 100%; } }
 .ui2 .nw { white-space: nowrap; }
+/* 오프닝 v2 · 여섯 수호자 컷인 (한 박에 한 명씩: 옆에서 '삭' → 실루엣 → 색 공개 + 번쩍) */
+.os-spr.cut { opacity: 0; animation: os-cut 0.55s cubic-bezier(0.18, 0.85, 0.3, 1) var(--d) both; will-change: transform, opacity, filter; }
+@keyframes os-cut {
+  0% { opacity: 0; transform: translate(calc(-50% + var(--dx)), -50%) scale(1.3); filter: brightness(0) drop-shadow(0 0 0 var(--c)); }
+  30% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); filter: brightness(0) drop-shadow(0 0 8px var(--c)); }
+  52% { transform: translate(-50%, -50%) scale(1.03); filter: brightness(2.4) drop-shadow(0 0 14px var(--c)); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: brightness(1) drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35)); }
+}
+.os-streak { position: absolute; left: -10%; width: 120%; height: 18%; transform: translateY(-50%) scaleX(0); transform-origin: 0 50%; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--c) 40%, #fff 60%, transparent); mix-blend-mode: screen; animation: os-streak 0.45s ease-out var(--d) both; }
+.os-streak.r { transform-origin: 100% 50%; background: linear-gradient(270deg, transparent, var(--c) 40%, #fff 60%, transparent); }
+@keyframes os-streak { 0% { opacity: 0; transform: translateY(-50%) scaleX(0) scaleY(0.4); } 25% { opacity: 0.85; transform: translateY(-50%) scaleX(1) scaleY(1); } 100% { opacity: 0; transform: translateY(-50%) scaleX(1) scaleY(0.1); } }
+.sky.os.paused .os-streak { animation-play-state: paused; }

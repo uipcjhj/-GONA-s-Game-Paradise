@@ -9,7 +9,7 @@
  *    (캔버스 매 프레임 그리기 · 색 입힌 사본 만들기 · React 10fps 갱신 없음 → 끊김 원인 제거)
  *  - 움직임: 기본 정지 · 몇 장면만 아주 느린 패닝/부유 (transform 만 · GPU)
  */
-import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties, type ReactElement } from 'react';
 import { packPath } from './artpack';
 import { playBgm, stopBgm, unlockAudio } from './audio';
 import { CUES } from './OpeningCinematic';
@@ -19,7 +19,10 @@ const src = (rel: string): string => `${BASE}${packPath(rel, '')}`;
 
 /** 장면 레이어: 배경 + (선택) 스프라이트 · fit 위치 · 아주 작은 움직임 */
 interface Sprite { img: string; x: number; y: number; w: number; float?: boolean }
-interface Page { bg: string; pos?: string; motion?: 'pan-up' | 'push' | 'none'; sprites?: Sprite[]; lines: number[]; hold?: number }
+interface Page { bg: string; pos?: string; motion?: 'pan-up' | 'push' | 'none'; sprites?: Sprite[]; lines: number[]; hold?: number; cut?: string[] }
+/** 수호자 컷인: 기존 오프닝처럼 0.6초(음악 한 박) 간격으로 한 명씩 '삭' 등장 · 실루엣 → 색 공개 · 빛줄기 */
+const CUT_BEAT = 0.6;
+const CUT_START = 0.75;
 const L = (i: number): number => i; // CUES 번호
 /** 기존 오프닝 장면 순서 그대로 (1 서기 2026 → 2 풍요 → 3 징조 → 4 사투 → 5 막혀버린 왕국 → 6 마왕 → 7 수호자 → 8 출격) */
 const PAGES: Page[] = [
@@ -35,7 +38,7 @@ const PAGES: Page[] = [
   { bg: 'opening3/guard-bg.jpg', sprites: [
     { img: 'opening3/fam-mom.webp', x: 18, y: 34, w: 30 }, { img: 'opening3/fam-dad.webp', x: 50, y: 30, w: 30 }, { img: 'opening3/fam-imo.webp', x: 82, y: 34, w: 30 },
     { img: 'opening3/fam-halmeoni.webp', x: 18, y: 60, w: 30 }, { img: 'opening3/fam-halabeoji.webp', x: 50, y: 58, w: 32 }, { img: 'opening3/fam-samchon.webp', x: 82, y: 60, w: 30 },
-  ], lines: [L(13)] },
+  ], lines: [L(13)], cut: ['#5ec8ff', '#ff8a3c', '#b45cff', '#ff8ac8', '#7ab8ff', '#7ff0d0'] },
   { bg: 'opening3/sortie.jpg', motion: 'push', lines: [L(14), L(15)] },
 ];
 const TITLE = PAGES.length; // 마지막 '페이지' = 타이틀
@@ -87,9 +90,16 @@ function Layer({ i, on }: { i: number; on: boolean }): ReactElement {
   return (
     <div className={`os-layer m-${p.motion ?? 'none'}${on ? ' on' : ''}`}>
       <img className="os-bg" src={src(p.bg)} alt="" style={p.pos ? { objectPosition: p.pos } : undefined} />
-      {(p.sprites ?? []).map((s) => (
-        <img key={s.img} className={`os-spr${s.float ? ' float' : ''}`} src={src(s.img)} alt="" style={{ left: `${s.x}%`, top: `${s.y}%`, width: `${s.w}%` }} />
-      ))}
+      {(p.sprites ?? []).map((s, k) => {
+        if (!p.cut) return <img key={s.img} className={`os-spr${s.float ? ' float' : ''}`} src={src(s.img)} alt="" style={{ left: `${s.x}%`, top: `${s.y}%`, width: `${s.w}%` }} />;
+        const v = { '--d': `${CUT_START + k * CUT_BEAT}s`, '--c': p.cut[k], '--dx': `${k % 2 ? 46 : -46}vw` } as CSSProperties;
+        return (
+          <Fragment key={s.img}>
+            <i className={`os-streak${k % 2 ? ' r' : ''}`} style={{ ...v, top: `${s.y}%` }} />
+            <img className="os-spr cut" src={src(s.img)} alt="" style={{ ...v, left: `${s.x}%`, top: `${s.y}%`, width: `${s.w}%` }} />
+          </Fragment>
+        );
+      })}
     </div>
   );
 }
@@ -207,8 +217,8 @@ export function OpeningStory({ onDone }: { onDone: () => void }): ReactElement {
   return (
     <div className={`sky os${paused ? ' paused' : ''}`} onClick={() => { unlockAudio(); if (!pausedRef.current) advance(); }}>
       <div className="os-stage">
-        {cur >= 0 && <Layer key={`c${cur}`} i={cur} on />}
-        {next >= 0 && <Layer key={`n${next}`} i={next} on={st !== 'loading'} />}
+        {/* 같은 장면은 같은 key 로 유지 → 디졸브가 끝나 '현재 장면'이 돼도 다시 만들지 않음 (컷인·카메라 움직임이 처음부터 다시 시작되지 않게) */}
+        {[cur, next].filter((k, j, a) => k >= 0 && a.indexOf(k) === j).map((k) => <Layer key={`p${k}`} i={k} on={k === cur || st !== 'loading'} />)}
         {!ready && <div className="os-loading">LOADING…</div>}
       </div>
       {page && page.lines.length > 0 && (
