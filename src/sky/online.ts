@@ -72,7 +72,7 @@ async function fresh(): Promise<Session | null> {
 export async function signUp(email: string, password: string): Promise<string> {
   const r = await req('/auth/v1/signup', { method: 'POST', body: JSON.stringify({ email, password }) });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) return j.msg ?? j.error_description ?? '가입하지 못했어요';
+  if (!r.ok) return /already|registered|exists/i.test(`${j.msg ?? ''}${j.error_code ?? ''}`) ? '이미 가입한 이메일이에요 · 로그인해 주세요' : /rate|limit/i.test(`${j.msg ?? ''}${j.error_code ?? ''}`) ? '잠시 뒤 다시 시도해 주세요 (가입 요청이 많아요)' : (j.msg ?? j.error_description ?? '가입하지 못했어요');
   if (!j.access_token) return '메일함의 확인 링크를 누른 뒤 로그인해 주세요';
   await afterLogin(j, email);
   return '';
@@ -80,9 +80,24 @@ export async function signUp(email: string, password: string): Promise<string> {
 export async function signIn(email: string, password: string): Promise<string> {
   const r = await req('/auth/v1/token?grant_type=password', { method: 'POST', body: JSON.stringify({ email, password }) });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) return j.error_description ?? j.msg ?? '로그인하지 못했어요';
+  if (!r.ok) return /not confirmed/i.test(`${j.error_description ?? j.msg ?? ''} ${j.error_code ?? ''}`) ? '메일함의 확인 링크를 먼저 눌러 주세요' : /invalid/i.test(`${j.error_description ?? ''}${j.error_code ?? ''}`) ? '이메일 또는 비밀번호가 맞지 않아요' : (j.error_description ?? j.msg ?? '로그인하지 못했어요');
   await afterLogin(j, email);
   return '';
+}
+/** 가입 확인 메일의 링크로 돌아왔을 때 (주소 #access_token=…) → 자동 로그인 · 주소에서 토큰 지움 · 실패해도 게임은 그대로 */
+export async function handleAuthRedirect(): Promise<string> {
+  if (!ONLINE || typeof location === 'undefined' || !/access_token=/.test(location.hash)) return '';
+  const h = new URLSearchParams(location.hash.slice(1));
+  history.replaceState(null, '', location.pathname + location.search);
+  const access = h.get('access_token'); const refresh = h.get('refresh_token') ?? '';
+  if (!access) return '';
+  try {
+    const r = await fetch(`${URL_}/auth/v1/user`, { headers: { apikey: KEY_, Authorization: `Bearer ${access}` } });
+    if (!r.ok) return '';
+    const u = (await r.json()) as { id: string; email?: string };
+    await afterLogin({ access_token: access, refresh_token: refresh, expires_in: +(h.get('expires_in') ?? 3600), user: { id: u.id } }, u.email ?? '');
+    return '메일 확인 완료! 로그인했어요';
+  } catch { return ''; }
 }
 async function afterLogin(j: { access_token: string; refresh_token: string; expires_in: number; user: { id: string } }, email: string): Promise<void> {
   const p = activeProfile();

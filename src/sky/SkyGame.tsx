@@ -14,7 +14,7 @@ import { newRewards, ackRewards } from './lobby';
 import { getSlot, lastSlot, putSlot, markContinue, finishStory, type Slot } from './story-save';
 import { achBadge, achDate, badgeSrc, MASTER_BADGE, DIFF_BADGE, FAM_BADGE } from './badges';
 import { pwa, onPwa, registerPwa, applyUpdate, promptInstall, precacheAll } from './pwa';
-import { ONLINE, account, signIn, signUp, signOut, deleteAccount, sync as cloudSync, setNickname as cloudNick, startPlay, reportStage, submitPlay, voidPlay, hasPlay, topBoard, myUserId, syncSoon, type BoardRow } from './online';
+import { ONLINE, account, signIn, signUp, signOut, deleteAccount, sync as cloudSync, setNickname as cloudNick, startPlay, reportStage, submitPlay, voidPlay, hasPlay, topBoard, myUserId, syncSoon, handleAuthRedirect, type BoardRow } from './online';
 import { THEME, familyText } from './theme';
 import { packPath } from './artpack';
 import { talkLines, talkMode, type TalkKey } from './story';
@@ -313,6 +313,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
 
   useEffect(() => {
     if (PROD && !location.search.includes('skytest') && !PREVIEW) registerPwa();
+    if (!PREVIEW) void handleAuthRedirect().then((m) => { if (m) { setAcct(account()); setRecords(loadRecords()); setToast(m); } });
     if (!PREVIEW) migrateLocal(); // 저장 구조 버전 표시 + 바뀌기 전 기록 전체 백업 (기존 기록은 그대로 읽힘)
     initAudio();
     if (location.search.includes('skytest')) Object.assign(window, { __skyAudio: audioState, __skyAudioTap: audioTap, __skyAudioDiag: audioDiag, __skyForceHtml: forceHtmlAudio });
