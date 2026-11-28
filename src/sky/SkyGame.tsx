@@ -69,6 +69,8 @@ const HUNT_POWER = [1, 2, 3, 3, 4, 4];
 /** 개발자용 엔딩 미리보기 (?preview=ending): 터치 → 엔딩 → 에필로그 → 크레딧 · 기록·앨범·랭킹에 아무것도 쓰지 않음 */
 /** 오프닝 v2 (스토리북 · 터치 진행) 미리보기: ?opening=2 — 승인 전에는 기존 오프닝 */
 const OPENING_V2 = /[?&]opening=2\b/.test(location.search);
+/** 공통 UI v2 (글자·버튼 정렬 · 랭킹·설정 재구성) 미리보기: ?ui=2 — 승인 전에는 기존 화면 */
+export const UI2 = /[?&]ui=2\b/.test(location.search);
 const SUB_CAND = ((): string | null => { const v = new URLSearchParams(location.search).get('sub') ?? ''; return /^([1-4]|C[134]|P1)$/.test(v) ? v : null; })();
 /** 로고 시안 미리보기(?logo=A..F · 한글 부제 레터링 ?sub=1..4) — 라이브 기본 로고는 바뀌지 않음 · 부제만 고르면 영문 로고는 E */
 const LOGO_CAND = ((): string | null => { const v = (new URLSearchParams(location.search).get('logo') ?? '').toUpperCase(); return 'ABCDEF'.includes(v) && v.length === 1 ? v : SUB_CAND ? 'E' : null; })();
@@ -248,6 +250,8 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   const [ckMsg, setCkMsg] = useState(''); // 체크포인트 저장 알림
   const [freshArm, setFreshArm] = useState(false); // '처음부터' 두 번 눌러 확인
   const [runTab, setRunTab] = useState<'arcade' | 'cont'>('arcade');
+  const [rk2, setRk2] = useState<'stage' | 'arcade' | 'cont' | 'daily' | 'online'>('arcade'); // UI2 랭킹 1차 탭
+  const [olTry, setOlTry] = useState(0); // 온라인 다시 시도
   const HOME: Phase = (THEME.id as string) === 'poop' ? 'lobby' : 'title';
   /** 공통 하단 내비게이션 (응가판 로비 · 앨범 · 랭킹): 홈 | 추억앨범 | 랭킹 | 프로필 */
   const navBar = (cur: 'home' | 'album' | 'rank'): ReactElement | null => {
@@ -274,13 +278,13 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
   const [recTab, setRecTab] = useState<'stage' | 'run' | 'daily' | 'online'>('stage');
   // 온라인 랭킹: 탭 · 보드 · 필터가 바뀔 때마다 다시 받기
   useEffect(() => {
-    if (phase !== 'records' || recTab !== 'online' || !ONLINE) return;
+    if (phase !== 'records' || !ONLINE || (UI2 ? rk2 !== 'online' : recTab !== 'online')) return;
     const board = olKind === 'daily' ? `daily:${today()}` : olKind === 'hunt' ? `hunt:${olStage}:${diff}` : `story:${diff}`;
     let live = true;
     setOlRows('loading');
     void topBoard(board, olKind === 'weekly', olFam || undefined).then((r) => live && setOlRows(r));
     return () => { live = false; };
-  }, [phase, recTab, olKind, olStage, olFam, diff]);
+  }, [phase, recTab, rk2, olTry, olKind, olStage, olFam, diff]);
   const [runOpts, setRunOpts] = useState<RunOpts | null>(null);
   const [stageArt, setStageArt] = useState<StageArt | null>(null);
   const [continues, setContinues] = useState(0);
@@ -343,6 +347,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     document.body.classList.toggle('sky-nobeta', hide);
   }, [phase]);
   useEffect(() => () => document.body.classList.remove('sky-nobeta'), []);
+  useEffect(() => { document.body.classList.toggle('ui2', UI2); return () => document.body.classList.remove('ui2'); }, []);
 
   // 화면별 BGM (첫 터치 전에는 예약만 → 잠금이 풀리는 순간 재생)
   useEffect(() => {
@@ -948,7 +953,27 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
               </div>
             </div>
           )}
-          {setOpen && (
+          {setOpen && UI2 && (
+            <div className="nick-modal" onPointerDown={(e) => e.stopPropagation()}>
+              <div className="nick-box prof-box lob-set set2">
+                <h2>설정</h2>
+                <p className="set2-h">게임 설정</p>
+                <div className="set2-row"><span>소리</span><div className="set2-seg"><button type="button" className={!mute ? 'on' : ''} onClick={() => { if (mute) { setMuted(false); setMute(false); } }}>켜짐</button><button type="button" className={mute ? 'on' : ''} onClick={() => { if (!mute) { setMuted(true); setMute(true); } }}>꺼짐</button></div></div>
+                <div className="set2-row"><span>화면 흔들림</span><div className="set2-seg">{([0, 0.5, 1] as const).map((v) => <button type="button" key={v} className={opts.shake === v ? 'on' : ''} onClick={() => setOpt({ shake: v })}>{v === 0 ? '끔' : v === 0.5 ? '약' : '보통'}</button>)}</div></div>
+                <div className="set2-row"><span>진동</span>{canVibrate ? <div className="set2-seg"><button type="button" className={opts.vibrate ? 'on' : ''} onClick={() => setOpt({ vibrate: true })}>켜짐</button><button type="button" className={!opts.vibrate ? 'on' : ''} onClick={() => setOpt({ vibrate: false })}>꺼짐</button></div> : <em>미지원</em>}</div>
+                <div className="set2-row"><span>근접 공격</span><div className="set2-seg"><button type="button" className={opts.autoMelee ? 'on' : ''} onClick={() => setOpt({ autoMelee: true })}>자동</button><button type="button" className={!opts.autoMelee ? 'on' : ''} onClick={() => setOpt({ autoMelee: false })}>끔</button></div></div>
+                <p className="set2-h">바로가기</p>
+                <div className="set2-links">
+                  {HAS_OPENING && <button type="button" className="sky-btn" onClick={() => { setSetOpen(false); sfx('menuMove'); openingFrom.current = 'lobby'; setSlide(0); setPhase('opening'); }}>🎬 오프닝 다시보기</button>}
+                  {!pwa.standalone && <button type="button" className="sky-btn pwa-install" onClick={() => { setSetOpen(false); setInstallOpen(true); }}>📱 홈 화면에 추가</button>}
+                  <button type="button" className="sky-btn" onClick={() => { setSetOpen(false); setProfOpen(true); }}>👤 프로필 · 백업</button>
+                  <button type="button" className="sky-btn" onClick={() => onExit()}>🗺 월드맵</button>
+                </div>
+                <button type="button" className="sky-btn sky-btn-go" onClick={() => setSetOpen(false)}>닫기</button>
+              </div>
+            </div>
+          )}
+          {setOpen && !UI2 && (
             <div className="nick-modal" onPointerDown={(e) => e.stopPropagation()}>
               <div className="nick-box prof-box lob-set">
                 <h2>설정</h2>
@@ -1285,7 +1310,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
       <div className={`sky end cred album${(THEME.id as string) === 'poop' ? ' has-nav' : ''}`}>
         <h2 className="recs-h">ALBUM · 추억 앨범</h2>
         <div className="alb-rate"><i style={{ width: `${Math.round((got / 108) * 100)}%` }} /><span>앨범 완성률 {Math.round((got / 108) * 100)}% · 기념사진 {got}/108</span></div>
-        <p className="alb-who">{prof ? <><b>{prof.nick}</b> 님의 앨범</> : '모험가'} · 완주 엽서 {runs}/18 · 미션 ★{mis.filter((x) => x.done).reduce((a, x) => a + x.stars, 0)}/{mis.reduce((a, x) => a + x.stars, 0)} · 업적 {ach.filter((a) => a.done).length}/{ach.length}
+        <p className="alb-who">{prof ? <><b>{prof.nick}</b> 님의 앨범</> : '모험가'} · <span className="nw">완주 엽서 {runs}/18</span> · <span className="nw">미션 ★{mis.filter((x) => x.done).reduce((a, x) => a + x.stars, 0)}/{mis.reduce((a, x) => a + x.stars, 0)}</span> · <span className="nw">업적 {ach.filter((a) => a.done).length}/{ach.length}</span>
           <button type="button" className="alb-mini" onClick={() => { setNickVal(prof?.nick ?? ''); setNickEdit('rename'); setPhase(HOME); }}>이름 바꾸기</button>
           {profiles().length > 1 && <button type="button" className="alb-mini" onClick={() => { const ps = profiles(); const i = ps.findIndex((p) => p.id === prof?.id); switchProfile(ps[(i + 1) % ps.length].id); setProf(activeProfile()); setRecords(loadRecords()); }}>다른 모험가</button>}
           <button type="button" className="alb-mini" onClick={() => { setNickVal(''); setNickEdit('new'); setPhase(HOME); }}>새 모험가</button>
@@ -1470,6 +1495,77 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     );
   }
 
+  if (phase === 'records' && UI2) {
+    const rowsOf = (board: string, legacy?: string) => [...topOf(board).map((e) => ({ e, old: false })), ...(legacy ? topOf(legacy).map((e) => ({ e, old: true })) : [])].sort((x, y) => y.e.score - x.e.score).slice(0, 10);
+    const diffRow = (
+      <div className="rk2-sub">{DIFFS.map((d) => <button key={d} type="button" className={diff === d ? 'on' : ''} onClick={() => { sfx('menuMove'); setDiff(d); }}>{DIFF[d].name}</button>)}</div>
+    );
+    const runList = (mode: 'arcade' | 'cont') => {
+      const rows = rowsOf(`${mode}:${diff}`, mode === 'cont' ? runBoard(diff) : undefined);
+      return (
+        <ol className="recs-list">
+          {rows.length === 0 && <li className="empty">{mode === 'arcade' ? '아직 연속 완주 기록이 없어요' : '아직 기록이 없어요'}</li>}
+          {rows.map(({ e, old }, i) => <li key={i}><b>{i + 1}</b><span>{String(e.score).padStart(8, '0')}</span><em>{e.time != null ? (mode === 'arcade' ? 'ARCADE CLEAR' : 'CLEAR') : `STAGE ${e.stage}`} · {CHARACTERS[e.fam].name}{old ? ' · 이전' : ''}</em><small>{e.at.slice(5)}</small></li>)}
+        </ol>
+      );
+    };
+    const olState: 'off' | 'loading' | 'fail' | 'empty' | 'ok' = !ONLINE ? 'off' : olRows === 'loading' ? 'loading' : !olRows ? 'fail' : olRows.length === 0 ? 'empty' : 'ok';
+    return (
+      <div className={`sky end cred recs rk2${(THEME.id as string) === 'poop' ? ' has-nav' : ''}`}>
+        <h2 className="recs-h">RANKING</h2>
+        <nav className="rk2-tabs">
+          {(['stage', 'arcade', 'cont', 'daily', 'online'] as const).map((t) => (
+            <button key={t} type="button" className={rk2 === t ? 'on' : ''} onClick={() => { sfx('menuMove'); setRk2(t); }}>{t === 'stage' ? '스테이지' : t === 'arcade' ? 'ARCADE' : t === 'cont' ? 'CONTINUE' : t === 'daily' ? '오늘' : '온라인'}</button>
+          ))}
+        </nav>
+        {(rk2 === 'stage' || rk2 === 'arcade' || rk2 === 'cont') && diffRow}
+        {rk2 === 'online' && ONLINE && (
+          <>
+            <div className="rk2-sub">{(['story', 'weekly', 'daily', 'hunt'] as const).map((k) => <button key={k} type="button" className={olKind === k ? 'on' : ''} onClick={() => { sfx('menuMove'); setOlKind(k); }}>{k === 'story' ? '역대' : k === 'weekly' ? '주간' : k === 'daily' ? '오늘' : '스테이지'}</button>)}</div>
+            {olKind !== 'daily' && diffRow}
+            {olKind === 'hunt' && <div className="rk2-sub">{STAGES.map((st) => <button key={st.id} type="button" className={olStage === st.id ? 'on' : ''} onClick={() => setOlStage(st.id)}>{st.id === 6 ? 'F' : st.id}</button>)}</div>}
+          </>
+        )}
+        <p className="rk2-cap">{rk2 === 'stage' ? '스테이지별 최고 기록 · 이 기기' : rk2 === 'arcade' ? 'STAGE 1부터 이어하기 없이 완주 · 이 기기' : rk2 === 'cont' ? '체크포인트 · 이어하기로 진행한 기록 · 이 기기' : rk2 === 'daily' ? '오늘의 도전 · 최근 7일 · 이 기기' : olKind === 'weekly' ? '이번 주 · 서버 확인 기록' : olKind === 'daily' ? '오늘 · 서버 확인 기록' : olKind === 'hunt' ? 'MEMORY HUNT 스테이지별 · 서버 확인 기록' : 'ARCADE 연속 완주 · 서버 확인 기록'}</p>
+        <div className="recs-body">
+          {rk2 === 'stage' && (
+            <table className="recs-table">
+              <thead><tr><th>STAGE</th><th>랭크</th><th>최고 점수</th><th>최단</th></tr></thead>
+              <tbody>
+                {STAGES.map((st) => { const b = bestOf(stageBoard(st.id, diff)); return <tr key={st.id}><td>{st.id === 6 ? 'FINAL' : st.id}<small>{THEME.stages[st.id - 1]?.name ?? st.name}</small></td><td>{medal(b.rank, 'sm') ?? '—'}</td><td>{b.score ? String(b.score).padStart(7, '0') : '—'}</td><td>{fmtT(b.time)}</td></tr>; })}
+              </tbody>
+            </table>
+          )}
+          {rk2 === 'arcade' && runList('arcade')}
+          {rk2 === 'cont' && runList('cont')}
+          {rk2 === 'daily' && (
+            <ol className="recs-list">
+              {(() => { const d = dailyFor(); const b = bestOf(dailyBoard(d.date)); return <li className="today"><b>오늘</b><span>{b.score ? String(b.score).padStart(8, '0') : '—'}</span><em>{d.title}</em><small>{dailyState(d.date).cleared ? '★ 클리어' : '미완료'}</small></li>; })()}
+              {dailyHistory(7).filter((h) => h.date !== today()).map((h) => <li key={h.date}><b>{h.date.slice(5)}</b><span>{h.best ? String(h.best).padStart(8, '0') : '—'}</span><em>{h.d.title}</em><small>{h.cleared ? '★ 클리어' : '실패'}</small></li>)}
+            </ol>
+          )}
+          {rk2 === 'online' && (olState === 'ok' ? (
+            <ol className="recs-list ol-list">
+              {(olRows as BoardRow[]).map((e, i) => (
+                <li key={e.user_id} className={`${i < 3 ? `top${i + 1}` : ''}${e.user_id === myUserId() ? ' me' : ''}`}>
+                  <b>{i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</b><span>{String(e.score).padStart(8, '0')}</span><em>{e.nickname} · {CHARACTERS[e.fam]?.name ?? e.fam}{e.rank ? ` · ${e.rank}` : ''}</em><small>{e.created_at.slice(5, 10)}</small>
+                </li>
+              ))}
+              {myUserId() && !(olRows as BoardRow[]).some((e) => e.user_id === myUserId()) && <li className="me"><b>—</b><span>나는 아직 TOP 100 밖</span><em /><small /></li>}
+            </ol>
+          ) : (
+            <div className={`rk2-state s-${olState}`}>
+              <b>{olState === 'off' ? '🌐 서버 미연결' : olState === 'loading' ? '불러오는 중…' : olState === 'fail' ? '⚠ 연결 실패' : '아직 기록 없음'}</b>
+              <small>{olState === 'off' ? '온라인 랭킹은 서버 연결 후 열려요' : olState === 'fail' ? '서버에 닿지 않았어요' : olState === 'empty' ? '첫 1위가 되어 보세요!' : ''}</small>
+              {olState === 'off' && <button type="button" className="sky-btn" onClick={() => setRk2('arcade')}>이 기기 기록 보기</button>}
+              {olState === 'fail' && <button type="button" className="sky-btn" onClick={() => setOlTry((n) => n + 1)}>다시 시도</button>}
+            </div>
+          ))}
+        </div>
+        {navBar('rank')}
+      </div>
+    );
+  }
   if (phase === 'records') {
     return (
       <div className={`sky end cred recs${(THEME.id as string) === 'poop' ? ' has-nav' : ''}`}>
