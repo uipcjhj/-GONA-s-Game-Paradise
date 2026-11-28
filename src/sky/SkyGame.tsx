@@ -681,7 +681,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     // 자동 검수: 스테이지·순간별로 보여야 하는 대사 (방식 · 순서)
     __skyExpected: (st: number, key: TalkKey, f: FamilyId) => resolveLines(talkLines(st, key) ?? [], f, STAGES[st - 1], key).map((l) => ({ mode: talkMode(st, key), text: l.text })),
   });
-  if (location.search.includes('skytest')) Object.assign(window, { __skyFlow: { nextStage, doContinue, start: (st: number, d: Difficulty = 'normal') => start(fam, d, st), phase, ending: () => { setSlide(0); playBgm('ending', 1.2); setPhase('ending'); } } });
+  if (location.search.includes('skytest')) Object.assign(window, { __skyFlow: { nextStage, doContinue, start: (st: number, d: Difficulty = 'normal', f?: FamilyId) => start(f ?? fam, d, st), phase, ending: () => { setSlide(0); playBgm('ending', 1.2); setPhase('ending'); } } });
 
   useEffect(() => {
     if (!paused) return;

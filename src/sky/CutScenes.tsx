@@ -10,7 +10,7 @@ import { PAGES } from './OpeningStory';
 import { CUES } from './OpeningCinematic';
 import { SCENES, type SceneId } from './PoopEnding';
 import { packPath, hasPack } from './artpack';
-import { playBgm, sfx } from './audio';
+import { audioTap, bgmInfo, playBgm, sfx } from './audio';
 
 const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
 const src = (rel: string): string => `${BASE}${packPath(rel)}`;
@@ -70,21 +70,45 @@ function openingSteps(): CutStep[] {
   return out;
 }
 
+/**
+ * 오프닝 음악 흐름 (한 곡이 끝까지 이어지게)
+ *  - 첫 장면에서 '오프닝' 곡 시작 (한 번만 · 이전 대사로 돌아가거나 빠르게 넘겨도 다시 시작하지 않음)
+ *  - 장면(그림) 전환과 음악은 묶지 않음: 그림이 바뀌어도 곡은 그대로 이어짐
+ *  - '오프닝' 곡(약 34초 · 반복 없음)이 끝나기 2.5초 전에 타이틀 곡으로 2.4초 교차 페이드 → 무음 구간 없음
+ *  - 마지막 타이틀 화면에 먼저 닿으면 그때 2초 교차 페이드 (분위기가 실제로 바뀌는 곳)
+ */
 export function CutOpening({ onDone }: { onDone: () => void }): ReactElement {
   const steps = useMemo(openingSteps, []);
   const title = steps.length - 1;
+  const started = useRef(false);
   const titled = useRef(false);
-  // 오프닝 곡(약 34초 · 반복 없음)이 끝나면 조용히 타이틀 곡으로 (천천히 읽어도 무음 구간 없게)
-  useEffect(() => { const t = window.setTimeout(() => { if (!titled.current) { titled.current = true; playBgm('title', 2.5); } }, 34000); return () => window.clearTimeout(t); }, []);
+  const log = (ev: string): void => {
+    if (!location.search.includes('skytest') && !location.search.includes('preview')) return;
+    const b = bgmInfo();
+    ((window as unknown as { __bgmLog?: unknown[] }).__bgmLog ??= []).push([Math.round(performance.now()), ev, b.name, +b.pos.toFixed(2), +b.dur.toFixed(1)]);
+  };
+  const toTitle = (why: string, sec: number): void => {
+    if (titled.current) return;
+    titled.current = true;
+    playBgm('title', sec, sec);
+    log(`title:${why}`);
+  };
+  useEffect(() => {
+    if (location.search.includes('skytest') || location.search.includes('preview')) Object.assign(window, { __bgmInfo: bgmInfo, __audioTap: audioTap });
+    const id = window.setInterval(() => {
+      const b = bgmInfo();
+      if (!titled.current && b.name === 'opening' && b.dur > 0 && b.running && b.dur - b.pos < 2.6) toTitle('곡 끝', 2.4);
+    }, 200);
+    return () => window.clearInterval(id);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <CutPlayer
       name="opening"
       steps={steps}
       onDone={onDone}
       onStep={(i) => {
-        if (i === 0) playBgm('opening', 0.3, 0.05);
-        // 출격 장면부터 타이틀 곡
-        if (!titled.current && (i === title || steps[i].cg.key === `o${PAGES.length - 1}`)) { titled.current = true; playBgm('title', 1.6); }
+        if (!started.current) { started.current = true; playBgm('opening', 0.8, 0.6); log('opening:start'); }
+        if (i === title) toTitle('타이틀 화면', 2.0);
       }}
     />
   );

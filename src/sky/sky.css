@@ -1213,3 +1213,10 @@ body.ui2 .sky { word-break: keep-all; overflow-wrap: break-word; }
 .cred-line.cred-final b { max-width: min(86vw, 320px); margin-top: 6px; font-size: 14px; line-height: 1.7; color: #ffe9a8; text-align: center; word-break: keep-all; text-wrap: balance; }
 .cred-v2 .cred-scroll { min-height: 0; overflow: visible; animation-name: credup2; }
 @keyframes credup2 { from { transform: translateY(40vh); } to { transform: translateY(var(--roll, 0px)); } }
+/* 대사 없는 연출 장면: 대사창 틀을 숨김 (자리는 유지) */
+.cp-box { transition: opacity 0.25s ease; }
+.cp-box.hide { opacity: 0; }
+.cp-dock { position: relative; }
+.cp-look { position: absolute; right: 16px; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 8px); font: 700 11px Galmuri11, sans-serif; color: rgba(255, 228, 150, 0.8); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.cp-look.on { opacity: 1; animation: os-blink 1.4s ease-in-out infinite; }
+.cp-text.on:not(.entering) { transition: none; }

@@ -400,6 +400,9 @@ interface Playing {
   name: BgmName;
   src: AudioBufferSourceNode;
   gain: GainNode;
+  /** 곡 0초가 컨텍스트 시간으로 언제였는지 · 곡 길이 (재생 위치 계산용) */
+  t0: number;
+  dur: number;
 }
 let cur: Playing | null = null;
 let curName: BgmName | null = null;
@@ -426,21 +429,28 @@ export function playBgm(name: BgmName, fadeOut = 0.6, fadeIn = 0.05, at = 0): vo
   const info = BGM[name];
   if (mode === 'html') {
     curName = name;
-    void blobUrl(`bgm-${name}`).then((url) => {
+    void blobUrl(`bgm-${name}`).then(async (url) => {
       if (!url || wanted !== name) return;
       htmlBgm ??= new Audio();
       const a = htmlBgm;
+      // HTML5 대체 경로는 요소가 하나 → 이전 곡을 줄인 뒤(최대 1.2초) 새 곡을 서서히 키움 (뚝 끊김 없게)
+      if (!a.paused && fadeOut > 0.1) await htmlRamp(a, 0, Math.min(1.2, fadeOut));
+      if (wanted !== name) return;
       a.pause();
       a.src = url;
       a.loop = !!info.loop;
-      a.volume = info.vol;
       a.currentTime = info.loop ? info.loop[0] : at;
+      a.volume = fadeIn > 0.06 ? 0 : info.vol;
       if (!muted) void a.play().catch((e: unknown) => note(`BGM 재생 거부(HTML5): ${String(e)}`));
+      if (fadeIn > 0.06) void htmlRamp(a, info.vol, fadeIn);
     });
     return;
   }
   const c = makeCtx();
   if (!c || !musicBus) return;
+  // 교차 페이드: 새 곡은 이전 곡이 절반쯤 줄어든 뒤부터 커짐 (두 곡이 겹쳐 음량이 튀지 않게)
+  const xfade = !!cur && fadeIn > 0.06 && fadeOut > 0.3;
+  const outEnd = c.currentTime + fadeOut;
   if (cur) {
     fadeOutAndStop(cur, fadeOut);
     cur = null;
@@ -450,8 +460,9 @@ export function playBgm(name: BgmName, fadeOut = 0.6, fadeIn = 0.05, at = 0): vo
     if (!buf || wanted !== name || !musicBus || mode !== 'webaudio' || (cur && cur.name === name)) return;
     const g = c.createGain();
     const t = c.currentTime;
+    const rise = xfade ? Math.max(t, outEnd - fadeOut * 0.8) : t;
     g.gain.setValueAtTime(fadeIn > 0.06 ? 0 : info.vol, t);
-    if (fadeIn > 0.06) g.gain.linearRampToValueAtTime(info.vol, t + fadeIn);
+    if (fadeIn > 0.06) { g.gain.setValueAtTime(0, rise); g.gain.linearRampToValueAtTime(info.vol, rise + fadeIn); }
     g.connect(musicBus);
     const s = c.createBufferSource();
     s.buffer = buf;
@@ -461,13 +472,39 @@ export function playBgm(name: BgmName, fadeOut = 0.6, fadeIn = 0.05, at = 0): vo
       s.loopEnd = Math.min(info.loop[1], buf.duration);
     }
     s.connect(g);
-    s.start(t, info.loop ? info.loop[0] : Math.min(at, Math.max(0, buf.duration - 0.1)));
-    const me: Playing = { name, src: s, gain: g };
+    const off = info.loop ? info.loop[0] : Math.min(at, Math.max(0, buf.duration - 0.1));
+    s.start(t, off);
+    const me: Playing = { name, src: s, gain: g, t0: t - off, dur: buf.duration };
     s.onended = () => {
       if (cur === me) cur = null;
     };
     cur = me;
   });
+}
+let rampId = 0;
+/** HTML5 <audio> 음량을 sec 초 동안 목표값으로 (iOS 는 volume 이 무시될 수 있음 → 그 경우 바로 넘어감) */
+function htmlRamp(a: HTMLAudioElement, to: number, sec: number): Promise<void> {
+  const id = ++rampId;
+  const from = a.volume;
+  const t0 = performance.now();
+  return new Promise((res) => {
+    const step = (): void => {
+      if (id !== rampId) { res(); return; }
+      const k = Math.min(1, (performance.now() - t0) / (sec * 1000));
+      try { a.volume = from + (to - from) * k; } catch { /* 무시 */ }
+      if (k >= 1) res(); else window.setTimeout(step, 40);
+    };
+    step();
+  });
+}
+/** 지금 BGM 이름 · 재생 위치(초) · 곡 길이 — 반복 없는 곡이 끝나기 전에 다음 곡으로 자연스럽게 넘기려고 */
+export function bgmInfo(): { name: BgmName | null; pos: number; dur: number; running: boolean } {
+  if (mode === 'html') {
+    const a = htmlBgm;
+    return { name: curName, pos: a ? a.currentTime : 0, dur: a && isFinite(a.duration) ? a.duration : 0, running: !!a && !a.paused };
+  }
+  if (!cur || !ctx) return { name: curName, pos: 0, dur: 0, running: false };
+  return { name: cur.name, pos: ctx.currentTime - cur.t0, dur: cur.dur, running: ctx.state === 'running' };
 }
 export function stopBgm(fade = 0.4): void {
   wanted = null;

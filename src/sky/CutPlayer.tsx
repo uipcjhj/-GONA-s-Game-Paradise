@@ -221,7 +221,9 @@ export function CutPlayer({ steps, onDone, onStep, skipLabel = 'SKIP ▶▶', na
         </nav>
       </div>
       <div className="cp-dock">
-        <div className={`cp-box${narr ? ' narr' : ' char'}`} aria-live="polite">
+        {/* 원래 대사가 없는 연출 장면(잠드는 장면): 빈 틀을 보이지 않고 그림만 감상 · 자리(높이)는 그대로 둬서 그림이 움직이지 않음 */}
+        {line?.kind === 'none' && <span className={`cp-look${st === 'wait' ? ' on' : ''}`}>▼ 터치하여 계속</span>}
+        <div className={`cp-box${narr ? ' narr' : ' char'}${line?.kind === 'none' || ((st === 'load' || st === 'dissolve') && idx > 0 && steps[idx - 1]?.line.kind === 'none') ? ' hide' : ''}`} aria-live="polite">
           {!narr && line && (
             <>
               <div className={`cp-face${faceOn ? ' on' : ''}`}><span className={line.faceCls} style={line.face ? { backgroundImage: `url(${line.face})` } : undefined} /></div>
