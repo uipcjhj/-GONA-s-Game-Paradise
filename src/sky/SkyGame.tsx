@@ -607,7 +607,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     huntRef.current = dl ? 0 : hunt;
     setDaily(dl);
     void startPlay(dl ? 'daily' : hunt ? 'hunt' : 'story', stage, d, f, dl?.date);
-    if (!dl && !hunt && stage > 1) voidPlay(); // 연습(중간 스테이지부터)은 온라인 제출 없음
+    if ((!dl && !hunt && stage > 1) || COMBAT2) voidPlay(); // 연습(중간 스테이지부터) · 전투 리마스터 시범판은 온라인 제출 없음
     dailyRef.current = dl;
     setSubm(null);
     if (dl) {
@@ -629,7 +629,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     }
     setResult(null);
     setContinues(0);
-    setPractice(stage > 1 || hunt > 0);
+    setPractice(stage > 1 || hunt > 0 || COMBAT2); // 시범판(?combat=2): 점수 체계가 달라 공식 기록·보드에 올리지 않음
     setCkMsg('');
     if (hunt) setMode(null);
     else if (stage === 1) { setMode('arcade'); putSlot({ fam: f, diff: d, stage: 1, score: 0, hp: 5, bombs: DIFF[d].bombs, power: 1, arcade: true }); }

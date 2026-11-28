@@ -3039,7 +3039,8 @@ export class SkyEngine {
     }
     for (let i = 0; i < 3; i++) this.addFx('smoke', r.x + rand(-8, 8), r.y - rand(4, 14), rand(0.5, 0.8), rand(0.45, 0.7), -rand(6, 16));
     for (let i = 0; i < 8; i++) this.part(r.x, r.y - 10, rand(-80, 80), rand(-90, -20), 0.45, i % 3 ? '#a8703a' : '#e0a050', 2, 200);
-    sfx('boomS', 0.7, 0.72);
+    sfx('boomS', 0.85, 0.7);
+    sfx('armorBreak', 0.55, 0.85); // 굳은 응가가 깨지는 소리 (적 폭발음과 구분)
     if (src === 'bomb') return;
     // CHAIN: 1.8초 안에 다음 지형을 부수면 이어짐 (화면 밖으로 흘러간 것은 해당 없음)
     this.chainN = this.chainT > 0 ? this.chainN + 1 : 1;
