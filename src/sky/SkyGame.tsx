@@ -22,6 +22,7 @@ import { TalkBox, BarkBox, resolveLines, type TalkLine } from './TalkBox';
 import { PoopEnding } from './PoopEnding';
 import { OpeningCinematic } from './OpeningCinematic';
 import { OpeningStory } from './OpeningStory';
+import { CutOpening, CutEnding } from './CutScenes';
 import { HUB, HubBack, TestHub, type HubGo } from './TestHub';
 import './sky.css';
 
@@ -69,6 +70,10 @@ const HUNT_POWER = [1, 2, 3, 3, 4, 4];
 /** 개발자용 엔딩 미리보기 (?preview=ending): 터치 → 엔딩 → 에필로그 → 크레딧 · 기록·앨범·랭킹에 아무것도 쓰지 않음 */
 /** 오프닝 v2 (스토리북 · 터치 진행) 미리보기: ?opening=2 — 승인 전에는 기존 오프닝 */
 const OPENING_V2 = /[?&]opening=2\b/.test(location.search);
+/** 새 컷신 플레이어 (하단 고정 대사창 · 수동 진행) — 미리보기(?preview) 와 ?cut=2 에서만 · 정식 화면은 승인 전까지 그대로 */
+const CUT2 = !!PREVIEW || /[?&]cut=2\b/.test(location.search);
+/** 크레딧 문구 교체 (새 컷신과 함께 미리보기) */
+const CREDITS2: [string, string][] = THEME.credits.map(([a, b]): [string, string] => (a === '스페셜 땡스' ? ['SPECIAL THANKS TO', 'My Family, My Forever Fans'] : b === 'THANK YOU FOR PLAYING!' ? ['', '현이가 마주할 모든 역경에 언제나 곁에 있길 바라며...'] : [a, b]));
 /** 공통 UI v2 (글자·버튼 정렬 · 랭킹·설정 재구성) 미리보기: ?ui=2 — 승인 전에는 기존 화면 */
 export const UI2 = /[?&]ui=2\b/.test(location.search);
 const SUB_CAND = ((): string | null => { const v = new URLSearchParams(location.search).get('sub') ?? ''; return /^([1-4]|C[134]|P1)$/.test(v) ? v : null; })();
@@ -332,7 +337,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
         try { seen = localStorage.getItem(OPENED_KEY) === '1'; } catch { /* 무시 */ }
         // 접속할 때마다 '터치하여 시작' 관문 (소리 켜기) → 처음이면 오프닝, 재방문이면 타이틀
         firstVisit.current = !seen;
-        if (PREVIEW) { setPhase('gate'); void preloadAudio('game'); return; }
+        if (PREVIEW) { void preloadAudio('game'); if (PREVIEW !== 'menu') runPreview(PREVIEW); else setPhase('gate'); return; }
         setPhase(HUB && THEME.id === 'poop' ? 'hub' : THEME.id === 'poop' && HAS_OPENING && (!location.search.includes('skytest') || location.search.includes('firstrun') || (location.search.includes('gate') && !seen)) ? 'gate' : 'title');
         void preloadAudio('game');
       })
@@ -773,6 +778,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
       </div>
     );
   }
+  if (phase === 'opening' && THEME.id === 'poop' && CUT2) return <CutOpening key={`c${hubOpen}-${endKey}`} onDone={() => { setHubOpen(0); if (PREVIEW) previewMenu(); else if (HUB) { stopBgm(0.4); setPhase('hub'); } else finishOpening(); }} />;
   if (phase === 'opening' && THEME.id === 'poop' && OPENING_V2) return <OpeningStory key={hubOpen} onDone={() => { setHubOpen(0); if (PREVIEW) previewMenu(); else if (HUB) { stopBgm(0.4); setPhase('hub'); } else finishOpening(); }} />;
   if (phase === 'opening' && THEME.id === 'poop') return <OpeningCinematic key={hubOpen} startAt={hubOpen} onDone={() => { setHubOpen(0); if (PREVIEW) previewMenu(); else if (HUB) { stopBgm(0.4); setPhase('hub'); } else finishOpening(); }} />;
   if (phase === 'opening') {
@@ -795,6 +801,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
 
   if (phase === 'ending' || phase === 'credits') {
     const sl = ENDING[Math.min(slide, ENDING.length - 1)];
+    if (phase === 'ending' && THEME.id === 'poop' && CUT2) return <CutEnding key={`c${hubEnd}-${endKey}`} startScene={hubEnd} stopAfter={pv === 'ending' ? 'hug' : undefined} onDone={() => { setHubEnd(0); if (PREVIEW && pv !== 'full') previewMenu(); else setPhase('credits'); }} />;
     if (phase === 'ending' && THEME.id === 'poop') return <PoopEnding key={`${hubEnd}-${endKey}`} startScene={hubEnd} stopAfter={pv === 'ending' ? 'hug' : undefined} onDone={() => { setHubEnd(0); if (PREVIEW && pv !== 'full') previewMenu(); else setPhase('credits'); }} />;
     if (phase === 'ending') {
       return (
@@ -812,9 +819,10 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
       );
     }
     return (
-      <div className="sky end cred cred-fin">
+      <div className={`sky end cred cred-fin${CUT2 ? ' cred-v2' : ''}`}>
         {THEME.id === 'poop' && <img className="cred-bg" src={`${BASE}${packPath('ending/finale.jpg', '')}`} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
-        <div className="cred-scroll">
+        {/* 새 크레딧(미리보기): 내용이 화면보다 길면 마지막 문구가 버튼 바로 위에서 멈추도록 올라가는 거리를 잼 */}
+        <div className="cred-scroll" ref={(el) => { if (el && CUT2) el.style.setProperty('--roll', `${Math.min(0, el.clientHeight - el.scrollHeight - 8)}px`); }}>
           <h2>ALL CLEAR!</h2>
           {THEME.id === 'poop' && <p className="cred-thanks">고나와 가족의 대모험, 정말 수고했어요!<br />{prof?.nick ?? '모험가'} 님의 추억 앨범 · 기념사진 {Object.keys(photos()).length}/108</p>}
           {result && (
@@ -825,8 +833,8 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
               <dt>최고 기록</dt><dd>{String(records[diff].score).padStart(8, '0')}</dd>
             </dl>
           )}
-          {CREDITS.map(([a, b], i) => (
-            <div className="cred-line" key={i}><small>{a}</small><b>{b}</b></div>
+          {(CUT2 ? CREDITS2 : CREDITS).map(([a, b], i) => (
+            <div className={`cred-line${CUT2 && !a && i === CREDITS2.length - 1 ? ' cred-final' : ''}${CUT2 && a === 'SPECIAL THANKS TO' ? ' cred-thx' : ''}`} key={i}><small>{a}</small><b>{b}</b></div>
           ))}
         </div>
         <div className="sel-btns cred-btns">

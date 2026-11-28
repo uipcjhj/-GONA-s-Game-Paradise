@@ -30,22 +30,25 @@ const [url, out, w = '393', h = '636'] = process.argv.slice(2);
   await p.waitForSelector('.pv-box', { timeout: 60000 });
   const before = await snap();
   await p.screenshot({ path: `${out}/0-menu-${w}x${h}.png` });
+  // 새 컷신 플레이어(수동 진행): 대기 상태면 터치로 넘기며 CG 로 장면 기록
+  const SC = { 'e-train': 'train', 'e-white': 'white', 'e-wake': 'strain', 'e-st1': 'strain', 'e-st2': 'strain', 'e-fart': 'fart', 'e-family': 'success', 'e-hug': 'hug', 'e-epi': 'epi' };
   const scenesOf = async (until, limit) => {
     const seen = []; const t0 = Date.now();
     while (Date.now() - t0 < limit && !(await until())) {
-      const cls = await p.$eval('.pe', (e) => e.className).catch(() => '');
-      const sc = (cls.match(/pes-(\w+)/) || [])[1];
+      const c = await p.evaluate(() => (document.querySelector('.cp') ? window.__cut : null)).catch(() => null);
+      const sc = c && SC[c.cg];
       if (sc && seen[seen.length - 1] !== sc) seen.push(sc);
-      await p.waitForTimeout(300);
+      if (c && c.st === 'wait') await p.touchscreen.tap(+w / 2, +h * 0.35);
+      await p.waitForTimeout(250);
     }
     return { seen, secs: Math.round((Date.now() - t0) / 1000) };
   };
   // 오프닝
   await p.tap('.pv-opening');
-  const oc = await p.waitForSelector('.oc-skip', { timeout: 20000 }).then(() => true).catch(() => false);
+  const oc = await p.waitForSelector('.cp-skip', { timeout: 20000 }).then(() => true).catch(() => false);
   await p.waitForTimeout(5000);
   await p.screenshot({ path: `${out}/1-opening.png` });
-  await p.tap('.oc-skip');
+  await p.tap('.cp-skip');
   ok('오프닝 처음부터 → SKIP → 메뉴로 복귀', oc && !!(await p.waitForSelector('.pv-box', { timeout: 10000 }).catch(() => null)));
   // 엔딩 (포옹까지 → 메뉴)
   await p.tap('.pv-ending');
@@ -70,7 +73,8 @@ const [url, out, w = '393', h = '636'] = process.argv.slice(2);
   ok('엔딩 → 에필로그 → 크레딧 연속', f.seen[0] === 'train' && f.seen.includes('epi') && !!(await p.$('.cred-fin')), `${f.seen.join('→')} → 크레딧 (${f.secs}초)`);
   await p.tap('.cred-btns .sky-btn-go');
   await p.waitForTimeout(1200);
-  ok('크레딧 "처음부터 다시" → 엔딩 처음 장면', /pes-train/.test(await p.$eval('.pe', (x) => x.className).catch(() => '')));
+  await p.waitForFunction(() => window.__cut && window.__cut.st === 'wait', null, { timeout: 15000 }).catch(() => {});
+  ok('크레딧 "처음부터 다시" → 엔딩 처음 장면', (await p.evaluate(() => window.__cut && window.__cut.cg)) === 'e-train');
   const after = await snap();
   ok('기존 저장(점수·사진·배지·미션·업적·클리어·프로필) 변화 없음', before === after);
   const blocked = await p.evaluate(() => window.__skyPreviewBlocked || null);

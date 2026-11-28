@@ -17,8 +17,8 @@ const nm = (f: FamilyId | 'gona') => (f === 'samchon' ? '삼촌' : CHARACTERS[f]
 const L = (who: FamilyId | 'gona' | 'narr' | 'train', text: string): TalkLine =>
   who === 'narr' ? { who: 'narr', name: '', text } : who === 'train' ? { who: 'train', name: '응가 열차', text } : { who, name: nm(who), text, fam: who };
 
-type SceneId = 'train' | 'white' | 'strain' | 'fart' | 'success' | 'hug' | 'epi';
-const SCENES: { id: SceneId; lines: TalkLine[] }[] = [
+export type SceneId = 'train' | 'white' | 'strain' | 'fart' | 'success' | 'hug' | 'epi';
+export const SCENES: { id: SceneId; lines: TalkLine[] }[] = [
   { id: 'train', lines: [
     L('narr', '변비마왕 꽉막혀가 쓰러지자, 마지막 성문이 활짝 열렸다!'),
     L('train', '뿌우우우~!! 응가 열차, 출발합니다!'),

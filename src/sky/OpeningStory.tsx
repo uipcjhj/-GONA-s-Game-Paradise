@@ -18,14 +18,14 @@ const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
 const src = (rel: string): string => `${BASE}${packPath(rel, '')}`;
 
 /** 장면 레이어: 배경 + (선택) 스프라이트 · fit 위치 · 아주 작은 움직임 */
-interface Sprite { img: string; x: number; y: number; w: number; float?: boolean }
-interface Page { bg: string; pos?: string; motion?: 'pan-up' | 'push' | 'none'; sprites?: Sprite[]; lines: number[]; hold?: number; cut?: string[] }
+export interface Sprite { img: string; x: number; y: number; w: number; float?: boolean }
+export interface Page { bg: string; pos?: string; motion?: 'pan-up' | 'push' | 'none'; sprites?: Sprite[]; lines: number[]; hold?: number; cut?: string[] }
 /** 수호자 컷인: 기존 오프닝처럼 0.6초(음악 한 박) 간격으로 한 명씩 '삭' 등장 · 실루엣 → 색 공개 · 빛줄기 */
 const CUT_BEAT = 0.6;
 const CUT_START = 0.75;
 const L = (i: number): number => i; // CUES 번호
 /** 기존 오프닝 장면 순서 그대로 (1 서기 2026 → 2 풍요 → 3 징조 → 4 사투 → 5 막혀버린 왕국 → 6 마왕 → 7 수호자 → 8 출격) */
-const PAGES: Page[] = [
+export const PAGES: Page[] = [
   { bg: 'opening3/room-eve.jpg', lines: [L(0), L(1)] },
   { bg: 'opening3/eat-full.jpg', lines: [L(2), L(3)] },
   { bg: 'opening3/room-eve.jpg', sprites: [{ img: 'opening3/a-clutch.png', x: 50, y: 66, w: 52 }], lines: [L(4), L(5)] },
