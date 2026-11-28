@@ -19,11 +19,14 @@ for n, sz in [(f'icon-512-{IV}.png', 512), (f'icon-192-{IV}.png', 192), (f'apple
     icon(sz).save(f'{D}/pwa/{n}', optimize=True)
 icon(64).save(f'{D}/pwa/favicon-{IV}.ico', sizes=[(16, 16), (32, 32), (48, 48), (64, 64)])
 
-# ── manifest (start_url · scope = 이 폴더)
+# ── manifest: 이 게임만의 앱 식별자 (Food Adventure 와 겹치지 않게 절대 경로로 고정)
+#    배포 경로가 바뀌면 SKY_PWA_BASE 로 지정 (예: /-GONA-s-Game-Paradise/sky-adventure/)
+import os
+PBASE = os.environ.get('SKY_PWA_BASE', '/GoNa/sky-adventure/')
 manifest = {
-    'name': "GONA's Sky Adventure", 'short_name': "GONA's Sky",
+    'id': PBASE, 'name': "GONA's Sky Adventure", 'short_name': '고나 스카이',
     'description': '아기 공룡 고나와 가족의 하늘 슈팅 대모험',
-    'start_url': './?pwa=1', 'scope': './', 'id': './', 'display': 'standalone', 'orientation': 'portrait',
+    'start_url': PBASE, 'scope': PBASE, 'display': 'standalone', 'orientation': 'portrait',
     'background_color': '#120a26', 'theme_color': '#120a26', 'lang': 'ko',
     'icons': [
         {'src': f'pwa/icon-192-{IV}.png', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'any'},
@@ -42,6 +45,7 @@ shell = ['./', 'index.html', 'manifest.webmanifest'] + sorted(f for f in files i
         sorted(f for f in files if f.startswith('assets/sky/v3-poop/title/') and 'cand/' not in f) + ['assets/sky/v3-poop/manifest.json', f'pwa/icon-192-{IV}.png', f'pwa/apple-touch-icon-{IV}.png', f'pwa/favicon-32-{IV}.png']
 core = sorted(f for f in files if f.startswith('assets/') and not f.startswith('assets/sky/v3-poop/album/p/') and 'title/cand/' not in f and not f.endswith('.webmanifest'))
 _h = hashlib.sha1(open(f'{D}/index.html', 'rb').read())
+_h.update(open(f'{D}/manifest.webmanifest', 'rb').read())  # 앱 식별 정보가 바뀌면 새 버전 (설치된 기기도 새 manifest 를 받게)
 for f in sorted(set(core) | {x for x in shell if x not in ('./', 'manifest.webmanifest')}):   # 파일 내용까지 → 같은 이름 그림만 바뀌어도 새 버전
     if os.path.isfile(f'{D}/{f}'): _h.update(f.encode()); _h.update(open(f'{D}/{f}', 'rb').read())
 ver = _h.hexdigest()[:10]
@@ -74,7 +78,7 @@ self.addEventListener('message', (e) => {{
 self.addEventListener('fetch', (e) => {{
   const u = new URL(e.request.url);
   if (e.request.method !== 'GET' || u.origin !== location.origin) return;            // 온라인 서버(Supabase) 요청은 건드리지 않음
-  if (u.pathname.endsWith('/online-config.js')) {{                                          // 온라인 설정: 항상 최신(인터넷 먼저)
+  if (u.pathname.endsWith('/online-config.js') || u.pathname.endsWith('/manifest.webmanifest')) {{   // 온라인 설정 · 앱 식별 정보(manifest)                                          // 온라인 설정: 항상 최신(인터넷 먼저)
     e.respondWith(fetch(e.request).then((res) => {{ const cp = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, cp)); return res; }}).catch(() => caches.match(e.request)));
     return;
   }}
