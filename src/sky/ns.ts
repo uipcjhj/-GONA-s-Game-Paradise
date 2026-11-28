@@ -11,13 +11,13 @@ export const PROD: boolean = import.meta.env.VITE_SKY_PROD === '1';
  *  - 온라인 제출·동기화 끔 (online.ts) · PWA 등록 안 함
  *  ⚠ 공개 정적 사이트라 URL 을 아는 사람은 누구나 열 수 있음 → '접근 제한'이 아니라 '열어도 아무 기록도 바뀌지 않게' 만드는 방식
  */
-export type PreviewMode = 'menu' | 'opening' | 'ending' | 'epilogue' | 'credits' | 'full';
+export type PreviewMode = 'menu' | 'opening' | 'ending' | 'epilogue' | 'credits' | 'full' | 'stage5';
 export const PREVIEW: PreviewMode | null = ((): PreviewMode | null => {
   if (typeof location === 'undefined') return null;
   const m = /[?&]preview(?:=(\w+))?(?:&|$)/.exec(location.search);
   if (!m) return null;
   const v = (m[1] ?? 'menu') as PreviewMode;
-  return (['menu', 'opening', 'ending', 'epilogue', 'credits', 'full'] as const).includes(v) ? v : 'menu';
+  return (['menu', 'opening', 'ending', 'epilogue', 'credits', 'full', 'stage5'] as const).includes(v) ? v : 'menu';
 })();
 if (PREVIEW && typeof Storage !== 'undefined') {
   const P = Storage.prototype;

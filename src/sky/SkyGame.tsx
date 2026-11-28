@@ -72,6 +72,8 @@ const HUNT_POWER = [1, 2, 3, 3, 4, 4];
 const OPENING_V2 = /[?&]opening=2\b/.test(location.search);
 /** 새 컷신 플레이어 (하단 고정 대사창 · 수동 진행) — 미리보기(?preview) 와 ?cut=2 에서만 · 정식 화면은 승인 전까지 그대로 */
 const CUT2 = !!PREVIEW || /[?&]cut=2\b/.test(location.search);
+/** 전투 리마스터 시범 (STAGE 5 파괴 지형) — ?preview=stage5 · ?combat=2 에서만 · 정식 게임은 그대로 */
+const COMBAT2 = PREVIEW === 'stage5' || /[?&]combat=2\b/.test(location.search);
 /** 크레딧 문구 교체 (새 컷신과 함께 미리보기) */
 const CREDITS2: [string, string][] = THEME.credits.map(([a, b]): [string, string] => (a === '스페셜 땡스' ? ['SPECIAL THANKS TO', 'My Family, My Forever Fans'] : b === 'THANK YOU FOR PLAYING!' ? ['', '현이가 마주할 모든 역경에 언제나 곁에 있길 바라며...'] : [a, b]));
 /** 공통 UI v2 (글자·버튼 정렬 · 랭킹·설정 재구성) 미리보기: ?ui=2 — 승인 전에는 기존 화면 */
@@ -160,6 +162,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
     unlockAudio(); setSoundOn(true); sfx('menuOk');
     setPv(m); setSlide(0); setEndKey((n) => n + 1);
     if (m === 'opening') { setHubOpen(0); setPhase('opening'); return; }
+    if (m === 'stage5') { start(fam, 'normal', 5); return; }
     if (m === 'credits') { playBgm('ending', 0.6); setPhase('credits'); return; }
     setHubEnd(m === 'epilogue' ? 6 : 0); playBgm('ending', 1.2); setPhase('ending');
   };
@@ -401,7 +404,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
       canvasRef.current,
       assets,
       stageArt,
-      runOpts,
+      { ...runOpts, terrain: COMBAT2 },
       (r) => {
         setResult(r);
         const dl = dailyRef.current;
@@ -753,6 +756,7 @@ function SkyGameMain({ onExit }: { onExit: () => void }) {
         ['epilogue', '에필로그만', '엔딩 마지막 장면'],
         ['credits', '크레딧만', 'ALL CLEAR 크레딧 화면'],
         ['full', '엔딩 → 에필로그 → 크레딧 연속', '실제 클리어 때와 같은 순서'],
+        ['stage5', 'STAGE 5 전투 테스트', '부서지는 응가 바위 시범 · 기록·보상 저장 없음'],
       ];
       return (
         <div className="sky gate pv-menu">

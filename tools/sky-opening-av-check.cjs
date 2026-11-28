@@ -92,7 +92,12 @@ const [url, out, mode = 'manual', w = '393', h = '636', VIDEO = '0'] = process.a
   ok(`[${mode}] 곡 교체는 최대 1번 (오프닝 → 타이틀)`, switches.filter((s) => s.from).length <= 1, JSON.stringify(switches));
   const stepSw = switches.filter((s) => s.from === 'opening' && s.to === 'title');
   const titleLog = bl.filter((x) => String(x[1]).startsWith('title'));
-  ok(`[${mode}] 타이틀 곡 교체는 '곡 끝' 또는 '타이틀 화면'에서만 (출격 장면 등 중간 장면 아님)`, titleLog.every((x) => /곡 끝|타이틀 화면/.test(x[1])), titleLog.map((x) => x[1]).join(','));
+  ok(`[${mode}] 타이틀 곡은 타이틀 화면에 도착한 뒤에만 (중간 장면·곡 끝에서 먼저 나오지 않음)`, titleLog.length === 1 && /타이틀 화면/.test(titleLog[0][1]) && !av.some((r) => r.bgm === 'title' && r.kind !== 'press'), titleLog.map((x) => x[1]).join(','));
+  // 반복 구간: 곡이 46.5초를 넘겨도(천천히 읽기) 오프닝 곡이 계속 · 이음매에서 음량 급변 없음
+  const hold = av.filter((r) => r.bgm === 'openingHold' && r.pos > 37.8);
+  if (mode === 'manual') ok(`[manual] 천천히 읽으면 수호자 악절(33.0~37.8초)이 이어서 반복됨`, hold.length > 20, `반복 중 표본 ${hold.length} · 최대 재생 위치 ${Math.max(0, ...av.filter((r) => r.bgm === 'openingHold').map((r) => r.pos)).toFixed(1)}초`);
+  let jump = 0; for (let k = 1; k < av.length; k++) { const a1 = av[k - 1], a2 = av[k]; if (a1.bgm === 'openingHold' && a2.bgm === 'openingHold' && a2.pos > 37.8 && a1.rms > 0.01 && a2.rms > 0.01 && (a2.rms / a1.rms > 2.2 || a1.rms / a2.rms > 2.2)) jump++; }
+  if (hold.length) ok(`[${mode}] 반복 이음매에서 음량 급변 없음`, jump === 0, `급변 ${jump}회`);
   // 무음: 곡 재생 중(시작 1초 이후) RMS 가 0.002 아래로 0.5초 이상
   const rmsOn = av.some((r) => r.rms > 0.003);
   let sil = 0, maxSil = 0; const start = av.findIndex((r) => r.rms > 0.003);

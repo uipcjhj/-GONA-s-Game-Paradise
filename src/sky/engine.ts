@@ -63,7 +63,14 @@ export interface RunOpts {
   score: number;
   /** 일일 도전 규칙: 폭탄 없음 · 하트 1개 (회복 대신 점수) */
   rules?: { noBomb?: boolean; oneLife?: boolean };
+  /** 전투 리마스터 시범 (STAGE 5 · 미리보기 전용): 파괴 가능한 응가 바위 · CHAIN */
+  terrain?: boolean;
 }
+/** 파괴 가능한 지형 (STAGE 5 시범: 작은 응가 바위) — 바닥과 함께 흘러감 · 기준점 = 바닥 가운데 */
+interface Terr { id: number; x: number; y: number; hp: number; max: number; flash: number; fcd: number; hitT: number; dead: boolean; st: number; drop?: Item['kind'] }
+interface Chip { cell: number; x: number; y: number; vx: number; vy: number; rot: number; vr: number; t: number }
+/** 지형 구간 바닥 흐름 속도 (논리 px/초) — 배경도 같은 속도로 흘러 바위가 미끄러져 보이지 않게 */
+const GROUND_V = 24;
 
 export interface HudInfo {
   hp: number;
@@ -354,6 +361,19 @@ export class SkyEngine {
   /** 부서져 떨어지는 부위 조각 */
   private chunks: { cell: number; x: number; y: number; vx: number; vy: number; rot: number; vr: number; k: number; t: number }[] = [];
   private darkCache = new Map<CanvasImageSource, HTMLCanvasElement>();
+  // ───── 파괴 지형 (시범) ─────
+  private terrOn = false;
+  private terrImg: HTMLImageElement | null = null;
+  terr: Terr[] = [];
+  private chipsT: Chip[] = [];
+  private terrT = 2.5;
+  private terrN = 0;
+  terrBroken = 0;
+  chainN = 0;
+  private chainT = 0;
+  chainMax = 0;
+  /** 검수용: 지형 피격·파괴 기록 */
+  terrLog: [number, string, number, number][] = [];
   /** 그림자용 어두운 실루엣 (한 번만 만듦) */
   private darkOf(src: HTMLImageElement): HTMLCanvasElement {
     let c = this.darkCache.get(src);
@@ -447,6 +467,12 @@ export class SkyEngine {
     if (this.rules.noBomb) this.bombs = 0;
     if (this.rules.oneLife) { this.hp = 1; this.healLeft = 0; }
     this.resize();
+    if (opts.terrain && this.st.id === 5) {
+      this.terrOn = true;
+      const im = new Image();
+      im.onload = () => { this.terrImg = im; try { whiteOf(this.a, im); } catch { /* 무시 */ } };
+      im.src = `${import.meta.env.BASE_URL}assets/sky/v3-poop/s5/terrain-rock-s.png`;
+    }
     this.bgBaked = this.bakeBackdrop();
     this.prewarm();
     this.cCd = this.fam === 'halmeoni' ? 5 : this.fam === 'halabeoji' ? 1 : 1.2;
@@ -570,6 +596,7 @@ export class SkyEngine {
     this.bombsUsed++;
     this.bombT = BOMB_T;
     this.bombHit = false;
+    if (this.terrOn) for (const r of this.terr) if (!r.dead && r.y > 0 && r.y < H + 10) this.hurtTerrain(r, 999, r.x, r.y - 10, 'bomb');
     this.inv = Math.max(this.inv, 2.6);
     this.sp = { id: 'gona', t: 0, cut: SP_CUT, dur: BOMB_T, n: 0, x: this.px, y: this.py, init: false };
     this.floats.length = 0;
@@ -658,6 +685,7 @@ export class SkyEngine {
       boss: this.boss ? Math.round(this.boss.hp) : -1, bossMax: this.boss ? this.boss.max : 0, phase: this.bs?.phase ?? 0, mid: this.midboss ? Math.round(this.midboss.hp) : -1, block: this.block, step: this.stepIdx,
       power: this.power, over: this.over ? 1 : 0, won: this.overWon ? 1 : 0, px: Math.round(this.px), py: Math.round(this.py), anim: this.lastAnim, hits: this.hits, lasers: this.lasers.length,
       hold: +this.holdT.toFixed(2), charge: +this.charge.toFixed(2), chargeShots: this.nCharge, melees: this.nMelee, meleeCd: +Math.max(0, this.meleeCd).toFixed(2), drag: this.dragId === null ? 0 : 1,
+      terr: this.terr.filter((r) => !r.dead).length, terrBroken: this.terrBroken, chain: this.chainN, chainMax: this.chainMax,
       talking: this.talking ? 1 : 0, vil: this.vil ? `${this.vil.kind}:${this.vil.mode}` : '',
       cause: JSON.stringify(this.hitLog), gauge: +this.gauge.toFixed(2), sp: this.sp ? this.sp.id : '', bombs: this.bombs, S: R, fps: this.perf.fps, ft: this.perf.ft, ftMax: this.perf.ftMax, upd: this.perf.upd, drw: this.perf.drw,
     };
@@ -680,6 +708,7 @@ export class SkyEngine {
     }
     if (cmd === 'sig' && this.bs) { this.bs.sigDue = true; this.bs.rest = Math.min(this.bs.rest, 0.1); }
     if (cmd === 'power') this.power = 4;
+    if (cmd === 'rocks' && this.terrOn) { for (let i = 0; i < 5; i++) this.spawnRock(26 + i * 32, 90 + (i % 2) * 18); }
     if (cmd === 'god') this.hp = 99;
     if (cmd === 'hp1') this.hp = 1;
     if (cmd === 'killboss' && this.boss) { this.boss.hp = 1; for (const e of this.en) if (e.kind === 'part') e.dead = true; }
@@ -1119,6 +1148,7 @@ export class SkyEngine {
     this.updateBullets(dt);
     this.updateItems(dt);
     this.updateFx(dt);
+    if (this.terrOn) this.updateTerrain(dt);
     this.collide();
 
     this.comboT -= dt;
@@ -2929,6 +2959,123 @@ export class SkyEngine {
     }
   }
 
+  // ───────────── 파괴 지형 (STAGE 5 시범: 작은 응가 바위) ─────────────
+  private spawnRock(x: number, y = -14): void {
+    const hp = Math.round(14 * this.dif.ehp);
+    this.terrN++;
+    // 숨겨진 보상: 일곱 번째마다 확실한 보상 · 그 외 가끔 (누구나 같은 확률 · 캐릭터 무관)
+    const r = Math.random();
+    const drop: Item['kind'] | undefined = this.terrN % 7 === 0 ? 'cookie' : r < 0.05 ? 'star' : r < 0.11 ? 'cookie' : r < 0.13 ? 'banana' : undefined;
+    this.terr.push({ id: -(this.nextId++), x, y, hp, max: hp, flash: 0, fcd: 0, hitT: 0, dead: false, st: 0, drop });
+  }
+  private updateTerrain(dt: number): void {
+    // 바위 무리: 보스전 · 대화 · 경고 중에는 새로 놓지 않음
+    this.terrT -= dt;
+    if (this.terrT <= 0 && !this.boss && this.block === 'none') {
+      this.terrT = rand(2.2, 3.4);
+      const pat = Math.floor(Math.random() * 4);
+      const xs = pat === 0 ? [rand(24, W - 24)] : pat === 1 ? [rand(24, 70), rand(110, W - 24)] : pat === 2 ? [40, 90, 140] : [rand(40, 60), rand(80, 100), rand(120, 140)];
+      xs.forEach((x, i) => this.spawnRock(x, -14 - (pat === 3 ? (i % 2) * 22 : 0)));
+    }
+    for (const r of this.terr) {
+      r.y += GROUND_V * dt;
+      if (r.flash > 0) r.flash -= dt;
+      if (r.fcd > 0) r.fcd -= dt;
+      if (r.hitT > 0) r.hitT -= dt;
+    }
+    compact(this.terr, (r) => r.y < H + 30); // 화면 밖 정리 (콤보 없음)
+    for (const c of this.chipsT) {
+      c.t += dt; c.x += c.vx * dt; c.y += c.vy * dt + GROUND_V * dt * 0.5;
+      c.vx *= 1 - dt * 2.2; c.vy *= 1 - dt * 2.2; c.rot += c.vr * dt;
+    }
+    compact(this.chipsT, (c) => c.t < 0.75);
+    if (this.chainT > 0) { this.chainT -= dt; if (this.chainT <= 0) this.chainN = 0; }
+  }
+  /** 바위 실루엣(타원) 안에 탄이 닿았는지: 기준점(바닥 가운데)에서 위로 */
+  private rockHit(r: Terr, x: number, y: number, pad: number): boolean {
+    const cx = r.x, cy = r.y - 12;
+    return ((x - cx) / (13 + pad)) ** 2 + ((y - cy) / (12 + pad)) ** 2 < 1;
+  }
+  private hitTerrain(b: PBullet): void {
+    for (const r of this.terr) {
+      if (r.dead || r.y < 4 || !b.alive) continue;
+      if (b.pierce && b.hits.includes(r.id)) continue;
+      if (!this.rockHit(r, b.x, b.y, b.r)) continue;
+      // 무기별 지형 피해: 차지 · 드릴 · 창 = 강함 / 미사일 · 포션 = 폭발 범위
+      const mul = b.kind === 'charge' ? 3 : b.kind === 'drill' || b.kind === 'lance' ? 2 : b.kind === 'missile' ? 1.5 : 1;
+      this.hurtTerrain(r, b.dmg * mul, b.x, b.y, b.kind);
+      if (b.kind === 'missile' || b.kind === 'potion' || b.scale >= 1.5) {
+        const rad = b.kind === 'potion' ? 18 + b.lvl * 4 : 22;
+        for (const o of this.terr) if (o !== r && !o.dead && (o.x - b.x) ** 2 + (o.y - 12 - b.y) ** 2 < rad * rad) this.hurtTerrain(o, b.dmg * 0.6, o.x, o.y - 12, b.kind);
+      }
+      if (b.pierce) b.hits.push(r.id);
+      else { b.alive = false; return; }
+    }
+  }
+  /** 바위 피해: 번쩍 · 떨림 · 흙 부스러기 → 균열 단계 바뀌면 조각 · 0 이면 부서짐 (잔해는 바닥에 남아 함께 흘러감) */
+  private hurtTerrain(r: Terr, dmg: number, hx: number, hy: number, src: string): void {
+    if (r.dead) return;
+    r.hp -= dmg;
+    // 번쩍임은 0.15초에 한 번만 짧게 (연사해도 균열이 하얗게 묻히지 않게)
+    if (r.fcd <= 0) { r.flash = 0.05; r.fcd = 0.15; }
+    r.hitT = 0.1;
+    if (this.terrLog.length < 400) this.terrLog.push([+this.t.toFixed(2), src, r.id, Math.max(0, +r.hp.toFixed(1))]);
+    for (let i = 0; i < 2; i++) this.part(hx, hy, rand(-50, 50), rand(-60, -10), 0.3, i ? '#c88a48' : '#6a4020', 1, 160);
+    if (src !== 'bomb') sfx('enemyHit', 0.5, 0.62);
+    const st = r.hp <= 0 ? 3 : r.hp / r.max > 0.66 ? 0 : r.hp / r.max > 0.33 ? 1 : 2;
+    if (st > r.st && st < 3) {
+      // 균열이 한 단계 깊어짐: 작은 조각 하나 + 딱 소리
+      this.chipsT.push({ cell: Math.floor(Math.random() * 4), x: r.x, y: r.y - 14, vx: rand(-40, 40), vy: rand(-60, -30), rot: 0, vr: rand(-8, 8), t: 0.25 });
+      sfx('armorBreak', 0.32, 1.7);
+    }
+    r.st = st;
+    if (r.hp > 0) return;
+    r.dead = true;
+    this.terrBroken++;
+    // 부서짐: 조각 4개가 사방으로 · 흙먼지 · 재질 소리 (적 폭발 그림과 다른 연출)
+    for (let i = 0; i < 4; i++) {
+      const a = -Math.PI / 2 + (i - 1.5) * 0.75 + rand(-0.2, 0.2);
+      if (this.chipsT.length < 40) this.chipsT.push({ cell: i, x: r.x + rand(-4, 4), y: r.y - 12, vx: Math.cos(a) * rand(60, 95), vy: Math.sin(a) * rand(60, 95), rot: 0, vr: rand(-9, 9), t: 0 });
+    }
+    for (let i = 0; i < 3; i++) this.addFx('smoke', r.x + rand(-8, 8), r.y - rand(4, 14), rand(0.5, 0.8), rand(0.45, 0.7), -rand(6, 16));
+    for (let i = 0; i < 8; i++) this.part(r.x, r.y - 10, rand(-80, 80), rand(-90, -20), 0.45, i % 3 ? '#a8703a' : '#e0a050', 2, 200);
+    sfx('boomS', 0.7, 0.72);
+    if (src === 'bomb') return;
+    // CHAIN: 1.8초 안에 다음 지형을 부수면 이어짐 (화면 밖으로 흘러간 것은 해당 없음)
+    this.chainN = this.chainT > 0 ? this.chainN + 1 : 1;
+    this.chainT = 1.8;
+    this.chainMax = Math.max(this.chainMax, this.chainN);
+    const bonus = 100 * (1 + Math.floor(this.chainN / 3) * 0.5);
+    this.addScore(Math.round(bonus), r.x, r.y - 22, this.chainN >= 3);
+    if (this.chainN >= 3) this.floatText(r.x, r.y - 24, `CHAIN ×${this.chainN}`, this.chainN >= 10 ? '#ffd34a' : '#ffe9c0');
+    if (r.drop) this.items.push({ x: r.x, y: r.y - 12, kind: r.drop, age: 0, alive: true });
+  }
+  private drawTerrain(): void {
+    const im = this.terrImg;
+    if (!im) return;
+    const g = this.g;
+    const P = 32;
+    const CW = im.width / 4;
+    const CH = im.height - P;
+    for (const r of this.terr) {
+      const cell = r.dead ? 3 : r.st;
+      const jx = r.hitT > 0 ? (Math.floor(this.t * 60) % 2 ? 0.5 : -0.5) : 0;
+      const x = Math.round((r.x - CW / 4 + jx) * R) / R;
+      const y = Math.round((r.y - CH / 2) * R) / R;
+      g.drawImage(im, cell * CW, 0, CW, CH, x, y, CW / 2, CH / 2);
+      if (r.flash > 0 && !r.dead) { g.globalAlpha = 0.38; g.drawImage(whiteOf(this.a, im), cell * CW, 0, CW, CH, x, y, CW / 2, CH / 2); g.globalAlpha = 1; }
+    }
+    for (const c of this.chipsT) {
+      g.globalAlpha = c.t > 0.5 ? Math.max(0, 1 - (c.t - 0.5) / 0.25) : 1;
+      g.save();
+      g.translate(c.x, c.y);
+      g.rotate(c.rot);
+      g.drawImage(im, c.cell * P, CH, P, P, -P / 4, -P / 4, P / 2, P / 2);
+      g.restore();
+    }
+    g.globalAlpha = 1;
+  }
+
   // ───────────── 충돌 ─────────────
   private collide(): void {
     for (const b of this.pb) {
@@ -2970,6 +3117,7 @@ export class SkyEngine {
           }
         }
       }
+      if (this.terrOn && b.alive) this.hitTerrain(b);
       if (b.kind === 'charge' || b.kind === 'drill') {
         for (const q of this.eb) {
           if (q.alive && (q.x - b.x) ** 2 + (q.y - b.y) ** 2 < (b.r + q.r) ** 2) {
@@ -3181,6 +3329,7 @@ export class SkyEngine {
     g.setTransform(R, 0, 0, R, ox * R, oy * R);
 
     this.drawStage1();
+    if (this.terrOn) this.drawTerrain();
     for (const it of this.items) this.drawItem(it.kind, it.x, it.y + Math.round(Math.sin(it.age * 6)), it.age);
     for (const e of this.en) if (e.kind !== 'part') this.drawEnemy(e);
     for (const e of this.en) if (e.kind === 'part') this.drawEnemy(e);
@@ -3231,6 +3380,12 @@ export class SkyEngine {
     }
 
     g.setTransform(R, 0, 0, R, 0, 0);
+    if (this.terrOn && this.chainN >= 2 && this.chainT > 0) {
+      const a = Math.min(1, this.chainT / 0.4);
+      g.globalAlpha = a;
+      this.text(`CHAIN ×${this.chainN}`, 6, 44, this.chainN >= 10 ? '#ffd34a' : '#ffe9c0', 'left', this.chainN >= 5 ? 11 : 9);
+      g.globalAlpha = 1;
+    }
     this.drawWarning();
     this.drawRage();
     this.drawCutin();
@@ -3310,7 +3465,7 @@ export class SkyEngine {
   }
   private drawStage1(): void {
     const g = this.g;
-    const off = Math.round(((this.t * 9) % H) * R) / R;
+    const off = Math.round(((this.t * (this.terrOn ? GROUND_V : 9)) % H) * R) / R;
     g.drawImage(this.bgBaked, 0, off - H, W, H);
     g.drawImage(this.bgBaked, 0, off, W, H);
     for (let layer = 0; layer < 3; layer++) {

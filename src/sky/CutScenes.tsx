@@ -10,7 +10,7 @@ import { PAGES } from './OpeningStory';
 import { CUES } from './OpeningCinematic';
 import { SCENES, type SceneId } from './PoopEnding';
 import { packPath, hasPack } from './artpack';
-import { audioTap, bgmInfo, playBgm, sfx } from './audio';
+import { audioTap, bgmInfo, playBgm, releaseBgm, sfx } from './audio';
 
 const BASE = `${import.meta.env.BASE_URL}assets/sky/`;
 const src = (rel: string): string => `${BASE}${packPath(rel)}`;
@@ -72,10 +72,10 @@ function openingSteps(): CutStep[] {
 
 /**
  * 오프닝 음악 흐름 (한 곡이 끝까지 이어지게)
- *  - 첫 장면에서 '오프닝' 곡 시작 (한 번만 · 이전 대사로 돌아가거나 빠르게 넘겨도 다시 시작하지 않음)
- *  - 장면(그림) 전환과 음악은 묶지 않음: 그림이 바뀌어도 곡은 그대로 이어짐
- *  - '오프닝' 곡(약 34초 · 반복 없음)이 끝나기 2.5초 전에 타이틀 곡으로 2.4초 교차 페이드 → 무음 구간 없음
- *  - 마지막 타이틀 화면에 먼저 닿으면 그때 2초 교차 페이드 (분위기가 실제로 바뀌는 곳)
+ *  - 첫 장면에서 오프닝 곡을 처음부터 1회 시작 ('openingHold') — 그림 전환 · ◀ 이전 · 빠른 연타에도 다시 시작하지 않음
+ *  - 타이틀 화면에 닿기 전에 곡이 '여섯 수호자' 악절(33.0~37.8초)까지 오면 그 악절을 이음매 없이 반복하며 기다림
+ *    (출격 고조 · 타이틀 '쿵'은 타이틀 곡이 맡음 → 타이틀 음악이 타이틀보다 먼저 나오지 않음)
+ *  - 타이틀 화면에 닿는 순간에만 2초 교차 페이드로 타이틀 곡
  */
 export function CutOpening({ onDone }: { onDone: () => void }): ReactElement {
   const steps = useMemo(openingSteps, []);
@@ -87,28 +87,19 @@ export function CutOpening({ onDone }: { onDone: () => void }): ReactElement {
     const b = bgmInfo();
     ((window as unknown as { __bgmLog?: unknown[] }).__bgmLog ??= []).push([Math.round(performance.now()), ev, b.name, +b.pos.toFixed(2), +b.dur.toFixed(1)]);
   };
-  const toTitle = (why: string, sec: number): void => {
-    if (titled.current) return;
-    titled.current = true;
-    playBgm('title', sec, sec);
-    log(`title:${why}`);
-  };
   useEffect(() => {
     if (location.search.includes('skytest') || location.search.includes('preview')) Object.assign(window, { __bgmInfo: bgmInfo, __audioTap: audioTap });
-    const id = window.setInterval(() => {
-      const b = bgmInfo();
-      if (!titled.current && b.name === 'opening' && b.dur > 0 && b.running && b.dur - b.pos < 2.6) toTitle('곡 끝', 2.4);
-    }, 200);
-    return () => window.clearInterval(id);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // 오프닝이 끝나면(교차 페이드가 끝난 뒤) 오프닝 곡 메모리 반납
+    return () => { window.setTimeout(() => releaseBgm('openingHold'), 3000); };
+  }, []);
   return (
     <CutPlayer
       name="opening"
       steps={steps}
       onDone={onDone}
       onStep={(i) => {
-        if (!started.current) { started.current = true; playBgm('opening', 0.8, 0.6); log('opening:start'); }
-        if (i === title) toTitle('타이틀 화면', 2.0);
+        if (!started.current) { started.current = true; playBgm('openingHold', 0.8, 0.6); log('opening:start'); }
+        if (i === title && !titled.current) { titled.current = true; playBgm('title', 2.0, 2.0); log('title:타이틀 화면'); }
       }}
     />
   );

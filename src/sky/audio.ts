@@ -16,9 +16,10 @@
 import LOOPS from './audioLoops';
 import { buzz } from './settings';
 
-export type BgmName = 'title' | 'select' | 'stage1' | 'stage2' | 'stage3' | 'stage4' | 'stage5' | 'final' | 'boss' | 'lastboss' | 'ending' | 'clear' | 'over' | 'opening';
+export type BgmName = 'title' | 'select' | 'stage1' | 'stage2' | 'stage3' | 'stage4' | 'stage5' | 'final' | 'boss' | 'lastboss' | 'ending' | 'clear' | 'over' | 'opening' | 'openingHold';
 
-const BGM: Record<BgmName, { vol: number; loop?: number[] }> = {
+/** file: 다른 이름의 음원 파일을 씀 · from0: 반복 곡이어도 처음(0초)부터 재생 · bake: 반복 이음매를 이 초만큼 미리 섞은 사본으로 (딸깍·뚝 끊김 방지) */
+const BGM: Record<BgmName, { vol: number; loop?: number[]; file?: string; from0?: boolean; bake?: number }> = {
   title: { vol: 0.6, ...LOOPS.title },
   select: { vol: 0.5, ...LOOPS.select },
   stage1: { vol: 0.52, ...LOOPS.stage1 },
@@ -34,7 +35,38 @@ const BGM: Record<BgmName, { vol: number; loop?: number[] }> = {
   over: { vol: 0.66 },
   /** 오프닝 시네마틱 (약 34초 · 반복 없음 · tools/sky-audio/opening.py) */
   opening: { vol: 0.9 },
+  /**
+   * 오프닝 스토리북용: 같은 오프닝 곡을 처음부터 재생하다가, 타이틀 화면에 닿기 전이면
+   * '여섯 수호자' 악절(33.0~37.8초 · Dm→B♭→C→D 화음 4개 × 1.2초)을 이어서 반복 — D 화음이 자연스럽게 Dm 으로 돌아감.
+   * 그 뒤의 출격 고조(37.8~41.4초)와 타이틀 '쿵'은 반복하면 어색하므로 쓰지 않고, 타이틀 화면에서 타이틀 곡으로 교차 페이드.
+   */
+  openingHold: { vol: 0.9, file: 'opening', loop: [33.0, 37.8], from0: true, bake: 0.25 },
 };
+const baked = new Map<string, AudioBuffer>();
+/** 반복 이음매 굽기: 반복 끝 직전 bake 초를 '반복 시작 직전' 소리와 교차로 섞은 사본 → 끝에서 시작으로 건너뛰어도 소리가 이어짐 */
+function bakeLoop(c: AudioContext, buf: AudioBuffer, key: string, a: number, b: number, x: number): AudioBuffer {
+  const hit = baked.get(key);
+  if (hit) return hit;
+  const sr = buf.sampleRate;
+  const out = c.createBuffer(buf.numberOfChannels, buf.length, sr);
+  const n = Math.round(x * sr), ia = Math.round(a * sr), ib = Math.round(b * sr);
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+    const src = buf.getChannelData(ch);
+    const dst = out.getChannelData(ch);
+    dst.set(src);
+    for (let i = 0; i < n; i++) {
+      const k = i / n; // 0 → 1
+      const j = ib - n + i;
+      const pre = ia - n + i;
+      if (j < 0 || pre < 0 || j >= dst.length) continue;
+      // 같은 힘(제곱 합 1) 교차: 끝부분은 줄이고, 반복 시작 직전 소리는 키움
+      dst[j] = src[j] * Math.cos((k * Math.PI) / 2) + src[pre] * Math.sin((k * Math.PI) / 2);
+    }
+  }
+  baked.set(key, out);
+  return out;
+}
+let htmlHold: (() => void) | null = null;
 
 /** 효과음 표: 볼륨 · 동시 재생 최대 수 · 같은 소리 최소 간격(초) */
 const SFX = {
@@ -337,6 +369,7 @@ export function preloadAudio(which: 'menu' | 'game'): Promise<void> {
 /** 다 쓴 배경음의 디코딩 사본을 놓아 줌 (오프닝 곡 ≈18MB 등 · 지금 재생 중이면 그대로) */
 export function releaseBgm(name: BgmName): void {
   if (curName === name) return;
+  baked.delete(name);
   buffers.delete(`bgm-${name}`);
   decoding.delete(`bgm-${name}`);
   const u = blobUrls.get(`bgm-${name}`);
@@ -429,7 +462,7 @@ export function playBgm(name: BgmName, fadeOut = 0.6, fadeIn = 0.05, at = 0): vo
   const info = BGM[name];
   if (mode === 'html') {
     curName = name;
-    void blobUrl(`bgm-${name}`).then(async (url) => {
+    void blobUrl(`bgm-${info.file ?? name}`).then(async (url) => {
       if (!url || wanted !== name) return;
       htmlBgm ??= new Audio();
       const a = htmlBgm;
@@ -438,8 +471,15 @@ export function playBgm(name: BgmName, fadeOut = 0.6, fadeIn = 0.05, at = 0): vo
       if (wanted !== name) return;
       a.pause();
       a.src = url;
-      a.loop = !!info.loop;
-      a.currentTime = info.loop ? info.loop[0] : at;
+      a.loop = !!info.loop && !info.from0;
+      a.currentTime = info.loop && !info.from0 ? info.loop[0] : at;
+      // 구간 반복(처음부터 재생 후 일부 구간만 반복): HTML5 는 재생 위치를 보다가 되돌림
+      if (htmlHold) { a.removeEventListener('timeupdate', htmlHold); htmlHold = null; }
+      if (info.loop && info.from0) {
+        const [l0, l1] = info.loop;
+        htmlHold = () => { if (a.currentTime >= l1 - 0.03) a.currentTime = l0 + (a.currentTime - l1 + 0.03); };
+        a.addEventListener('timeupdate', htmlHold);
+      }
       a.volume = fadeIn > 0.06 ? 0 : info.vol;
       if (!muted) void a.play().catch((e: unknown) => note(`BGM 재생 거부(HTML5): ${String(e)}`));
       if (fadeIn > 0.06) void htmlRamp(a, info.vol, fadeIn);
@@ -456,8 +496,10 @@ export function playBgm(name: BgmName, fadeOut = 0.6, fadeIn = 0.05, at = 0): vo
     cur = null;
   }
   curName = name;
-  void decode(`bgm-${name}`).then((buf) => {
-    if (!buf || wanted !== name || !musicBus || mode !== 'webaudio' || (cur && cur.name === name)) return;
+  void decode(`bgm-${info.file ?? name}`).then((raw) => {
+    if (!raw || wanted !== name || !musicBus || mode !== 'webaudio' || (cur && cur.name === name)) return;
+    const buf = info.bake && info.loop ? bakeLoop(c, raw, name, info.loop[0], info.loop[1], info.bake) : raw;
+    if (buf !== raw) buffers.delete(`bgm-${info.file ?? name}`); // 원본 디코딩 사본은 놓아 줌 (구운 사본 하나만 메모리에)
     const g = c.createGain();
     const t = c.currentTime;
     const rise = xfade ? Math.max(t, outEnd - fadeOut * 0.8) : t;
@@ -472,7 +514,7 @@ export function playBgm(name: BgmName, fadeOut = 0.6, fadeIn = 0.05, at = 0): vo
       s.loopEnd = Math.min(info.loop[1], buf.duration);
     }
     s.connect(g);
-    const off = info.loop ? info.loop[0] : Math.min(at, Math.max(0, buf.duration - 0.1));
+    const off = info.loop && !info.from0 ? info.loop[0] : Math.min(at, Math.max(0, buf.duration - 0.1));
     s.start(t, off);
     const me: Playing = { name, src: s, gain: g, t0: t - off, dur: buf.duration };
     s.onended = () => {
